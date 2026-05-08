@@ -69,6 +69,9 @@ const ForgotPasswordPage = () => {
           ) : (
             <form onSubmit={handleSubmit}>
               <TextField
+                id="forgot-email"
+                name="email"
+                autoComplete="email"
                 fullWidth
                 label="Email Address"
                 type="email"

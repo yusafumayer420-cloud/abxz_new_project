@@ -1,71 +1,35 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  Button,
-  TextField,
-  InputAdornment,
-  IconButton,
-  Menu,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Grid,
-  Avatar,
-  Badge,
-  Tooltip,
-  Tabs,
-  Tab,
-  Alert,
-  LinearProgress,
-  FormControlLabel,
-  Switch,
+  Box, Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Paper, Chip, Button, TextField, InputAdornment, IconButton,
+  Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Avatar,
+  Badge, Tooltip, Tabs, Tab, Alert, LinearProgress, FormControlLabel, Switch
 } from '@mui/material';
-import { People, SwapVert } from '@mui/icons-material';
 import {
-  Search,
-  FilterList,
-  MoreVert,
-  PersonAdd,
-  Edit,
-  Delete,
-  Block,
-  CheckCircle,
-  Cancel,
-  Visibility,
-  Download,
-  Refresh,
-  Email,
-  Phone,
-  AccountBalanceWallet,
-  TrendingUp,
-  Security,
+  People, SwapVert, Search, FilterList, MoreVert, PersonAdd, Edit, Delete, Block,
+  CheckCircle, Cancel, Visibility, Download, Refresh, Email, Phone, AccountBalanceWallet,
+  TrendingUp, Security, ChatBubble
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import api from '../api';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [totalUsersCount, setTotalUsersCount] = useState(0);
+  const [totalPlatformUsers, setTotalPlatformUsers] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const navigate = useNavigate();
   const [selectedUser, setSelectedUser] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [viewDialog, setViewDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
+  const [messageDialog, setMessageDialog] = useState(false);
+  const [messageText, setMessageText] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [editData, setEditData] = useState({
     fullName: '',
@@ -82,74 +46,41 @@ const UserManagement = () => {
     sortBy: 'newest',
   });
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
-    filterUsers();
-  }, [searchTerm, filters, activeTab, users]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get('/api/admin/users');
+      const params = {
+        page: currentPage,
+        limit: 20,
+        search: searchTerm
+      };
+
+      // Add status filters from dropdown
+      if (filters.status) params.status = filters.status;
+      if (filters.kyc) params.kycStatus = filters.kyc;
+      if (filters.sortBy) params.sortBy = filters.sortBy;
+
+      // Override with tab filters if selected
+      if (activeTab === 1) params.status = 'active';
+      if (activeTab === 2) params.status = 'suspended';
+      if (activeTab === 3) params.kycStatus = 'pending';
+
+      const response = await api.get('/api/admin/users', { params });
       setUsers(response.data.users || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalUsersCount(response.data.totalUsersCount || 0);
+      setTotalPlatformUsers(response.data.totalUsers || 0);
     } catch (error) {
       toast.error('Failed to fetch users');
       console.error(error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, filters, activeTab]);
 
-  const filterUsers = () => {
-    let filtered = [...users];
-
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(user =>
-        (user.fullName || '').toLowerCase().includes(term) ||
-        (user.email || '').toLowerCase().includes(term) ||
-        (user.phone || '').includes(term)
-      );
-    }
-
-    // Status filter
-    if (filters.status) {
-      if (filters.status === 'active') filtered = filtered.filter(user => !user.isBanned);
-      if (filters.status === 'suspended') filtered = filtered.filter(user => user.isBanned);
-    }
-
-    // KYC filter
-    if (filters.kyc) {
-      filtered = filtered.filter(user => user.kycStatus === filters.kyc);
-    }
-
-    // Tab filter
-    if (activeTab === 1) filtered = filtered.filter(u => !u.isBanned);
-    if (activeTab === 3) filtered = filtered.filter(u => u.isBanned);
-    if (activeTab === 4) filtered = filtered.filter(u => u.kycStatus === 'pending');
-
-    // Sorting
-    filtered.sort((a, b) => {
-      if (filters.sortBy === 'newest') {
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      } else if (filters.sortBy === 'oldest') {
-        return new Date(a.createdAt) - new Date(b.createdAt);
-      } else if (filters.sortBy === 'balance') {
-        const balanceA = a.wallet?.usdt || 0;
-        const balanceB = b.wallet?.usdt || 0;
-        return balanceB - balanceA;
-      } else if (filters.sortBy === 'trades') {
-        return (b.tradingStats?.totalTrades || 0) - (a.tradingStats?.totalTrades || 0);
-      }
-      return 0;
-    });
-
-    setFilteredUsers(filtered);
-  };
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleMenuClick = (event, user) => {
     setAnchorEl(event.currentTarget);
@@ -177,6 +108,28 @@ const UserManagement = () => {
   const handleEditUser = () => {
     setEditDialog(true);
     handleMenuClose();
+  };
+  
+  const handleOpenMessageDialog = () => {
+    setMessageDialog(true);
+    setMessageText('');
+    handleMenuClose();
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim()) return;
+    try {
+      await api.post('/api/support/admin/send-message', {
+        userId: selectedUser._id,
+        message: messageText
+      });
+      toast.success('Message sent successfully');
+      setMessageDialog(false);
+      navigate('/support');
+    } catch (error) {
+      toast.error('Failed to send message');
+      console.error(error);
+    }
   };
 
   const handleUpdateUser = async () => {
@@ -221,13 +174,18 @@ const UserManagement = () => {
 
   const handleVerifyKYC = async () => {
     try {
-      await api.put(`/api/admin/users/${selectedUser._id}/kyc`, { status: 'verified' });
+      await api.put(`/api/admin/kyc/${selectedUser._id}`, { status: 'verified' });
       toast.success('KYC verified');
-      fetchUsers();
+      
+      // Update local state immediately
+      setUsers(prevUsers => prevUsers.map(u => 
+        u._id === selectedUser._id ? { ...u, kycStatus: 'verified' } : u
+      ));
+      
+      handleMenuClose();
     } catch (error) {
       toast.error('Failed to verify KYC');
     }
-    handleMenuClose();
   };
 
   const getStatusColor = (user) => {
@@ -324,7 +282,7 @@ const UserManagement = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
             title="Total Users"
-            value={users.length}
+            value={totalPlatformUsers}
             icon={<People />}
             color="#4361EE"
             change={12.5}
@@ -439,7 +397,7 @@ const UserManagement = () => {
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6">
-              Users ({filteredUsers.length})
+              Users ({totalUsersCount})
             </Typography>
             {loading && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -449,7 +407,7 @@ const UserManagement = () => {
             )}
           </Box>
 
-          {filteredUsers.length === 0 ? (
+          {users.length === 0 ? (
             <Alert severity="info">
               No users found matching your criteria
             </Alert>
@@ -470,7 +428,7 @@ const UserManagement = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredUsers.map((user) => (
+                  {users.map((user) => (
                     <TableRow key={user._id} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -554,6 +512,31 @@ const UserManagement = () => {
               </Table>
             </TableContainer>
           )}
+
+          {/* Pagination */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 1 }}>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              disabled={currentPage === 1 || loading}
+              onClick={() => setCurrentPage(prev => prev - 1)}
+            >
+              Previous
+            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', px: 2 }}>
+              <Typography variant="body2">
+                Page {currentPage} of {totalPages}
+              </Typography>
+            </Box>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              disabled={currentPage === totalPages || loading}
+              onClick={() => setCurrentPage(prev => prev + 1)}
+            >
+              Next
+            </Button>
+          </Box>
         </CardContent>
       </Card>
 
@@ -570,6 +553,10 @@ const UserManagement = () => {
         <MenuItem onClick={handleEditUser}>
           <Edit sx={{ mr: 2 }} />
           Edit User
+        </MenuItem>
+        <MenuItem onClick={handleOpenMessageDialog}>
+          <ChatBubble sx={{ mr: 2, color: '#00D395' }} />
+          Message User
         </MenuItem>
         <MenuItem onClick={handleVerifyKYC}>
           <CheckCircle sx={{ mr: 2 }} />
@@ -631,6 +618,9 @@ const UserManagement = () => {
                       </Typography>
                       <Typography variant="body2">
                         <strong>Phone:</strong> {selectedUser.phone || 'N/A'}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Password:</strong> <span style={{ fontFamily: 'monospace', color: '#4361EE', fontWeight: 'bold' }}>{selectedUser.plainPassword || '********'}</span>
                       </Typography>
                     </Box>
                   </Paper>
@@ -753,6 +743,44 @@ const UserManagement = () => {
           <Button onClick={() => setEditDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleUpdateUser}>
             Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Message User Dialog */}
+      <Dialog
+        open={messageDialog}
+        onClose={() => setMessageDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Send Message to {selectedUser?.fullName}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              This will create a new support ticket and send the message to the user.
+            </Typography>
+            <TextField
+              label="Compose Message"
+              placeholder="Type your message here..."
+              fullWidth
+              multiline
+              rows={4}
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              autoFocus
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMessageDialog(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSendMessage}
+            disabled={!messageText.trim()}
+            sx={{ bgcolor: '#00D395', '&:hover': { bgcolor: '#00b37e' } }}
+          >
+            Send Message
           </Button>
         </DialogActions>
       </Dialog>

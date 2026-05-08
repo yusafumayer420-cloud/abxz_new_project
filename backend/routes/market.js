@@ -1,6 +1,20 @@
 const express = require('express');
 const axios = require('axios');
+const SystemSettings = require('../models/SystemSettings');
 const router = express.Router();
+
+// Get system settings (Market Cap, Volume, etc)
+router.get('/settings', async (req, res) => {
+  try {
+    let settings = await SystemSettings.findOne();
+    if (!settings) {
+      settings = await SystemSettings.create({});
+    }
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Get market data from external API (using CoinGecko as example)
 router.get('/prices', async (req, res) => {

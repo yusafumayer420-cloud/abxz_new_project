@@ -28,7 +28,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit for chat attachments
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit for chat attachments
 });
 
 // Get user tickets
@@ -238,6 +238,76 @@ router.get('/admin/stats', auth, admin, async (req, res) => {
       priorityStats,
       avgResolutionHours: resolutionTimes[0]?.avg || 0
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Admin send message to user (initiating chat)
+router.post('/admin/send-message', auth, admin, async (req, res) => {
+  try {
+    const { userId, message, subject } = req.body;
+    
+    if (!userId || !message) {
+      return res.status(400).json({ message: 'User ID and message are required' });
+    }
+
+    // 1. Find or Create Ticket
+    let ticket = await SupportTicket.findOne({
+      userId,
+      status: { $in: ['open', 'in_progress'] }
+    }).sort({ updatedAt: -1 });
+    
+    if (!ticket) {
+      ticket = new SupportTicket({
+        userId,
+        subject: subject || 'Support Message from Admin',
+        category: 'other',
+        priority: 'medium',
+        status: 'in_progress',
+        assignedTo: req.user.id,
+        lastMessage: message.substring(0, 100),
+        lastMessageAt: new Date()
+      });
+      await ticket.save();
+    } else {
+      ticket.status = 'in_progress';
+      if (!ticket.assignedTo) ticket.assignedTo = req.user.id;
+      ticket.lastMessage = message.substring(0, 100);
+      ticket.lastMessageAt = new Date();
+      await ticket.save();
+    }
+    
+    // 2. Create Chat Message
+    const chatMessage = new ChatMessage({
+      userId: req.user.id,
+      message,
+      type: 'admin',
+      room: `user_${userId}`,
+    });
+    await chatMessage.save();
+    
+    ticket.messages.push(chatMessage._id);
+    await ticket.save();
+    
+    // 3. Emit via Socket if possible
+    const io = req.app.get('io');
+    if (io) {
+      const chatNamespace = io.of('/chat');
+      const populatedMessage = await ChatMessage.findById(chatMessage._id).populate('userId', 'email fullName role');
+      
+      chatNamespace.to(`user_${userId}`).emit('receive_message', {
+        ...populatedMessage.toObject(),
+        ticketId: ticket._id
+      });
+      
+      chatNamespace.to('admin_room').emit('receive_message', {
+        ...populatedMessage.toObject(),
+        ticketId: ticket._id
+      });
+    }
+    
+    res.json({ success: true, ticketId: ticket._id });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

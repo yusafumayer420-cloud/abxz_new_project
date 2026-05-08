@@ -18,6 +18,7 @@ import {
   Logout,
   Person,
   Security,
+  Refresh,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -73,9 +74,9 @@ const TopBar = ({ onMenuClick }) => {
         position="static" 
         elevation={0}
         sx={{ 
-          background: 'rgba(19, 26, 46, 0.95)',
+          background: 'rgba(19, 26, 46, 0.8)',
           backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
         <Toolbar sx={{ minHeight: 64 }}>
@@ -101,6 +102,9 @@ const TopBar = ({ onMenuClick }) => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton onClick={() => window.location.reload()} sx={{ color: 'white' }}>
+              <Refresh />
+            </IconButton>
             <NotificationBell />
             
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -109,6 +113,7 @@ const TopBar = ({ onMenuClick }) => {
                 sx={{ p: 0 }}
               >
                 <Avatar
+                  src={user?.profilePicture}
                   sx={{
                     bgcolor: '#00D395',
                     width: 36,
@@ -116,7 +121,7 @@ const TopBar = ({ onMenuClick }) => {
                     border: '2px solid rgba(255,255,255,0.2)',
                   }}
                 >
-                  {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+                  {!user?.profilePicture && (user?.fullName?.charAt(0).toUpperCase() || 'U')}
                 </Avatar>
               </IconButton>
             </motion.div>

@@ -23,7 +23,10 @@ const storage = new CloudinaryStorage({
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+});
 
 // Generate deposit address
 router.post('/deposit/address', auth, async (req, res) => {
@@ -102,6 +105,12 @@ router.post('/deposit', auth, upload.single('voucher'), async (req, res) => {
       const io = req.app.get('io');
       if (io) {
         io.to('admin').emit('new_transaction', populated);
+        io.to(`user_${req.user.id}`).emit('transaction_requested', {
+          title: 'Deposit Requested',
+          message: `${amount} ${currency} deposit is pending review`,
+          type: 'info',
+          transaction
+        });
       }
     }).catch(err => console.error('Notification error:', err));
 
@@ -138,28 +147,24 @@ router.post('/withdraw', auth, async (req, res) => {
       });
     }
     
-    // Check balance
-    if (!user.wallet[currency.toLowerCase()] || user.wallet[currency.toLowerCase()] < amount) {
-      return res.status(400).json({ message: 'Insufficient balance' });
-    }
-    
-    // Check minimum withdrawal
-    const minAmounts = {
-      'BTC': 0.001,
-      'ETH': 0.01,
-      'USDT': 10,
-      'SOL': 0.1
-    };
-    
+    const minAmounts = { 'BTC': 0, 'ETH': 0, 'USDT': 0, 'SOL': 0 };
     if (amount < (minAmounts[currency] || 0)) {
-      return res.status(400).json({ 
-        message: `Minimum withdrawal is ${minAmounts[currency] || 0} ${currency}` 
-      });
+      return res.status(400).json({ message: `Minimum withdrawal is ${minAmounts[currency] || 0} ${currency}` });
     }
+
+    // Atomic deduction: only subtract if balance is sufficient
+    const currencyKey = currency.toLowerCase();
+    const queryObj = { _id: req.user.id };
+    queryObj[`wallet.${currencyKey}`] = { $gte: amount };
     
-    // Deduct balance
-    user.wallet[currency.toLowerCase()] -= amount;
-    await user.save();
+    const updateObj = { $inc: {} };
+    updateObj.$inc[`wallet.${currencyKey}`] = -amount;
+
+    const updatedUser = await User.findOneAndUpdate(queryObj, updateObj, { new: true });
+    
+    if (!updatedUser) {
+      return res.status(400).json({ message: 'Insufficient balance or user not found' });
+    }
     
     // Create transaction record
     const transaction = new WalletTransaction({
@@ -167,7 +172,7 @@ router.post('/withdraw', auth, async (req, res) => {
       type: 'withdrawal',
       currency,
       amount,
-      network,
+      chain: network,
       toAddress: address,
       status: 'pending',
       fee: calculateFee(currency, network)
@@ -197,7 +202,7 @@ router.post('/withdraw', auth, async (req, res) => {
         type: 'info',
         transaction
       });
-      io.to(`user_${req.user.id}`).emit('balance_updated', { wallet: user.wallet });
+      io.to(`user_${req.user.id}`).emit('balance_updated', { wallet: updatedUser.wallet });
     }
     
     res.json({
@@ -225,7 +230,7 @@ function calculateFee(currency, network) {
   const fees = {
     'BTC': { 'BTC': 0.0005, 'BEP20': 0.0001 },
     'ETH': { 'ETH': 0.005, 'BEP20': 0.001 },
-    'USDT': { 'ETH': 10, 'BEP20': 1, 'TRX': 1 }
+    'USDT': { 'ETH': 10, 'BEP20': 1, 'TRX': 1, 'TRC20': 1 }
   };
   
   return fees[currency]?.[network] || 0;

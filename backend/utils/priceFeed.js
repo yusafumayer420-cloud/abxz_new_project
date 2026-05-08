@@ -11,7 +11,27 @@ const COINS = [
   { symbol: 'BNB/USDT', binanceSymbol: 'bnbusdt' },
   { symbol: 'MATIC/USDT', binanceSymbol: 'maticusdt' },
   { symbol: 'AVAX/USDT', binanceSymbol: 'avaxusdt' },
-  { symbol: 'LINK/USDT', binanceSymbol: 'linkusdt' }
+  { symbol: 'LINK/USDT', binanceSymbol: 'linkusdt' },
+  { symbol: 'DOT/USDT', binanceSymbol: 'dotusdt' },
+  { symbol: 'LTC/USDT', binanceSymbol: 'ltcusdt' },
+  { symbol: 'SHIB/USDT', binanceSymbol: 'shibusdt' },
+  { symbol: 'TRX/USDT', binanceSymbol: 'trxusdt' },
+  { symbol: 'UNI/USDT', binanceSymbol: 'uniusdt' },
+  { symbol: 'ATOM/USDT', binanceSymbol: 'atomusdt' },
+  { symbol: 'XLM/USDT', binanceSymbol: 'xlmusdt' },
+  { symbol: 'ETC/USDT', binanceSymbol: 'etcusdt' },
+  { symbol: 'FIL/USDT', binanceSymbol: 'filusdt' },
+  { symbol: 'NEAR/USDT', binanceSymbol: 'nearusdt' },
+  { symbol: 'ALGO/USDT', binanceSymbol: 'algousdt' },
+  { symbol: 'VET/USDT', binanceSymbol: 'vetusdt' },
+  { symbol: 'ICP/USDT', binanceSymbol: 'icpusdt' },
+  { symbol: 'MANA/USDT', binanceSymbol: 'manausdt' },
+  { symbol: 'SAND/USDT', binanceSymbol: 'sandusdt' },
+  { symbol: 'AXS/USDT', binanceSymbol: 'axsusdt' },
+  { symbol: 'THETA/USDT', binanceSymbol: 'thetausdt' },
+  { symbol: 'FTM/USDT', binanceSymbol: 'ftmusdt' },
+  { symbol: 'EGLD/USDT', binanceSymbol: 'egldusdt' },
+  { symbol: 'XTZ/USDT', binanceSymbol: 'xtzusdt' }
 ];
 
 let socket = null;

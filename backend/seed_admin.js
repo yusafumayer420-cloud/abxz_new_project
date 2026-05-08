@@ -23,18 +23,23 @@ async function seedAdmin() {
     
     const existingAdmin = await User.findOne({ email: adminEmail });
     if (existingAdmin) {
-      console.log('Admin user already exists');
+      existingAdmin.isVerified = true;
+      await existingAdmin.save();
+      console.log('Admin user already exists (Updated to Verified)');
       process.exit(0);
     }
     
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
     
-    await User.create({
+    const adminData = {
       email: adminEmail,
       password: hashedPassword,
       fullName: 'System Administrator',
-      role: 'admin'
-    });
+      role: 'admin',
+      isVerified: true
+    };
+    
+    await User.create(adminData);
     
     console.log('Admin user created successfully!');
     console.log(`Email: ${adminEmail}`);

@@ -45,9 +45,18 @@ import { AuthContext } from '../context/AuthContext';
 import io from 'socket.io-client';
 import axios from '../utils/axiosConfig';
 import toast from 'react-hot-toast';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const LiveChat = () => {
   const { user } = useContext(AuthContext);
+  const location = useLocation();
+  
+  // Hide on specific pages
+  const hiddenPaths = ['/notifications', '/history'];
+  if (hiddenPaths.includes(location.pathname)) {
+    return null;
+  }
+
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -92,7 +101,7 @@ const LiveChat = () => {
     });
 
     chatSocket.on('chat_history', (history) => {
-      setMessages(history);
+      setMessages(history.filter(m => !m.isDeleted));
     });
 
     chatSocket.on('receive_message', (message) => {
@@ -156,6 +165,16 @@ const LiveChat = () => {
       toast.error(error.message || 'Chat error occurred');
     });
 
+    chatSocket.on('message_edited', (data) => {
+      setMessages(prev => prev.map(msg => 
+        String(msg._id) === String(data.messageId) ? { ...msg, message: data.newMessage, isEdited: true } : msg
+      ));
+    });
+
+    chatSocket.on('message_deleted', (data) => {
+      setMessages(prev => prev.filter(msg => String(msg._id) !== String(data.messageId)));
+    });
+
     setSocket(chatSocket);
 
     return () => {
@@ -206,9 +225,7 @@ const LiveChat = () => {
         const formData = new FormData();
         formData.append('attachment', selectedFile);
         
-        const response = await axios.post('/api/support/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const response = await axios.post('/api/support/upload', formData);
         
         uploadedUrls.push(response.data.url);
       } catch (error) {
@@ -291,8 +308,6 @@ const LiveChat = () => {
     }
   };
 
-
-
   const formatTime = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -326,6 +341,7 @@ const LiveChat = () => {
   return (
     <>
       {/* Chat Button */}
+      {!isOpen && !['/trading', '/markets', '/funds', '/profile'].some(path => location.pathname.startsWith(path)) && (
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -363,6 +379,7 @@ const LiveChat = () => {
           </Button>
         </Badge>
       </motion.div>
+      )}
 
       {/* Chat Window */}
       <AnimatePresence>
@@ -374,10 +391,10 @@ const LiveChat = () => {
             transition={{ type: 'spring', damping: 25 }}
             style={{
               position: 'fixed',
-              bottom: 140,
+              bottom: 80,
               right: 20,
-              width: isMinimized ? 300 : 400,
-              height: isMinimized ? 60 : 600,
+              width: isMinimized ? 'min(300px, calc(100vw - 40px))' : 'min(400px, calc(100vw - 40px))',
+              height: isMinimized ? 60 : 'min(600px, calc(100vh - 100px))',
               zIndex: 9998,
             }}
           >
@@ -462,7 +479,7 @@ const LiveChat = () => {
                               >
                                 <Box
                                   sx={{
-                                    maxWidth: '70%',
+                                    maxWidth: { xs: '85%', sm: '70%' },
                                     p: 2,
                                     borderRadius: 3,
                                     bgcolor: message.userId?._id === (user?._id || user?.id)
@@ -496,7 +513,7 @@ const LiveChat = () => {
                                       ))}
                                     </Box>
                                   )}
-                                  <Typography variant="body2">
+                                  <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                     {message.message}
                                   </Typography>
                                 </Box>
@@ -516,18 +533,21 @@ const LiveChat = () => {
                             >
                               <Box sx={{ display: 'flex', gap: 0.5 }}>
                                 <motion.div
+                                  key="dot1"
                                   animate={{ opacity: [0.3, 1, 0.3] }}
                                   transition={{ duration: 1, repeat: Infinity }}
                                 >
                                   <Typography variant="body2">.</Typography>
                                 </motion.div>
                                 <motion.div
+                                  key="dot2"
                                   animate={{ opacity: [0.3, 1, 0.3] }}
                                   transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
                                 >
                                   <Typography variant="body2">.</Typography>
                                 </motion.div>
                                 <motion.div
+                                  key="dot3"
                                   animate={{ opacity: [0.3, 1, 0.3] }}
                                   transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
                                 >
@@ -554,6 +574,9 @@ const LiveChat = () => {
                         )}
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                           <input
+                            id="livechat-file-upload"
+                            name="livechatFileUpload"
+                            autoComplete="off"
                             type="file"
                             accept="image/*"
                             style={{ display: 'none' }}
@@ -568,6 +591,9 @@ const LiveChat = () => {
                             <AttachFile />
                           </IconButton>
                           <TextField
+                            id="livechat-message-input"
+                            name="livechatMessageInput"
+                            autoComplete="off"
                             fullWidth
                             multiline
                             maxRows={3}
@@ -615,6 +641,9 @@ const LiveChat = () => {
         <DialogTitle>Create Support Ticket</DialogTitle>
         <DialogContent>
           <TextField
+            id="ticket-subject"
+            name="ticketSubject"
+            autoComplete="off"
             fullWidth
             label="Subject"
             value={newTicket.subject}
@@ -623,6 +652,9 @@ const LiveChat = () => {
           />
           
           <TextField
+            id="ticket-category"
+            name="ticketCategory"
+            autoComplete="off"
             select
             fullWidth
             label="Category"
@@ -644,6 +676,9 @@ const LiveChat = () => {
           </TextField>
           
           <TextField
+            id="ticket-priority"
+            name="ticketPriority"
+            autoComplete="off"
             select
             fullWidth
             label="Priority"
@@ -661,6 +696,9 @@ const LiveChat = () => {
           </TextField>
           
           <TextField
+            id="ticket-message"
+            name="ticketMessage"
+            autoComplete="off"
             fullWidth
             label="Message"
             multiline
@@ -728,11 +766,25 @@ const AdminChatView = ({ socket, user }) => {
           setTicketMessages(prev => [...prev, message]);
         }
       });
+
+      socket.on('message_edited', (data) => {
+        setTicketMessages(prev => prev.map(msg => 
+          String(msg._id) === String(data.messageId) ? { ...msg, message: data.newMessage, isEdited: true } : msg
+        ));
+      });
+
+      socket.on('message_deleted', (data) => {
+        setTicketMessages(prev => prev.map(msg => 
+          String(msg._id) === String(data.messageId) ? { ...msg, message: "This message was deleted", isDeleted: true } : msg
+        ));
+      });
       
       return () => {
         socket.off('all_tickets');
         socket.off('new_ticket');
         socket.off('receive_message');
+        socket.off('message_edited');
+        socket.off('message_deleted');
       };
     }
     
@@ -851,6 +903,9 @@ const AdminChatView = ({ socket, user }) => {
               {/* Filters */}
               <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                 <TextField
+                  id="admin-filter-status"
+                  name="adminFilterStatus"
+                  autoComplete="off"
                   select
                   size="small"
                   label="Status"
@@ -866,6 +921,9 @@ const AdminChatView = ({ socket, user }) => {
                 </TextField>
                 
                 <TextField
+                  id="admin-filter-priority"
+                  name="adminFilterPriority"
+                  autoComplete="off"
                   select
                   size="small"
                   label="Priority"
@@ -985,9 +1043,9 @@ const AdminChatView = ({ socket, user }) => {
                   
                   {/* Messages */}
                     <Box sx={{ flex: 1, overflowY: 'auto', mb: 2, p: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2 }}>
-                      {ticketMessages.map((message) => (
+                      {ticketMessages.map((message, index) => (
                         <Box
-                          key={message._id || Math.random()}
+                          key={message._id || `admin-msg-${index}`}
                           sx={{
                             mb: 2,
                             display: 'flex',
@@ -1007,7 +1065,12 @@ const AdminChatView = ({ socket, user }) => {
                             <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
                               {message.userId._id === user.id ? 'You' : message.userId?.email}
                             </Typography>
-                            <Typography variant="body2">{message.message}</Typography>
+                            <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere', fontStyle: message.isDeleted ? 'italic' : 'normal', opacity: message.isDeleted ? 0.7 : 1 }}>
+                              {message.message}
+                              {message.isEdited && !message.isDeleted && (
+                                <Typography component="span" variant="caption" sx={{ opacity: 0.6, ml: 1 }}>(edited)</Typography>
+                              )}
+                            </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                               {new Date(message.createdAt).toLocaleTimeString()}
                             </Typography>
@@ -1020,6 +1083,9 @@ const AdminChatView = ({ socket, user }) => {
                   {/* Message Input */}
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <TextField
+                      id="admin-reply-input"
+                      name="adminReplyInput"
+                      autoComplete="off"
                       fullWidth
                       multiline
                       maxRows={3}

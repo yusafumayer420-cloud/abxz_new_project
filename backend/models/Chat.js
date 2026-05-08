@@ -21,6 +21,14 @@ const ChatMessageSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isEdited: {
+    type: Boolean,
+    default: false
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
   room: {
     type: String,
     default: 'general'

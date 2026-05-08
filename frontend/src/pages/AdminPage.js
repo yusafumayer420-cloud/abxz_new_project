@@ -257,6 +257,9 @@ const AdminPage = () => {
       {/* Search and Filter */}
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <TextField
+          id="admin-search-users"
+          name="search"
+          autoComplete="off"
           placeholder="Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

@@ -40,23 +40,18 @@ const Sidebar = ({ open, onClose }) => {
   const menuItems = [
     { text: 'Home', icon: <Home />, path: '/' },
     { text: 'Markets', icon: <ShowChart />, path: '/markets' },
-    { text: 'Trading', icon: <TrendingUp />, path: '/trading/BTC-USDT' },
     { text: 'Wallet', icon: <AccountBalanceWallet />, path: '/funds' },
     { text: 'Profile', icon: <Person />, path: '/profile' },
   ];
 
   const tradingItems = [
-    { text: 'Spot Trading', icon: <SwapHoriz />, path: '/trading/spot' },
-    { text: 'Perpetual', icon: <BarChart />, path: '/trading/perpetual', isComingSoon: true },
-    { text: 'Delivery', icon: <AccountBalance />, path: '/trading/delivery', isComingSoon: true },
+    { text: 'Perpetual', icon: <BarChart />, path: '/trading/perpetual'},
+    { text: 'Delivery', icon: <AccountBalance />, path: '/trading/delivery'},
   ];
 
   const otherItems = [
-    { text: 'Asset Management', icon: <AccountBalance />, path: '/assets', isComingSoon: true },
-    { text: 'AI Trading', icon: <Settings />, path: '/ai-trading', isComingSoon: true },
-    { text: 'Lending', icon: <TrendingUp />, path: '/lending', isComingSoon: true },
     { text: 'Support', icon: <SupportAgent />, path: '/support' },
-    { text: 'Notifications', icon: <Notifications />, path: '/notifications', isComingSoon: true },
+    { text: 'Notifications', icon: <Notifications />, path: '/notifications' },
   ];
 
   const handleToggleSubmenu = (menu) => {

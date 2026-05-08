@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -62,76 +62,70 @@ const KYCVerification = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [viewDialog, setViewDialog] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalPlatformUsers, setTotalPlatformUsers] = useState(0);
   const [filters, setFilters] = useState({
     status: '',
+    type: '',
     sortBy: 'newest',
   });
 
 
   useEffect(() => {
-    fetchKYCRequests();
-  }, []);
+    setCurrentPage(1);
+  }, [searchTerm, filters.status, activeTab]);
 
-  useEffect(() => {
-    filterRequests();
-  }, [searchTerm, filters, activeTab]);
-
-  const fetchKYCRequests = async () => {
+  const fetchKYCRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get('/api/admin/users');
+      const params = {
+        page: currentPage,
+        limit: 20,
+        search: searchTerm
+      };
+
+      if (filters.status) params.kycStatus = filters.status;
+      if (filters.sortBy) params.sortBy = filters.sortBy;
+
+      // Handle tabs
+      if (activeTab === 1) params.kycStatus = 'pending';
+      if (activeTab === 2) params.kycStatus = 'under_review'; // Note: check if backend supports this
+      if (activeTab === 3) params.kycStatus = 'verified';
+      if (activeTab === 4) params.kycStatus = 'rejected';
+
+      const response = await api.get('/api/admin/users', { params });
       const users = response.data.users || [];
       setKycRequests(users);
       setFilteredRequests(users);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalPlatformUsers(response.data.totalUsers || 0);
     } catch (error) {
       toast.error('Failed to fetch KYC requests');
       console.error('Error fetching KYC requests:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, filters, activeTab]);
+
+  useEffect(() => {
+    fetchKYCRequests();
+  }, [fetchKYCRequests]);
 
   const filterRequests = () => {
     let filtered = [...kycRequests];
 
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(request =>
-        request.userName.toLowerCase().includes(term) ||
-        request.userEmail.toLowerCase().includes(term) ||
-        request.userId.toString().includes(term)
-      );
-    }
-
-    // Status filter
-    if (filters.status) {
-      filtered = filtered.filter(request => request.status === filters.status);
-    }
-
-    // Document type filter
+    // Document type filter (Local only as backend doesn't support it yet)
     if (filters.type) {
-      filtered = filtered.filter(request => request.documentType === filters.type);
+      filtered = filtered.filter(request => request.kycDetails?.idType === filters.type);
     }
-
-    // Tab filter
-    if (activeTab === 1) filtered = filtered.filter(r => r.status === 'pending');
-    if (activeTab === 2) filtered = filtered.filter(r => r.status === 'under_review');
-    if (activeTab === 3) filtered = filtered.filter(r => r.status === 'approved');
-    if (activeTab === 4) filtered = filtered.filter(r => r.status === 'rejected');
-
-    // Sorting
-    filtered.sort((a, b) => {
-      if (filters.sortBy === 'newest') {
-        return new Date(b.submittedDate) - new Date(a.submittedDate);
-      } else if (filters.sortBy === 'oldest') {
-        return new Date(a.submittedDate) - new Date(b.submittedDate);
-      }
-      return 0;
-    });
 
     setFilteredRequests(filtered);
   };
+
+  useEffect(() => {
+    filterRequests();
+  }, [kycRequests, filters.type]);
 
   const handleMenuClick = (event, request) => {
     setAnchorEl(event.currentTarget);
@@ -284,7 +278,7 @@ const KYCVerification = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
             title="Total Users"
-            value={kycRequests.length.toString()}
+            value={totalPlatformUsers.toString()}
             icon={<Security />}
             color="#4361EE"
             change="+45"
@@ -382,7 +376,7 @@ const KYCVerification = () => {
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6">
-              KYC Requests ({filteredRequests.length})
+              KYC Requests ({totalPlatformUsers})
             </Typography>
             {loading && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -469,6 +463,31 @@ const KYCVerification = () => {
               </Table>
             </TableContainer>
           )}
+
+          {/* Pagination */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 1 }}>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              disabled={currentPage === 1 || loading}
+              onClick={() => setCurrentPage(prev => prev - 1)}
+            >
+              Previous
+            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', px: 2 }}>
+              <Typography variant="body2">
+                Page {currentPage} of {totalPages}
+              </Typography>
+            </Box>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              disabled={currentPage === totalPages || loading}
+              onClick={() => setCurrentPage(prev => prev + 1)}
+            >
+              Next
+            </Button>
+          </Box>
         </CardContent>
       </Card>
 

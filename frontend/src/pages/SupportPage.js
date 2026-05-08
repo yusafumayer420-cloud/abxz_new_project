@@ -21,6 +21,7 @@ import {
   Alert,
   IconButton,
   CircularProgress,
+  Dialog,
 } from '@mui/material';
 import {
   SupportAgent,
@@ -33,6 +34,7 @@ import {
   History,
   Search,
   Refresh,
+  Close,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
@@ -191,7 +193,7 @@ const SupportPage = () => {
 
       <Grid container spacing={3}>
         {/* Left Side - Tickets List */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={4} sx={{ display: { xs: selectedTicket ? 'none' : 'block', md: 'block' } }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -206,7 +208,7 @@ const SupportPage = () => {
                     startIcon={<Add />}
                     onClick={() => setShowNewTicket(true)}
                   >
-                    New Ticket
+                    New
                   </Button>
                 </Box>
               </Box>
@@ -214,7 +216,12 @@ const SupportPage = () => {
               <Tabs
                 value={activeTab}
                 onChange={(e, v) => setActiveTab(v)}
-                sx={{ mb: 2 }}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{ 
+                  mb: 2,
+                  '& .MuiTab-root': { minWidth: 'auto', px: 2 }
+                }}
               >
                 <Tab label="Active" />
                 <Tab label="Closed" />
@@ -223,14 +230,14 @@ const SupportPage = () => {
 
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <CircularProgress />
+                  <CircularProgress size={30} />
                 </Box>
               ) : filteredTickets.length === 0 ? (
-                <Alert severity="info">
+                <Alert severity="info" sx={{ py: 0 }}>
                   No {activeTab === 0 ? 'active' : 'closed'} tickets
                 </Alert>
               ) : (
-                <List sx={{ maxHeight: 500, overflow: 'auto' }}>
+                <List sx={{ maxHeight: { xs: '60vh', md: 500 }, overflow: 'auto' }}>
                   {filteredTickets.map((ticket) => (
                     <React.Fragment key={ticket._id}>
                       <ListItem
@@ -240,43 +247,47 @@ const SupportPage = () => {
                         sx={{
                           borderRadius: 2,
                           mb: 1,
+                          p: 1.5,
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           '&.Mui-selected': {
                             bgcolor: 'rgba(0, 211, 149, 0.1)',
+                            borderColor: '#00D395',
                           }
                         }}
                       >
-                        <ListItemAvatar>
-                          <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }}>
+                        <ListItemAvatar sx={{ minWidth: 48 }}>
+                          <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', width: 32, height: 32 }}>
                             {getStatusIcon(ticket.status)}
                           </Avatar>
                         </ListItemAvatar>
                         <ListItemText
+                          primaryTypographyProps={{ component: 'div' }}
+                          secondaryTypographyProps={{ component: 'div' }}
                           primary={
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold', noWrap: true, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {ticket.subject}
                               </Typography>
                               <Chip
                                 label={ticket.priority}
                                 size="small"
+                                sx={{ height: 18, fontSize: '0.65rem' }}
                                 color={getPriorityColor(ticket.priority)}
                               />
                             </Box>
                           }
                           secondary={
-                            <>
+                            <Box sx={{ mt: 0.5 }}>
                               <Typography variant="caption" display="block">
                                 {ticket.ticketId} • {ticket.category}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 {formatDate(ticket.updatedAt)}
                               </Typography>
-                            </>
+                            </Box>
                           }
                         />
                       </ListItem>
-                      <Divider variant="inset" component="li" />
                     </React.Fragment>
                   ))}
                 </List>
@@ -284,50 +295,55 @@ const SupportPage = () => {
             </CardContent>
           </Card>
 
-          {/* FAQ Section */}
-          <Card sx={{ mt: 3 }}>
+          {/* FAQ Section - Hidden on mobile if ticket selected */}
+          <Card sx={{ mt: 3, display: { xs: 'none', sm: 'block' } }}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 2 }}>
                 Common Questions
               </Typography>
-              <List>
+              <List dense>
                 {[
                   'How to deposit funds?',
                   'How to withdraw crypto?',
                   'How to verify my account?',
-                  'How to use trading features?',
-                  'What are the trading fees?'
                 ].map((question, index) => (
-                  <ListItem key={index} button>
-                    <ListItemText primary={question} />
+                  <ListItem key={index} button sx={{ borderRadius: 1 }}>
+                    <ListItemText primary={question} primaryTypographyProps={{ variant: 'body2' }} />
                   </ListItem>
                 ))}
               </List>
-              <Button fullWidth variant="outlined" sx={{ mt: 2 }}>
-                View All FAQs
-              </Button>
             </CardContent>
           </Card>
         </Grid>
 
         {/* Right Side - Ticket Details */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={8} sx={{ display: { xs: selectedTicket ? 'block' : 'none', md: 'block' } }}>
           {selectedTicket ? (
-            <Card sx={{ height: '100%' }}>
-              <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Card sx={{ height: '100%', minHeight: { xs: '70vh', md: 600 } }}>
+              <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: { xs: 2, sm: 3 } }}>
                 {/* Ticket Header */}
                 <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, display: { xs: 'flex', md: 'none' } }}>
+                    <Button 
+                      startIcon={<Refresh sx={{ transform: 'rotate(-90deg)' }} />} 
+                      onClick={() => setSelectedTicket(null)}
+                      size="small"
+                    >
+                      Back to list
+                    </Button>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                       {selectedTicket.subject}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       <Chip 
+                        size="small"
                         label={selectedTicket.status} 
                         color={getStatusColor(selectedTicket.status)} 
-                        icon={getStatusIcon(selectedTicket.status)}
                       />
                       <Chip 
+                        size="small"
                         label={selectedTicket.priority} 
                         color={getPriorityColor(selectedTicket.priority)}
                         variant="outlined"
@@ -335,26 +351,33 @@ const SupportPage = () => {
                     </Box>
                   </Box>
                   
-                  <Typography variant="body2" color="text.secondary">
-                    Ticket: {selectedTicket.ticketId} • Category: {selectedTicket.category} • 
-                    Created: {formatDate(selectedTicket.createdAt)}
+                  <Typography variant="caption" color="text.secondary">
+                    Ticket: {selectedTicket.ticketId} • {selectedTicket.category} • {formatDate(selectedTicket.createdAt)}
                   </Typography>
                   
                   {selectedTicket.assignedTo && (
-                    <Alert severity="info" sx={{ mt: 2 }}>
-                      Assigned to: {selectedTicket.assignedTo?.email || 'Support Agent'}
+                    <Alert severity="info" sx={{ mt: 2, py: 0 }}>
+                      <Typography variant="caption">
+                        Assigned to: {selectedTicket.assignedTo?.email || 'Support Agent'}
+                      </Typography>
                     </Alert>
                   )}
                 </Box>
 
                 {/* Messages */}
-                <Box sx={{ flex: 1, overflowY: 'auto', mb: 3, p: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2 }}>
+                <Box sx={{ 
+                  flex: 1, 
+                  overflowY: 'auto', 
+                  mb: 3, 
+                  p: { xs: 1.5, sm: 2 }, 
+                  bgcolor: 'rgba(0,0,0,0.15)', 
+                  borderRadius: 2,
+                  maxHeight: { xs: '45vh', md: '500px' }
+                }}>
                   {ticketMessages.length === 0 ? (
                     <Box sx={{ textAlign: 'center', py: 4 }}>
                       <Chat sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                      <Typography color="text.secondary">
-                        No messages yet
-                      </Typography>
+                      <Typography color="text.secondary">No messages yet</Typography>
                     </Box>
                   ) : (
                     ticketMessages.map((message) => (
@@ -364,30 +387,25 @@ const SupportPage = () => {
                           mb: 2,
                           display: 'flex',
                           justifyContent: message.userId?._id === (user?._id || user?.id) ? 'flex-end' : 'flex-start',
-                          mb: 1,
                         }}
                       >
                         <Box
                           sx={{
-                            maxWidth: '70%',
-                            p: 2,
-                            borderRadius: 3,
+                            maxWidth: { xs: '90%', sm: '75%' },
+                            p: 1.5,
+                            borderRadius: 2,
                             bgcolor: message.userId?._id === (user?._id || user?.id)
                               ? 'primary.main'
-                              : 'background.paper',
+                              : 'rgba(255, 255, 255, 0.05)',
                             color: message.userId?._id === (user?._id || user?.id) ? 'white' : 'text.primary',
-                            border: message.userId?._id === (user?._id || user?.id)
-                              ? 'none'
-                              : '1px solid rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.05)',
                           }}
                         >
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
-                              {message.userId?._id === (user?._id || user?.id) ? 'You' : 'Support Team'}
-                            </Typography>
-                          </Box>
-                          <Typography variant="body2">{message.message}</Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5, opacity: 0.8 }}>
+                            {message.userId?._id === (user?._id || user?.id) ? 'You' : 'Support Team'}
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>{message.message}</Typography>
+                          <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.5, textAlign: 'right' }}>
                             {formatDate(message.createdAt)}
                           </Typography>
                         </Box>
@@ -400,32 +418,36 @@ const SupportPage = () => {
                 {selectedTicket.status !== 'closed' && selectedTicket.status !== 'resolved' && (
                   <Box>
                     <TextField
+                      id="support-reply"
+                      name="reply"
+                      autoComplete="off"
                       fullWidth
                       multiline
-                      rows={3}
+                      rows={2}
                       placeholder="Type your reply..."
                       value={replyMessage}
                       onChange={(e) => setReplyMessage(e.target.value)}
                       sx={{ mb: 2 }}
                     />
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
                       <Button
                         variant="outlined"
+                        size="small"
                         onClick={() => {
-                          if (confirm('Are you sure you want to close this ticket?')) {
-                            // Handle close ticket
+                          if (window.confirm('Are you sure you want to close this ticket?')) {
                             toast.success('Ticket closed');
                           }
                         }}
                       >
-                        Close Ticket
+                        Close
                       </Button>
                       <Button
                         variant="contained"
                         onClick={handleSendReply}
                         disabled={!replyMessage.trim()}
+                        size="small"
                       >
-                        Send Reply
+                        Send
                       </Button>
                     </Box>
                   </Box>
@@ -433,23 +455,12 @@ const SupportPage = () => {
               </CardContent>
             </Card>
           ) : (
-            <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Card sx={{ height: '100%', minHeight: 400, display: { xs: 'none', md: 'flex' }, alignItems: 'center', justifyContent: 'center' }}>
               <CardContent sx={{ textAlign: 'center', py: 8 }}>
-                <SupportAgent sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <SupportAgent sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} opacity={0.3} />
                 <Typography variant="h6" color="text.secondary">
                   Select a ticket to view details
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Choose a ticket from the list or create a new one
-                </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={() => setShowNewTicket(true)}
-                  sx={{ mt: 3 }}
-                >
-                  Create New Ticket
-                </Button>
               </CardContent>
             </Card>
           )}
@@ -457,84 +468,92 @@ const SupportPage = () => {
       </Grid>
 
       {/* New Ticket Dialog */}
-      {showNewTicket && (
-        <Card sx={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 9999, width: 500 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6">Create New Ticket</Typography>
-              <IconButton onClick={() => setShowNewTicket(false)}>
-                ×
-              </IconButton>
-            </Box>
+      <Dialog 
+        open={showNewTicket} 
+        onClose={() => setShowNewTicket(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <Box sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>New Ticket</Typography>
+            <IconButton onClick={() => setShowNewTicket(false)} size="small">
+              <Close />
+            </IconButton>
+          </Box>
+
+          <TextField
+            id="support-new-subject"
+            name="subject"
+            fullWidth
+            label="Subject"
+            value={newTicket.subject}
+            onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
+            sx={{ mb: 2 }}
+            size="small"
+          />
+
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <TextField
+              id="support-new-category"
+              name="category"
+              select
+              fullWidth
+              label="Category"
+              value={newTicket.category}
+              onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value })}
+              SelectProps={{ native: true }}
+              size="small"
+            >
+              <option value="general">General</option>
+              <option value="deposit">Deposit</option>
+              <option value="withdrawal">Withdrawal</option>
+              <option value="trading">Trading</option>
+              <option value="account">Account</option>
+              <option value="other">Other</option>
+            </TextField>
 
             <TextField
+              id="support-new-priority"
+              name="priority"
+              select
               fullWidth
-              label="Subject"
-              value={newTicket.subject}
-              onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
-              sx={{ mb: 2 }}
-            />
+              label="Priority"
+              value={newTicket.priority}
+              onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
+              SelectProps={{ native: true }}
+              size="small"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </TextField>
+          </Box>
 
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <TextField
-                select
-                fullWidth
-                label="Category"
-                value={newTicket.category}
-                onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value })}
-                SelectProps={{ native: true }}
-              >
-                <option value="general">General</option>
-                <option value="deposit">Deposit Issue</option>
-                <option value="withdrawal">Withdrawal Issue</option>
-                <option value="trading">Trading Problem</option>
-                <option value="account">Account Issue</option>
-                <option value="security">Security Concern</option>
-                <option value="kyc">KYC Verification</option>
-                <option value="technical">Technical Problem</option>
-              </TextField>
+          <TextField
+            id="support-new-message"
+            name="message"
+            fullWidth
+            label="Message"
+            multiline
+            rows={4}
+            value={newTicket.message}
+            onChange={(e) => setNewTicket({ ...newTicket, message: e.target.value })}
+            placeholder="Describe your issue..."
+            sx={{ mb: 3 }}
+          />
 
-              <TextField
-                select
-                fullWidth
-                label="Priority"
-                value={newTicket.priority}
-                onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
-                SelectProps={{ native: true }}
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </TextField>
-            </Box>
-
-            <TextField
-              fullWidth
-              label="Message"
-              multiline
-              rows={6}
-              value={newTicket.message}
-              onChange={(e) => setNewTicket({ ...newTicket, message: e.target.value })}
-              placeholder="Describe your issue in detail..."
-              sx={{ mb: 3 }}
-            />
-
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Button onClick={() => setShowNewTicket(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleCreateTicket}
-                disabled={loading || !newTicket.subject || !newTicket.message}
-              >
-                {loading ? <CircularProgress size={24} /> : 'Create Ticket'}
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
-      )}
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleCreateTicket}
+            disabled={loading || !newTicket.subject || !newTicket.message}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Create Ticket'}
+          </Button>
+        </Box>
+      </Dialog>
     </Container>
   );
 };

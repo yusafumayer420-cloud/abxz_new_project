@@ -18,7 +18,8 @@ import {
   Email, 
   Lock,
   Phone,
-  AccountCircle 
+  AccountCircle,
+  Group
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -34,7 +35,8 @@ const AuthPage = ({ isRegister = false }) => {
     password: '',
     fullName: '',
     confirmPassword: '',
-    phone: ''
+    phone: '',
+    referralCode: ''
   });
 
   const handleChange = (e) => {
@@ -53,11 +55,17 @@ const AuthPage = ({ isRegister = false }) => {
         return;
       }
       
-      const success = await register(formData.email, formData.password, formData.fullName);
-      if (success) navigate('/');
+      const result = await register(formData.email, formData.password, formData.fullName, formData.referralCode);
+      if (result.success) {
+        navigate('/verify-email', { state: { email: formData.email } });
+      }
     } else {
-      const success = await login(formData.email, formData.password);
-      if (success) navigate('/');
+      const result = await login(formData.email, formData.password);
+      if (result.success) {
+        navigate('/');
+      } else if (result.unverified) {
+        navigate('/verify-email', { state: { email: result.email } });
+      }
     }
   };
 
@@ -79,10 +87,12 @@ const AuthPage = ({ isRegister = false }) => {
         </Box>
 
         {/* Form */}
-        <Paper sx={{ p: 4, borderRadius: 3 }}>
+        <Paper sx={{ p: { xs: 2, sm: 4 }, borderRadius: 3 }}>
           <form onSubmit={handleSubmit}>
             {isRegister && (
               <TextField
+                id="reg-full-name"
+                autoComplete="name"
                 fullWidth
                 label="Full Name"
                 name="fullName"
@@ -101,6 +111,8 @@ const AuthPage = ({ isRegister = false }) => {
             )}
 
             <TextField
+              id="auth-email"
+              autoComplete="email"
               fullWidth
               label="Email Address"
               name="email"
@@ -120,6 +132,8 @@ const AuthPage = ({ isRegister = false }) => {
 
             {isRegister && (
               <TextField
+                id="reg-phone"
+                autoComplete="tel"
                 fullWidth
                 label="Phone Number (Optional)"
                 name="phone"
@@ -137,6 +151,8 @@ const AuthPage = ({ isRegister = false }) => {
             )}
 
             <TextField
+              id="auth-password"
+              autoComplete={isRegister ? "new-password" : "current-password"}
               fullWidth
               label="Password"
               name="password"
@@ -179,23 +195,45 @@ const AuthPage = ({ isRegister = false }) => {
             )}
 
             {isRegister && (
-              <TextField
-                fullWidth
-                label="Confirm Password"
-                name="confirmPassword"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                sx={{ mb: 3 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock />
-                    </InputAdornment>
-                  ),
-                }}
-              />
+              <>
+                <TextField
+                  id="reg-confirm-password"
+                  autoComplete="new-password"
+                  fullWidth
+                  label="Confirm Password"
+                  name="confirmPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  sx={{ mb: 3 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Lock />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                
+                <TextField
+                  id="reg-referral-code"
+                  fullWidth
+                  label="Referral Code (Optional)"
+                  name="referralCode"
+                  placeholder="e.g. CROK-123456"
+                  value={formData.referralCode}
+                  onChange={handleChange}
+                  sx={{ mb: 3 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Group />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </>
             )}
 
             

@@ -27,6 +27,11 @@ import {
   DialogContent,
   DialogActions,
   Avatar,
+  Divider,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Select,
 } from '@mui/material';
 import {
   AccountBalanceWallet,
@@ -39,6 +44,7 @@ import {
   CurrencyExchange,
   ArrowBack,
   Security,
+  Close,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
@@ -77,6 +83,7 @@ const FundsPage = () => {
   const [depositVoucher, setDepositVoucher] = useState(null);
   const [voucherPreview, setVoucherPreview] = useState(null);
   const [showKycDialog, setShowKycDialog] = useState(false);
+  const [selectedTx, setSelectedTx] = useState(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -93,7 +100,7 @@ const FundsPage = () => {
       if (tx.userId === user?._id || tx.userId?._id === user?._id) {
         fetchTransactions();
         // Profile refresh is now handled globally by AuthContext
-        toast.info(`Transaction ${tx.status}: ${tx.amount} ${tx.currency}`);
+        toast(`Transaction ${tx.status}: ${tx.amount} ${tx.currency}`, { icon: 'ℹ️' });
       }
     });
 
@@ -141,9 +148,7 @@ const FundsPage = () => {
       formData.append('chain', depositChain);
       formData.append('voucher', depositVoucher);
 
-      const response = await axios.post('/api/wallet/deposit', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const response = await axios.post('/api/wallet/deposit', formData);
 
       toast.success(response.data.message);
       // Reset form and go back to history or step 1
@@ -353,6 +358,64 @@ const FundsPage = () => {
                   </Grid>
                 ))}
               </Grid>
+
+              {/* Exchange Logos Section */}
+              <Box sx={{ mt: 4, mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, textAlign: 'center', color: 'text.secondary', fontWeight: 'bold' }}>
+                  Buy Crypto via Popular Exchanges
+                </Typography>
+                <Grid container spacing={2}>
+                  {[
+                    { name: 'Kraken', logo: 'https://www.google.com/s2/favicons?domain=kraken.com&sz=128', url: 'https://www.kraken.com' },
+                    { name: 'Coinbase', logo: 'https://www.google.com/s2/favicons?domain=coinbase.com&sz=128', url: 'https://www.coinbase.com' },
+                    { name: 'Cash App', logo: 'https://www.google.com/s2/favicons?domain=cash.app&sz=128', url: 'https://cash.app' },
+                    { name: 'Shakepay', logo: 'https://www.google.com/s2/favicons?domain=shakepay.com&sz=128', url: 'https://shakepay.com' },
+                    { name: 'Crypto.com', logo: 'https://www.google.com/s2/favicons?domain=crypto.com&sz=128', url: 'https://crypto.com' },
+                    { name: 'Robinhood', logo: 'https://www.google.com/s2/favicons?domain=robinhood.com&sz=128', url: 'https://robinhood.com' },
+                    { name: 'Binance', logo: 'https://www.google.com/s2/favicons?domain=binance.com&sz=128', url: 'https://www.binance.com' },
+                    { name: 'Bitget', logo: 'https://www.google.com/s2/favicons?domain=bitget.com&sz=128', url: 'https://www.bitget.com' },
+                    { name: 'MEXC', logo: 'https://www.google.com/s2/favicons?domain=mexc.com&sz=128', url: 'https://www.mexc.com' },
+                    { name: 'OKX', logo: 'https://www.google.com/s2/favicons?domain=okx.com&sz=128', url: 'https://www.okx.com' },
+                  ].map((ex) => (
+                    <Grid item xs={4} sm={3} key={ex.name}>
+                      <Box
+                        onClick={() => window.open(ex.url, '_blank')}
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          transition: '0.2s',
+                          '&:hover': {
+                            bgcolor: 'rgba(255,255,255,0.08)',
+                            transform: 'translateY(-2px)',
+                            borderColor: 'rgba(255,255,255,0.1)'
+                          }
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={ex.logo}
+                          alt={ex.name}
+                          sx={{
+                            width: '100%',
+                            height: 40,
+                            objectFit: 'contain',
+                            mb: 1
+                          }}
+                        />
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: '500' }}>
+                          {ex.name}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
             </Box>
           ) : (
             <Card>
@@ -470,13 +533,17 @@ const FundsPage = () => {
                 }}
                 sx={{ mb: 2 }}
                 SelectProps={{
-                  native: true,
+                  MenuProps: {
+                    PaperProps: {
+                      sx: { maxHeight: 300 }
+                    }
+                  }
                 }}
               >
                 {currencies.map((currency) => (
-                  <option key={currency.symbol} value={currency.symbol}>
+                  <MenuItem key={currency.symbol} value={currency.symbol}>
                     {currency.name} ({currency.symbol}) - Balance: {currency.balance.toFixed(4)}
-                  </option>
+                  </MenuItem>
                 ))}
               </TextField>
 
@@ -489,13 +556,17 @@ const FundsPage = () => {
                   onChange={(e) => setWithdrawNetwork(e.target.value)}
                   sx={{ mb: 2 }}
                   SelectProps={{
-                    native: true,
+                    MenuProps: {
+                      PaperProps: {
+                        sx: { maxHeight: 300 }
+                      }
+                    }
                   }}
                 >
                   {networks[withdrawCurrency].map((network) => (
-                    <option key={network} value={network}>
+                    <MenuItem key={network} value={network}>
                       {network} Network
-                    </option>
+                    </MenuItem>
                   ))}
                 </TextField>
               )}
@@ -535,14 +606,7 @@ const FundsPage = () => {
                 placeholder={`Enter ${withdrawCurrency} address`}
               />
               
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                <Typography variant="body2">
-                  Withdrawal fee: 10 USDT
-                </Typography>
-                <Typography variant="caption">
-                  Please double-check the address before confirming.
-                </Typography>
-              </Alert>
+           
               
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
@@ -609,59 +673,167 @@ const FundsPage = () => {
                   </Typography>
                 </Box>
               ) : (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Type</TableCell>
-                        <TableCell>Amount</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Date</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {transactions.map((tx) => (
-                        <TableRow key={tx._id} hover>
-                          <TableCell>
-                            <Chip
-                              label={tx.type}
-                              color={getTypeColor(tx.type)}
-                              size="small"
-                              icon={tx.type === 'deposit' ? <ArrowDownward /> : <ArrowUpward />}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {tx.amount} {tx.currency}
-                            </Typography>
-                            {tx.pair && (
-                              <Typography variant="caption" color="text.secondary">
-                                {tx.pair}
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={tx.status}
-                              color={getStatusColor(tx.status)}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="caption">
-                              {formatDate(tx.createdAt)}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                <Box sx={{ mt: 1 }}>
+                  {/* Custom Header */}
+                  <Box sx={{ display: 'flex', px: 1, py: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <Typography variant="caption" sx={{ width: '25%', fontWeight: 'bold', color: 'text.secondary' }}>Type</Typography>
+                    <Typography variant="caption" sx={{ width: '30%', fontWeight: 'bold', color: 'text.secondary', textAlign: 'center' }}>Amount</Typography>
+                    <Typography variant="caption" sx={{ width: '25%', fontWeight: 'bold', color: 'text.secondary', textAlign: 'center' }}>Status</Typography>
+                    <Typography variant="caption" sx={{ width: '20%', fontWeight: 'bold', color: 'text.secondary', textAlign: 'right' }}>Date</Typography>
+                  </Box>
+                  
+                  {transactions.filter(tx => tx.type !== 'trade').map((tx) => (
+                    <Box 
+                      key={tx._id} 
+                      onClick={() => setSelectedTx(tx)}
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        px: 0, 
+                        py: 2, 
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' }
+                      }}
+                    >
+                      <Box sx={{ width: '25%' }}>
+                        <Chip
+                          label={tx.type}
+                          color={getTypeColor(tx.type)}
+                          size="small"
+                          sx={{ 
+                            fontSize: '0.65rem', 
+                            height: '20px',
+                            '& .MuiChip-label': { px: 1 }
+                          }}
+                        />
+                      </Box>
+                      <Box sx={{ width: '30%', textAlign: 'center' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
+                          {tx.amount}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
+                          {tx.currency}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ width: '25%', textAlign: 'center' }}>
+                        <Chip
+                          label={tx.status}
+                          color={getStatusColor(tx.status)}
+                          size="small"
+                          sx={{ 
+                            fontSize: '0.65rem', 
+                            height: '20px',
+                            '& .MuiChip-label': { px: 1 }
+                          }}
+                        />
+                      </Box>
+                      <Box sx={{ width: '20%', textAlign: 'right' }}>
+                        <Typography variant="caption" sx={{ display: 'block', fontSize: '0.7rem', color: 'text.secondary' }}>
+                          {new Date(tx.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', color: 'text.secondary' }}>
+                          {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
               )}
             </CardContent>
           </Card>
         </motion.div>
       )}
+
+      {/* Transaction Details Dialog */}
+      <Dialog 
+        open={Boolean(selectedTx)} 
+        onClose={() => setSelectedTx(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          style: {
+            backgroundColor: '#1E293B',
+            color: 'white',
+            borderRadius: 16
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, pb: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <Typography variant="h6" component="span" sx={{ fontWeight: 'bold' }}>Transaction Details</Typography>
+          <IconButton onClick={() => setSelectedTx(null)} sx={{ color: 'white', mr: -1 }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, pt: 4 }}>
+          {selectedTx && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ textAlign: 'center', mb: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: selectedTx.type === 'deposit' ? '#00D395' : '#FF6B6B' }}>
+                  {selectedTx.type === 'deposit' ? '+' : '-'}{selectedTx.amount} {selectedTx.currency}
+                </Typography>
+                <Chip 
+                  label={selectedTx.status.toUpperCase()} 
+                  size="small" 
+                  sx={{ 
+                    mt: 1.5, 
+                    fontWeight: 'bold',
+                    px: 1,
+                    bgcolor: selectedTx.status === 'completed' ? 'rgba(0, 211, 149, 0.1)' : selectedTx.status === 'pending' ? 'rgba(255, 183, 3, 0.1)' : 'rgba(255, 107, 107, 0.1)',
+                    color: selectedTx.status === 'completed' ? '#00D395' : selectedTx.status === 'pending' ? '#FFB703' : '#FF6B6B'
+                  }} 
+                />
+              </Box>
+
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: 1 }} />
+
+              <Grid container spacing={3} alignItems="center">
+                <Grid item xs={5}><Typography color="text.secondary" variant="body2">Type</Typography></Grid>
+                <Grid item xs={7}><Typography variant="body2" sx={{ textAlign: 'right', textTransform: 'capitalize' }}>{selectedTx.type}</Typography></Grid>
+
+                <Grid item xs={5}><Typography color="text.secondary" variant="body2">Network/Chain</Typography></Grid>
+                <Grid item xs={7}><Typography variant="body2" sx={{ textAlign: 'right' }}>{selectedTx.chain || selectedTx.network || selectedTx.metadata?.network || 'ERC20'}</Typography></Grid>
+
+                <Grid item xs={5}><Typography color="text.secondary" variant="body2">Time</Typography></Grid>
+                <Grid item xs={7}><Typography variant="body2" sx={{ textAlign: 'right' }}>{formatDate(selectedTx.createdAt || selectedTx.date)}</Typography></Grid>
+
+                {(selectedTx.toAddress || selectedTx.fromAddress) && 
+                 !(selectedTx.toAddress || selectedTx.fromAddress).toLowerCase().includes('admin manual') && (
+                  <>
+                    <Grid item xs={4}><Typography color="text.secondary" variant="body2">Address</Typography></Grid>
+                    <Grid item xs={8}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', gap: 0.5 }}>
+                        <Typography variant="body2" sx={{ wordBreak: 'break-all', textAlign: 'right', mt: 0.5 }}>
+                          {selectedTx.toAddress || selectedTx.fromAddress}
+                        </Typography>
+                        <IconButton size="small" onClick={() => copyToClipboard(selectedTx.toAddress || selectedTx.fromAddress)} sx={{ color: 'text.secondary', p: 0.5 }}>
+                          <ContentCopy fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Grid>
+                  </>
+                )}
+
+                {selectedTx.transactionHash && (
+                  <>
+                    <Grid item xs={4}><Typography color="text.secondary" variant="body2">TxID</Typography></Grid>
+                    <Grid item xs={8}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', gap: 0.5 }}>
+                        <Typography variant="body2" sx={{ wordBreak: 'break-all', textAlign: 'right', mt: 0.5 }}>
+                          {selectedTx.transactionHash}
+                        </Typography>
+                        <IconButton size="small" onClick={() => copyToClipboard(selectedTx.transactionHash)} sx={{ color: 'text.secondary', p: 0.5 }}>
+                          <ContentCopy fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Grid>
+                  </>
+                )}
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Deposit Address Dialog */}
       <Dialog 
@@ -731,7 +903,7 @@ const FundsPage = () => {
           >
             <Security sx={{ color: '#FF6B6B', fontSize: 30 }} />
           </Avatar>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'white' }}>
+          <Typography variant="h6" component="span" sx={{ fontWeight: 'bold', color: 'white' }}>
             KYC Verification Required
           </Typography>
         </DialogTitle>

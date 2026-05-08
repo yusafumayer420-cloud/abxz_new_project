@@ -1,6 +1,7 @@
 const ChatMessage = require('../models/Chat');
 const SupportTicket = require('../models/SupportTicket');
 const User = require('../models/User');
+const { createAdminNotification } = require('../utils/notificationHelper');
 
 module.exports = (io) => {
   const chatNamespace = io.of('/chat');
@@ -63,16 +64,18 @@ module.exports = (io) => {
     });
     
     // Send chat history
-    const messages = await ChatMessage.find({
+    let messages = await ChatMessage.find({
       $or: [
         { userId: socket.user._id },
         { room: 'general' },
         { type: 'admin', room: userRoom }
       ]
     })
-    .sort({ createdAt: 1 })
+    .sort({ createdAt: -1 })
     .limit(50)
     .populate('userId', 'email fullName role');
+    
+    messages = messages.reverse();
     
     socket.emit('chat_history', messages);
     
@@ -198,6 +201,14 @@ module.exports = (io) => {
             message: message.substring(0, 50),
             ticketId: ticket?._id,
             timestamp: new Date()
+          });
+
+          // Also create a persistent notification in the database
+          await createAdminNotification(io, {
+            type: 'support',
+            title: 'New Support Message',
+            message: `${socket.user.fullName || socket.user.email}: ${message.substring(0, 50)}`,
+            relatedId: ticket?._id
           });
         } else {
            chatNamespace.to(adminRoom).emit('receive_message', {
@@ -333,6 +344,14 @@ module.exports = (io) => {
           userId: socket.user._id,
           timestamp: new Date()
         });
+
+        // Also create a persistent notification in the database
+        await createAdminNotification(io, {
+          type: 'support',
+          title: 'New Support Ticket',
+          message: `${socket.user.fullName || socket.user.email}: ${subject}`,
+          relatedId: ticket._id
+        });
         
       } catch (error) {
         console.error('Create ticket error:', error);
@@ -415,6 +434,44 @@ module.exports = (io) => {
           }
         } catch (error) {
           console.error('Resolve ticket error:', error);
+        }
+      });
+
+      socket.on('edit_message', async (data) => {
+        try {
+          const { messageId, newMessage } = data;
+          const message = await ChatMessage.findById(messageId);
+          if (message && message.type === 'admin' && message.userId.toString() === socket.user._id.toString()) {
+            message.message = newMessage;
+            message.isEdited = true;
+            await message.save();
+
+            chatNamespace.to('admin_room').emit('message_edited', { messageId, newMessage, isEdited: true });
+            if (message.room !== 'admin_room') {
+              chatNamespace.to(message.room).emit('message_edited', { messageId, newMessage, isEdited: true });
+            }
+          }
+        } catch (error) {
+          console.error('Edit message error:', error);
+        }
+      });
+
+      socket.on('delete_message', async (data) => {
+        try {
+          const { messageId } = data;
+          const message = await ChatMessage.findById(messageId);
+          if (message && message.type === 'admin' && message.userId.toString() === socket.user._id.toString()) {
+            message.isDeleted = true;
+            message.message = "This message was deleted";
+            await message.save();
+
+            chatNamespace.to('admin_room').emit('message_deleted', { messageId });
+            if (message.room !== 'admin_room') {
+              chatNamespace.to(message.room).emit('message_deleted', { messageId });
+            }
+          }
+        } catch (error) {
+          console.error('Delete message error:', error);
         }
       });
     }

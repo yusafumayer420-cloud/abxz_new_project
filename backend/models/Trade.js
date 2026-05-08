@@ -77,4 +77,9 @@ const TradeSchema = new mongoose.Schema({
   }
 });
 
+TradeSchema.index({ userId: 1 });
+TradeSchema.index({ status: 1 });
+TradeSchema.index({ tradeMode: 1 });
+TradeSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Trade', TradeSchema);

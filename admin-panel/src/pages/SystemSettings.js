@@ -66,6 +66,7 @@ import {
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
+import api from "../api";
 
 const SystemSettings = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -121,6 +122,11 @@ const SystemSettings = () => {
     backupFrequency: "daily",
     backupRetention: 30,
     lastBackup: "2024-01-15 02:00:00",
+
+    // Market Stats (Dynamic)
+    marketCap: '$2.4T',
+    volume24h: '$64B',
+    btcDominance: '51.2%'
   });
 
   const [loading, setLoading] = useState(false);
@@ -153,19 +159,39 @@ const SystemSettings = () => {
 
   const fetchSettings = async () => {
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await api.get('/api/admin/settings');
+      if (response.data) {
+        setSettings(prev => ({
+          ...prev,
+          marketCap: response.data.marketCap || '$2.4T',
+          volume24h: response.data.volume24h || '$64B',
+          btcDominance: response.data.btcDominance || '51.2%'
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch settings:', error);
+      toast.error("Failed to fetch market settings");
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const handleSaveSettings = async () => {
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      toast.success("Settings saved successfully");
+    try {
+      await api.put('/api/admin/settings', {
+        marketCap: settings.marketCap,
+        volume24h: settings.volume24h,
+        btcDominance: settings.btcDominance
+      });
+      toast.success("Market settings saved successfully");
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast.error("Failed to save market settings");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleResetSettings = () => {
@@ -436,6 +462,67 @@ const SystemSettings = () => {
                       ))}
                     </Select>
                   </FormControl>
+                </Grid>
+              </Grid>
+            </SettingSection>
+
+            <SettingSection title="Market Display Settings" icon={<Timeline />}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={4}>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                      Total Market Cap
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={settings.marketCap}
+                      onChange={(e) => handleSettingChange("marketCap", e.target.value)}
+                      placeholder="$2.4T"
+                    />
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                      24h Volume
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={settings.volume24h}
+                      onChange={(e) => handleSettingChange("volume24h", e.target.value)}
+                      placeholder="$64B"
+                    />
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                      BTC Dominance
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={settings.btcDominance}
+                      onChange={(e) => handleSettingChange("btcDominance", e.target.value)}
+                      placeholder="51.2%"
+                    />
+                  </Box>
+                </Grid>
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<Save />}
+                      onClick={handleSaveSettings}
+                      disabled={loading}
+                      sx={{ mt: 1 }}
+                    >
+                      Save Market Stats
+                    </Button>
+                  </Box>
                 </Grid>
               </Grid>
             </SettingSection>

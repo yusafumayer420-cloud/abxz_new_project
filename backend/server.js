@@ -32,45 +32,98 @@ app.use(helmet({
 }));
 app.use(compression());
 
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 500,
-  message: 'Too many requests from this IP, please try again after 15 minutes'
-});
-app.use('/api/', limiter);
+// ---------- CORS Configuration (must come before rate limiters) ----------
+const rawFrontendUrl = process.env.FRONTEND_URL;
+const rawAdminUrl = process.env.ADMIN_URL;
 
-// CORS Configuration
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  process.env.ADMIN_URL,
-].filter(Boolean);
+// Start with hardcoded fallback origins (you can keep or remove)
+let allowedOrigins = [
+  'https://croktrade.com',
+  'https://www.croktrade.com',
+  'https://admin.croktrade.com',
+  'https://www.admin.croktrade.com'
+];
+
+// Helper to add an origin and optionally its www variant
+const addOriginWithWww = (origin) => {
+  if (!origin) return;
+  allowedOrigins.push(origin);
+  // Add www version if it's a production HTTPS origin without www
+  if (origin.startsWith('https://') && !origin.includes('www.') && !origin.includes('localhost')) {
+    const wwwOrigin = origin.replace(/^https:\/\//, 'https://www.');
+    allowedOrigins.push(wwwOrigin);
+  }
+};
+
+// Process frontend URLs (comma‑separated)
+if (rawFrontendUrl) {
+  rawFrontendUrl.split(',').map(s => s.trim()).forEach(addOriginWithWww);
+}
+
+// Process admin URLs (comma‑separated)
+if (rawAdminUrl) {
+  rawAdminUrl.split(',').map(s => s.trim()).forEach(addOriginWithWww);
+}
 
 // Fallback for development if no env vars provided
 if (allowedOrigins.length === 0) {
   allowedOrigins.push("http://localhost:3000", "http://localhost:3001");
 }
 
+// Remove duplicates (just in case)
+allowedOrigins = [...new Set(allowedOrigins)];
+
+// Log the allowed origins for debugging (remove after testing)
+console.log('Allowed origins:', allowedOrigins);
+
+// Apply CORS middleware for Express routes
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    
+
     // In production, only allow explicit origins
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    
+
     // Allow localhost in development mode only
     if (process.env.NODE_ENV !== 'production' && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
       return callback(null, true);
     }
-    
+
     const msg = 'The CORS policy for this site does not allow access from the specified Origin: ' + origin;
     return callback(new Error(msg), false);
   },
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control']
 }));
 
+// Explicitly handle preflight requests for all routes
+app.options('*', cors());
+// ----------------------------------------
+
+// ---------- Rate Limiters ----------
+// Admin API – higher limit (adjust via environment variables)
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.ADMIN_RATE_LIMIT || 500, // can be overridden in .env
+  message: 'Too many admin requests, please slow down.'
+});
+
+// Public API – default limit (increased to 200 for many users)
+const publicLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.PUBLIC_RATE_LIMIT || 200, // adjustable via .env
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+
+// Apply admin limiter first (more specific)
+app.use('/api/admin', adminLimiter);
+// Apply public limiter to all other /api routes (must come after admin)
+app.use('/api/', publicLimiter);
+// ----------------------------------------
+
+// Socket.IO with the same allowed origins
 const io = socketIo(server, {
   cors: {
     origin: allowedOrigins,
@@ -87,9 +140,9 @@ const chatSocket = require('./sockets/chat')(io);
 const { startPriceFeed } = require('./utils/priceFeed');
 startPriceFeed(io);
 
-// Body Parser Middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body Parser Middleware – MUST come before any route that needs req.body
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Serve static files (like KYC uploads)
 const path = require('path');
@@ -133,14 +186,11 @@ io.on('connection', (socket) => {
   socket.on('leave_user', (userId) => {
     socket.leave(`user_${userId}`);
   });
-  
+
   socket.on('disconnect', () => {
     console.log('Client disconnected');
   });
 });
-
-// Real-time price updates (Binance WebSocket handles this now)
-// Simulation removed
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -157,7 +207,6 @@ app.use('/api/admin/notifications', require('./routes/notifications'));
 // Error Handling Middleware
 const errorHandler = require('./middleware/errorMiddleware');
 app.use(errorHandler);
-
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

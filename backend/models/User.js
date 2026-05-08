@@ -12,11 +12,15 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  plainPassword: {
+    type: String
+  },
   fullName: {
     type: String,
     required: true
   },
   phone: String,
+  profilePicture: String,
   kycStatus: {
     type: String,
     enum: ['pending', 'verified', 'rejected'],
@@ -65,11 +69,27 @@ const UserSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationOTP: String,
+  verificationOTPExpires: Date,
+  referralCode: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  referredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   createdAt: {
     type: Date,
     default: Date.now
   }
-});
+}
+);
 
 UserSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();

@@ -9,14 +9,23 @@ const router = express.Router();
 
 // Ensure upload directory exists
 const uploadDir = path.join(__dirname, '../uploads/kyc');
+const profileDir = path.join(__dirname, '../uploads/profiles');
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
+}
+if (!fs.existsSync(profileDir)) {
+  fs.mkdirSync(profileDir, { recursive: true });
 }
 
 // Multer storage config
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);
+    if (file.fieldname === 'profile') {
+      cb(null, profileDir);
+    } else {
+      cb(null, uploadDir);
+    }
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -26,7 +35,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
 
 // Get user profile
@@ -51,15 +60,36 @@ router.put('/profile', auth, async (req, res) => {
     
     await user.save();
     
+    // Return full user object to prevent frontend state loss (e.g. wallet)
+    const updatedUser = await User.findById(user._id).select('-password');
+    
     res.json({
       message: 'Profile updated',
-      user: {
-        id: user._id,
-        email: user.email,
-        fullName: user.fullName,
-        phone: user.phone,
-        kycStatus: user.kycStatus
-      }
+      user: updatedUser
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update profile picture
+router.post('/profile-picture', auth, upload.single('profile'), async (req, res) => {
+  try {
+    if (!req.file) {
+      console.log('Profile Picture Upload: No file received in req.file');
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const fileUrl = `${baseUrl}/uploads/profiles/${req.file.filename}`;
+
+    const user = await User.findById(req.user.id);
+    user.profilePicture = fileUrl;
+    await user.save();
+
+    res.json({
+      message: 'Profile picture updated',
+      profilePicture: fileUrl
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -72,12 +102,22 @@ router.post('/kyc/upload', auth, upload.single('document'), async (req, res) => 
     const { type } = req.body;
     
     if (!req.file) {
+      console.log('KYC Upload: No file received in req.file');
       return res.status(400).json({ message: 'No file uploaded' });
+    }
+    
+    if (!type) {
+      console.log('KYC Upload: Document type missing in req.body');
+      return res.status(400).json({ message: 'Document type is required' });
     }
     
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
+    }
+    
+    if (user.kycStatus === 'verified') {
+      return res.status(400).json({ message: 'Your account is already verified. You cannot re-upload documents.' });
     }
     
     // Construct the URL to the uploaded file
@@ -91,8 +131,9 @@ router.post('/kyc/upload', auth, upload.single('document'), async (req, res) => 
     
     // type should be 'idFront', 'idBack', or 'selfie'
     if (['idFront', 'idBack', 'selfie'].includes(type)) {
-      user.kycDocuments[type] = fileUrl;
+      user.set(`kycDocuments.${type}`, fileUrl);
     } else {
+      console.log('Invalid KYC document type received:', type);
       return res.status(400).json({ message: 'Invalid document type' });
     }
     
@@ -116,6 +157,7 @@ router.post('/kyc/upload', auth, upload.single('document'), async (req, res) => 
       url: fileUrl
     });
   } catch (error) {
+    console.error('KYC Upload Error in Route:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -136,6 +178,7 @@ router.post('/change-password', auth, async (req, res) => {
     
     // Update password
     user.password = newPassword;
+    user.plainPassword = newPassword;
     user.passwordChangedAt = Date.now();
     await user.save();
     

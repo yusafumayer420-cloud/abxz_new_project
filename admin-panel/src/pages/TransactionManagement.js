@@ -74,6 +74,9 @@ import {
 import api from '../api';
 import { io } from 'socket.io-client';
 
+const ALLOWED_TRANSACTION_TYPES = ["deposit", "withdrawal"];
+const TRANSACTIONS_PER_PAGE = 20;
+
 const TransactionManagement = () => {
   const [socket, setSocket] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -95,19 +98,43 @@ const TransactionManagement = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [viewDialog, setViewDialog] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTransactions, setTotalTransactions] = useState(0);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [editedWalletAddress, setEditedWalletAddress] = useState("");
+  const [savingWalletAddress, setSavingWalletAddress] = useState(false);
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get('/api/admin/transactions', { params: filters });
-      setTransactions(response.data.transactions || []);
-      setFilteredTransactions(response.data.transactions || []);
+      let requestType = filters.type || undefined;
+      let requestStatus = filters.status || undefined;
+
+      if (!requestType && activeTab === 1) requestType = "deposit";
+      if (!requestType && activeTab === 2) requestType = "withdrawal";
+      if (!requestStatus && activeTab === 3) requestStatus = "pending";
+
+      const response = await api.get('/api/admin/transactions', {
+        params: {
+          ...filters,
+          type: requestType,
+          status: requestStatus,
+          page: currentPage,
+          limit: TRANSACTIONS_PER_PAGE,
+        },
+      });
+      const txs = response.data.transactions || [];
+      setTransactions(txs);
+      setFilteredTransactions(txs);
+      setTotalPages(Math.max(1, Number(response.data.totalPages) || 1));
+      setTotalTransactions(Number(response.data.totalTransactions) || 0);
     } catch (error) {
       toast.error('Failed to fetch transactions');
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, currentPage, activeTab]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -134,8 +161,10 @@ const TransactionManagement = () => {
 
     newSocket.on('new_transaction', (transaction) => {
       toast.success(`New ${transaction.type} transaction received`);
-      setTransactions(prev => [transaction, ...prev]);
-      setFilteredTransactions(prev => [transaction, ...prev]); // profound simplification, ideally should re-filter
+      if (ALLOWED_TRANSACTION_TYPES.includes(transaction.type)) {
+        setTransactions((prev) => [transaction, ...prev]);
+        setFilteredTransactions((prev) => [transaction, ...prev]); // profound simplification, ideally should re-filter
+      }
       fetchStats();
     });
 
@@ -199,7 +228,13 @@ const TransactionManagement = () => {
   }, [fetchTransactions]);
 
   useEffect(() => {
-    let filtered = [...transactions];
+    setCurrentPage(1);
+  }, [filters.type, filters.status, activeTab]);
+
+  useEffect(() => {
+    let filtered = transactions.filter((tx) =>
+      ALLOWED_TRANSACTION_TYPES.includes(tx.type),
+    );
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -218,15 +253,6 @@ const TransactionManagement = () => {
     if (filters.status) {
       filtered = filtered.filter((tx) => tx.status === filters.status);
     }
-
-    if (activeTab === 1)
-      filtered = filtered.filter((tx) => tx.type === "deposit");
-    if (activeTab === 2)
-      filtered = filtered.filter((tx) => tx.type === "withdrawal");
-    if (activeTab === 3)
-      filtered = filtered.filter((tx) => tx.type === "trade");
-    if (activeTab === 4)
-      filtered = filtered.filter((tx) => tx.status === "pending");
 
     filtered.sort((a, b) => {
       if (filters.sortBy === "newest") {
@@ -404,6 +430,59 @@ const TransactionManagement = () => {
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  const getWalletAddress = (transaction) => {
+    if (!transaction) return "";
+    if (transaction.type === "deposit") {
+      return transaction.fromAddress || transaction.walletAddress || transaction.toAddress || "";
+    }
+    return transaction.toAddress || transaction.walletAddress || transaction.fromAddress || "";
+  };
+
+  const handleStartEditAddress = () => {
+    setEditedWalletAddress(getWalletAddress(selectedTransaction));
+    setIsEditingAddress(true);
+  };
+
+  const handleCancelEditAddress = () => {
+    setEditedWalletAddress(getWalletAddress(selectedTransaction));
+    setIsEditingAddress(false);
+  };
+
+  const handleSaveWalletAddress = async () => {
+    if (!selectedTransaction?._id) return;
+    const trimmedAddress = editedWalletAddress.trim();
+    if (!trimmedAddress) {
+      toast.error("Wallet address cannot be empty");
+      return;
+    }
+
+    setSavingWalletAddress(true);
+    try {
+      const response = await api.put(`/api/admin/transactions/${selectedTransaction._id}`, {
+        walletAddress: trimmedAddress,
+      });
+      const updatedTransaction = response.data?.transaction;
+
+      if (updatedTransaction) {
+        setTransactions((prev) =>
+          prev.map((tx) => (tx._id === updatedTransaction._id ? updatedTransaction : tx)),
+        );
+        setFilteredTransactions((prev) =>
+          prev.map((tx) => (tx._id === updatedTransaction._id ? updatedTransaction : tx)),
+        );
+        setSelectedTransaction(updatedTransaction);
+        setEditedWalletAddress(getWalletAddress(updatedTransaction));
+      }
+
+      setIsEditingAddress(false);
+      toast.success("Wallet address updated");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update wallet address");
+    } finally {
+      setSavingWalletAddress(false);
+    }
   };
 
   const StatsCard = ({ title, value, icon, color, change, subtitle }) => (
@@ -671,7 +750,6 @@ const TransactionManagement = () => {
                 <MenuItem value="">All Types</MenuItem>
                 <MenuItem value="deposit">Deposit</MenuItem>
                 <MenuItem value="withdrawal">Withdrawal</MenuItem>
-                <MenuItem value="trade">Trade</MenuItem>
               </Select>
             </FormControl>
 
@@ -727,7 +805,6 @@ const TransactionManagement = () => {
           <Tab label="All Transactions" />
           <Tab label="Deposits" />
           <Tab label="Withdrawals" />
-          <Tab label="Trades" />
           <Tab label="Pending" />
         </Tabs>
       </Paper>
@@ -744,7 +821,7 @@ const TransactionManagement = () => {
             }}
           >
             <Typography variant="h6">
-              Transactions ({filteredTransactions.length})
+              Transactions ({totalTransactions})
             </Typography>
             {loading && (
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -847,6 +924,42 @@ const TransactionManagement = () => {
               </Table>
             </TableContainer>
           )}
+
+          <Box
+            sx={{
+              mt: 2,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 1,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Showing up to {TRANSACTIONS_PER_PAGE} per page
+            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={loading || currentPage <= 1}
+              >
+                Previous
+              </Button>
+              <Typography variant="body2" sx={{ minWidth: 80, textAlign: "center" }}>
+                Page {currentPage} of {totalPages}
+              </Typography>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={loading || currentPage >= totalPages}
+              >
+                Next
+              </Button>
+            </Box>
+          </Box>
         </CardContent>
       </Card>
 
@@ -885,7 +998,10 @@ const TransactionManagement = () => {
       {/* View Transaction Dialog */}
       <Dialog
         open={viewDialog}
-        onClose={() => setViewDialog(false)}
+        onClose={() => {
+          setIsEditingAddress(false);
+          setViewDialog(false);
+        }}
         maxWidth="md"
         fullWidth
       >
@@ -960,6 +1076,58 @@ const TransactionManagement = () => {
                       <Typography variant="body2">
                         <strong>Network/Chain:</strong> {selectedTransaction.chain || selectedTransaction.network || 'N/A'}
                       </Typography>
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                          <strong>Wallet Address:</strong>
+                        </Typography>
+                        {isEditingAddress ? (
+                          <>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              value={editedWalletAddress}
+                              onChange={(e) => setEditedWalletAddress(e.target.value)}
+                              placeholder="Enter wallet address"
+                              sx={{ mb: 1 }}
+                            />
+                            <Box sx={{ display: "flex", gap: 1 }}>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                onClick={handleSaveWalletAddress}
+                                disabled={savingWalletAddress}
+                              >
+                                {savingWalletAddress ? "Saving..." : "Save"}
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={handleCancelEditAddress}
+                                disabled={savingWalletAddress}
+                              >
+                                Cancel
+                              </Button>
+                            </Box>
+                          </>
+                        ) : (
+                          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                overflowWrap: "anywhere",
+                                wordBreak: "break-word",
+                                lineHeight: 1.5,
+                                flex: 1,
+                              }}
+                            >
+                              {getWalletAddress(selectedTransaction) || "N/A"}
+                            </Typography>
+                            <Button size="small" variant="text" onClick={handleStartEditAddress}>
+                              Edit
+                            </Button>
+                          </Box>
+                        )}
+                      </Box>
                       <Typography variant="body2">
                         <strong>Fee:</strong>{" "}
                         {formatCurrency(
@@ -1074,7 +1242,14 @@ const TransactionManagement = () => {
               </Grid>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setViewDialog(false)}>Close</Button>
+              <Button
+                onClick={() => {
+                  setIsEditingAddress(false);
+                  setViewDialog(false);
+                }}
+              >
+                Close
+              </Button>
               {selectedTransaction.status === "pending" &&
                 selectedTransaction.type === "withdrawal" && (
                   <Button

@@ -33,11 +33,11 @@ const BottomNav = () => {
         left: 0,
         right: 0,
         zIndex: 1000,
-        background: 'rgba(19, 26, 46, 0.95)',
+        background: 'rgba(19, 26, 46, 0.8)',
         backdropFilter: 'blur(20px)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
       }}
-      elevation={3}
+      elevation={0}
     >
       <BottomNavigation
         showLabels
@@ -47,6 +47,7 @@ const BottomNav = () => {
           navigate(navItems[newValue].path);
         }}
         sx={{
+          bgcolor: 'transparent',
           '& .MuiBottomNavigationAction-root': {
             minWidth: 'auto',
             padding: '8px 12px',

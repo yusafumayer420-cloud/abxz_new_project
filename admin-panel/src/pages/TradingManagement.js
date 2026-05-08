@@ -568,7 +568,7 @@ const TradingManagement = () => {
                     <TableCell>Entry Price</TableCell>
                     <TableCell>Amount</TableCell>
                     <TableCell>Leverage</TableCell>
-                    <TableCell>P&L</TableCell>
+                    <TableCell>Profit/Loss</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Duration</TableCell>
                     <TableCell>Actions</TableCell>

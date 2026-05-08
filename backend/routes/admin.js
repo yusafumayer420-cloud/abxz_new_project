@@ -5,34 +5,89 @@ const Trade = require('../models/Trade');
 const SupportTicket = require('../models/SupportTicket');
 const ChatMessage = require('../models/Chat');
 const WalletTransaction = require('../models/WalletTransaction');
+const SystemSettings = require('../models/SystemSettings');
 const router = express.Router();
+
+// Get system settings
+router.get('/settings', protect, adminAuth, async (req, res) => {
+  try {
+    let settings = await SystemSettings.findOne();
+    if (!settings) {
+      settings = await SystemSettings.create({});
+    }
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update system settings
+router.put('/settings', protect, adminAuth, async (req, res) => {
+  try {
+    const { marketCap, volume24h, btcDominance } = req.body;
+    let settings = await SystemSettings.findOne();
+    
+    if (!settings) {
+      settings = new SystemSettings();
+    }
+    
+    if (marketCap !== undefined) settings.marketCap = marketCap;
+    if (volume24h !== undefined) settings.volume24h = volume24h;
+    if (btcDominance !== undefined) settings.btcDominance = btcDominance;
+    settings.updatedAt = Date.now();
+    
+    await settings.save();
+    res.json({ message: 'Settings updated successfully', settings });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Get all users
 router.get('/users', protect, adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = '' } = req.query;
+    const { page = 1, limit = 20, search = '', status, kycStatus } = req.query;
     
     const query = {};
     if (search) {
       query.$or = [
         { email: { $regex: search, $options: 'i' } },
-        { fullName: { $regex: search, $options: 'i' } }
+        { fullName: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } }
       ];
+    }
+
+    if (status) {
+      if (status === 'active') query.isBanned = false;
+      else if (status === 'suspended') query.isBanned = true;
+    }
+
+    if (kycStatus) {
+      query.kycStatus = kycStatus;
+    }
+
+    let sort = { createdAt: -1 };
+    if (req.query.sortBy) {
+      if (req.query.sortBy === 'oldest') sort = { createdAt: 1 };
+      else if (req.query.sortBy === 'balance') sort = { 'wallet.usdt': -1 };
+      else if (req.query.sortBy === 'trades') sort = { 'tradingStats.totalTrades': -1 };
     }
     
     const users = await User.find(query)
       .select('-password')
-      .sort({ createdAt: -1 })
+      .sort(sort)
       .limit(limit * 1)
       .skip((page - 1) * limit);
     
     const count = await User.countDocuments(query);
+    const totalUsers = await User.countDocuments(); // Always send total platform users
     
     res.json({
       users,
       totalPages: Math.ceil(count / limit),
-      currentPage: page,
-      totalUsers: count
+      currentPage: parseInt(page),
+      totalUsersCount: count, // Count matching current query
+      totalUsers // Total in platform
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -57,26 +112,27 @@ router.put('/users/:id', protect, adminAuth, async (req, res) => {
   try {
     const { fullName, phone, kycStatus, wallet, isActive, deliveryTradeEnabled } = req.body;
     
-    const user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    if (fullName !== undefined) user.fullName = fullName;
-    if (phone !== undefined) user.phone = phone;
-    if (kycStatus !== undefined) user.kycStatus = kycStatus;
+    const updateFields = {};
+    if (fullName !== undefined) updateFields.fullName = fullName;
+    if (phone !== undefined) updateFields.phone = phone;
+    if (kycStatus !== undefined) updateFields.kycStatus = kycStatus;
+    if (isActive !== undefined) updateFields.isActive = isActive;
+    if (deliveryTradeEnabled !== undefined) updateFields.deliveryTradeEnabled = deliveryTradeEnabled;
+
     if (wallet !== undefined) {
-      // Direct assignment for each coin to ensure Mongoose detects changes
-      if (wallet.usdt !== undefined) user.wallet.usdt = wallet.usdt;
-      if (wallet.btc !== undefined) user.wallet.btc = wallet.btc;
-      if (wallet.eth !== undefined) user.wallet.eth = wallet.eth;
-      if (wallet.sol !== undefined) user.wallet.sol = wallet.sol;
-      user.markModified('wallet');
+      if (wallet.usdt !== undefined) updateFields['wallet.usdt'] = wallet.usdt;
+      if (wallet.btc !== undefined) updateFields['wallet.btc'] = wallet.btc;
+      if (wallet.eth !== undefined) updateFields['wallet.eth'] = wallet.eth;
+      if (wallet.sol !== undefined) updateFields['wallet.sol'] = wallet.sol;
     }
-    if (isActive !== undefined) user.isActive = isActive;
-    if (deliveryTradeEnabled !== undefined) user.deliveryTradeEnabled = deliveryTradeEnabled;
-    
-    await user.save();
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: updateFields },
+      { new: true }
+    ).select('-password');
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     // Notify user to refresh their profile/balance
     const io = req.app.get('io');
@@ -89,7 +145,7 @@ router.put('/users/:id', protect, adminAuth, async (req, res) => {
       });
       io.to(`user_${user._id}`).emit('balance_updated', { wallet: user.wallet });
     }
-    
+
     res.json({ message: 'User updated successfully', user });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -129,16 +185,30 @@ router.get('/trades', protect, adminAuth, async (req, res) => {
 // Get all transactions
 router.get('/transactions', protect, adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 50, type, status, userId } = req.query;
+    const {
+      page: rawPage = 1,
+      limit: rawLimit = 50,
+      type,
+      status,
+      userId,
+      sortBy = 'newest'
+    } = req.query;
+    const page = Math.max(1, parseInt(rawPage, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(rawLimit, 10) || 50));
     
-    const query = {};
-    if (type) query.type = type;
+    const query = { type: { $in: ['deposit', 'withdrawal'] } };
+    if (type && ['deposit', 'withdrawal'].includes(type)) query.type = type;
     if (status) query.status = status;
     if (userId) query.userId = userId;
+
+    let sort = { createdAt: -1 };
+    if (sortBy === 'oldest') sort = { createdAt: 1 };
+    if (sortBy === 'amount_high') sort = { amount: -1, createdAt: -1 };
+    if (sortBy === 'amount_low') sort = { amount: 1, createdAt: -1 };
     
     const transactions = await WalletTransaction.find(query)
       .populate('userId', 'email fullName')
-      .sort({ createdAt: -1 })
+      .sort(sort)
       .limit(limit * 1)
       .skip((page - 1) * limit);
     
@@ -147,7 +217,7 @@ router.get('/transactions', protect, adminAuth, async (req, res) => {
     res.json({
       transactions,
       totalPages: Math.ceil(count / limit),
-      currentPage: page,
+      currentPage: parseInt(page, 10),
       totalTransactions: count
     });
   } catch (error) {
@@ -158,7 +228,7 @@ router.get('/transactions', protect, adminAuth, async (req, res) => {
 // Update transaction status
 router.put('/transactions/:id', protect, adminAuth, async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, walletAddress } = req.body;
     
     const transaction = await WalletTransaction.findById(req.params.id);
     if (!transaction) {
@@ -166,25 +236,59 @@ router.put('/transactions/:id', protect, adminAuth, async (req, res) => {
     }
 
     const prevStatus = transaction.status;
-    transaction.status = status;
-    if (status === 'completed') {
-      transaction.completedAt = new Date();
+    if (typeof status !== 'undefined') {
+      transaction.status = status;
+      if (status === 'completed') {
+        transaction.completedAt = new Date();
+      }
+    }
+
+    if (typeof walletAddress !== 'undefined') {
+      const trimmedAddress = String(walletAddress).trim();
+      if (!trimmedAddress) {
+        return res.status(400).json({ message: 'Wallet address cannot be empty' });
+      }
+      if (trimmedAddress.length > 200) {
+        return res.status(400).json({ message: 'Wallet address is too long' });
+      }
+      const addressField = transaction.type === 'deposit' ? 'fromAddress' : 'toAddress';
+      transaction[addressField] = trimmedAddress;
     }
     
     await transaction.save();
     
     // On deposit approval: credit user wallet
     if (transaction.type === 'deposit' && status === 'completed' && prevStatus !== 'completed') {
-      const user = await User.findById(transaction.userId);
+      const currency = transaction.currency.toLowerCase();
+      const updateObj = { $inc: {} };
+      updateObj.$inc[`wallet.${currency}`] = transaction.amount;
+      
+      const user = await User.findByIdAndUpdate(transaction.userId, updateObj, { new: true });
       if (user) {
-        const currency = transaction.currency.toLowerCase();
-        if (user.wallet[currency] !== undefined) {
-          user.wallet[currency] += transaction.amount;
-          await user.save();
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`user_${user._id}`).emit('balance_updated', { wallet: user.wallet });
         }
       }
     }
-    // NOTE: Withdrawal balance was already deducted at submission time, so we do NOT deduct again here.
+    
+    // On withdrawal rejection/cancellation: refund user wallet
+    if (transaction.type === 'withdrawal' && (status === 'cancelled' || status === 'rejected') && prevStatus === 'pending') {
+      const currency = transaction.currency.toLowerCase();
+      const updateObj = { $inc: {} };
+      updateObj.$inc[`wallet.${currency}`] = transaction.amount;
+
+      const user = await User.findByIdAndUpdate(transaction.userId, updateObj, { new: true });
+      if (user) {
+        // Emit balance update to user
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`user_${user._id}`).emit('balance_updated', { wallet: user.wallet });
+        }
+      }
+    }
+    
+    // NOTE: Withdrawal balance was already deducted at submission time, so we do NOT deduct again on completion.
 
     // Emit socket event
     const io = req.app.get('io');
@@ -193,9 +297,11 @@ router.put('/transactions/:id', protect, adminAuth, async (req, res) => {
       io.to('admin').emit('transaction_updated', populatedTransaction);
       io.to(`user_${transaction.userId}`).emit('transaction_updated', {
         ...transaction.toObject(),
-        status,
+        status: transaction.status,
         title: status === 'completed' ? 'Transaction Approved' : 'Transaction Updated',
-        message: `Your ${transaction.type} of ${transaction.amount} ${transaction.currency} has been ${status}`
+        message: status
+          ? `Your ${transaction.type} of ${transaction.amount} ${transaction.currency} has been ${status}`
+          : `Your ${transaction.type} details were updated by admin`
       });
       // Emit balance_updated to trigger real-time refresh
       const user = await User.findById(transaction.userId);

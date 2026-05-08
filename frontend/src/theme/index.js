@@ -170,7 +170,8 @@ const darkTheme = createTheme({
               borderColor: 'rgba(255, 255, 255, 0.3)',
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#00D395',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              borderWidth: '1px',
             },
           },
         },

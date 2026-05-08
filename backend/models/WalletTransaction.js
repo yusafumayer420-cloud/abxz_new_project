@@ -41,4 +41,9 @@ const WalletTransactionSchema = new mongoose.Schema({
   completedAt: Date
 });
 
+WalletTransactionSchema.index({ userId: 1 });
+WalletTransactionSchema.index({ type: 1 });
+WalletTransactionSchema.index({ status: 1 });
+WalletTransactionSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('WalletTransaction', WalletTransactionSchema);

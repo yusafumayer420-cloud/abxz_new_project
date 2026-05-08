@@ -29,6 +29,7 @@ import {
   Tab,
   Alert,
   LinearProgress,
+  CircularProgress,
   List,
   ListItem,
   ListItemAvatar,
@@ -51,6 +52,8 @@ import {
   Refresh,
   Add,
   Visibility,
+  Edit,
+  Delete
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -80,6 +83,8 @@ const SupportManagement = () => {
   const [replyMessage, setReplyMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingMessageContent, setEditingMessageContent] = useState("");
   const fileInputRef = React.useRef(null);
   const [stats, setStats] = useState({
     openTickets: 0,
@@ -224,6 +229,18 @@ const SupportManagement = () => {
 
     supportSocket.on('error', (error) => {
       toast.error(error.message || 'Support system error');
+    });
+
+    supportSocket.on('message_edited', (data) => {
+      setChatMessages(prev => prev.map(msg => 
+        String(msg._id) === String(data.messageId) ? { ...msg, message: data.newMessage, isEdited: true } : msg
+      ));
+    });
+
+    supportSocket.on('message_deleted', (data) => {
+      setChatMessages(prev => prev.map(msg => 
+        String(msg._id) === String(data.messageId) ? { ...msg, message: "This message was deleted", isDeleted: true } : msg
+      ));
     });
 
     setSocket(supportSocket);
@@ -388,6 +405,44 @@ const SupportManagement = () => {
     setReplyMessage("");
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleEditMessageClick = (msg) => {
+    setEditingMessageId(msg._id);
+    setEditingMessageContent(msg.message);
+  };
+
+  const handleSaveEditMessage = () => {
+    if (!editingMessageContent.trim() || !socket || !editingMessageId) return;
+    
+    // Optimistic UI update
+    setChatMessages(prev => prev.map(msg => 
+      msg._id === editingMessageId ? { ...msg, message: editingMessageContent, isEdited: true } : msg
+    ));
+
+    socket.emit('edit_message', {
+      messageId: editingMessageId,
+      newMessage: editingMessageContent
+    });
+
+    setEditingMessageId(null);
+    setEditingMessageContent("");
+  };
+
+  const handleCancelEditMessage = () => {
+    setEditingMessageId(null);
+    setEditingMessageContent("");
+  };
+
+  const handleDeleteMessageClick = (msgId) => {
+    if (window.confirm("Are you sure you want to delete this message?")) {
+      // Optimistic UI update
+      setChatMessages(prev => prev.map(msg => 
+        msg._id === msgId ? { ...msg, message: "This message was deleted", isDeleted: true } : msg
+      ));
+
+      socket.emit('delete_message', { messageId: msgId });
+    }
   };
   
   const handleFileChange = (e) => {
@@ -792,11 +847,11 @@ const SupportManagement = () => {
                           sx={{ display: "flex", alignItems: "center", gap: 1 }}
                         >
                           <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
-                            {(ticket.userName || 'U').charAt(0)}
+                            {(typeof ticket.userId === 'object' ? (ticket.userId?.fullName || ticket.userId?.email || 'U') : 'U').charAt(0)}
                           </Avatar>
                           <Box>
                             <Typography variant="body2">
-                              {ticket.userName || 'Unknown User'}
+                              {typeof ticket.userId === 'object' ? (ticket.userId?.fullName || ticket.userId?.email || 'Unknown User') : 'Unknown User'}
                             </Typography>
                             <Typography
                               variant="caption"
@@ -877,7 +932,7 @@ const SupportManagement = () => {
                           {getTimeAgo(ticket.updatedAt)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {ticket.messages} messages
+                          {ticket.messages?.length || 0} messages
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -1008,7 +1063,7 @@ const SupportManagement = () => {
                         {formatDate(selectedTicket.updatedAt)}
                       </Typography>
                       <Typography variant="body2">
-                        <strong>Messages:</strong> {selectedTicket.messages}
+                        <strong>Messages:</strong> {selectedTicket.messages?.length || 0}
                       </Typography>
                       <Typography variant="body2">
                         <strong>Assigned To:</strong>{" "}
@@ -1191,9 +1246,51 @@ const SupportManagement = () => {
                                   ))}
                                 </Box>
                               )}
-                              <Typography variant="body2">
-                                {msg.message}
-                              </Typography>
+                              
+                              {editingMessageId === msg._id ? (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                  <TextField 
+                                    fullWidth
+                                    multiline
+                                    size="small"
+                                    value={editingMessageContent}
+                                    onChange={(e) => setEditingMessageContent(e.target.value)}
+                                  />
+                                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                    <Button size="small" onClick={handleCancelEditMessage}>Cancel</Button>
+                                    <Button size="small" variant="contained" onClick={handleSaveEditMessage}>Save</Button>
+                                  </Box>
+                                </Box>
+                              ) : (
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                                  <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere', fontStyle: msg.isDeleted ? 'italic' : 'normal', opacity: msg.isDeleted ? 0.7 : 1 }}>
+                                    {msg.message}
+                                    {msg.isEdited && !msg.isDeleted && (
+                                      <Typography component="span" variant="caption" sx={{ opacity: 0.6, ml: 1 }}>(edited)</Typography>
+                                    )}
+                                  </Typography>
+                                  
+                                  {msg.type === "admin" && !msg.isDeleted && (
+                                    (() => {
+                                      const adminUser = JSON.parse(localStorage.getItem('adminData') || '{}');
+                                      const isOwnMessage = msg.userId && (msg.userId._id === adminUser.id || msg.userId._id === adminUser._id || msg.userId === adminUser.id || msg.userId === adminUser._id);
+                                      if (isOwnMessage) {
+                                        return (
+                                          <Box sx={{ display: 'flex', ml: 2, opacity: 0.5, '&:hover': { opacity: 1 } }}>
+                                            <IconButton size="small" onClick={() => handleEditMessageClick(msg)} sx={{ p: 0.5 }}>
+                                              <Edit sx={{ fontSize: 16 }} />
+                                            </IconButton>
+                                            <IconButton size="small" onClick={() => handleDeleteMessageClick(msg._id)} sx={{ p: 0.5 }}>
+                                              <Delete sx={{ fontSize: 16 }} />
+                                            </IconButton>
+                                          </Box>
+                                        );
+                                      }
+                                      return null;
+                                    })()
+                                  )}
+                                </Box>
+                              )}
                             </Paper>
                             <Typography
                               variant="caption"

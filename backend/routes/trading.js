@@ -7,12 +7,12 @@ const router = express.Router();
 
 // Delivery contract time slots (seconds → config)
 const DELIVERY_SLOTS = {
-  60:   { profit: 13, minAmount: 500 },
-  180:  { profit: 15, minAmount: 10000 },
-  300:  { profit: 20, minAmount: 30000 },
-  600:  { profit: 27, minAmount: 50000 },
-  900:  { profit: 75, minAmount: 100000 },
-  1800: { profit: 90, minAmount: 300000 },
+  60:   { profit: 13, minAmount: 100 },
+  180:  { profit: 15, minAmount: 1000 },
+  300:  { profit: 20, minAmount: 3000 },
+  600:  { profit: 27, minAmount: 5000 },
+  900:  { profit: 75, minAmount: 10000 },
+  1800: { profit: 90, minAmount: 30000 },
 };
 
 // Settle a delivery trade after timer expires
@@ -28,29 +28,47 @@ async function settleDeliveryTrade(tradeId, io) {
     const isWin = user.deliveryTradeEnabled;
 
     let profitAmount = 0;
+    let finalUser = user;
+
     if (isWin) {
       // Return original amount + profit
       profitAmount = trade.total * (trade.profitPercent / 100);
-      user.wallet.usdt += trade.total + profitAmount;
-      user.markModified('wallet');
+      
+      // Atomic increment to prevent race conditions
+      finalUser = await User.findByIdAndUpdate(
+        user._id,
+        { 
+          $inc: { 
+            'wallet.usdt': trade.total + profitAmount,
+            'tradingStats.totalTrades': 1,
+            'tradingStats.profitLoss': profitAmount
+          } 
+        },
+        { new: true }
+      );
+    } else {
+      // For loss, just update stats (funds were already deducted)
+      finalUser = await User.findByIdAndUpdate(
+        user._id,
+        { 
+          $inc: { 
+            'tradingStats.totalTrades': 1,
+            'tradingStats.profitLoss': -trade.total
+          } 
+        },
+        { new: true }
+      );
     }
-    // On loss: funds were already deducted when order was placed, no action needed
 
     trade.status = 'completed';
     trade.outcome = isWin ? 'win' : 'loss';
     trade.profitAmount = profitAmount;
-
-    user.tradingStats = user.tradingStats || {};
-    user.tradingStats.totalTrades = (user.tradingStats.totalTrades || 0) + 1;
-    user.tradingStats.profitLoss = (user.tradingStats.profitLoss || 0) + (isWin ? profitAmount : -trade.total);
-
     await trade.save();
-    await user.save();
 
     // Create wallet transaction for win
     if (isWin) {
       await WalletTransaction.create({
-        userId: user._id,
+        userId: finalUser._id,
         type: 'trade',
         currency: 'USDT',
         amount: trade.total + profitAmount,
@@ -68,14 +86,14 @@ async function settleDeliveryTrade(tradeId, io) {
     if (io) {
       const populated = await Trade.findById(tradeId).populate('userId', 'email fullName');
       io.to('admin').emit('trade_updated', populated);
-      io.to(`user_${user._id}`).emit('trade_updated', {
+      io.to(`user_${finalUser._id}`).emit('trade_updated', {
         ...populated.toObject(),
         title: isWin ? '🎉 Trade Won!' : '❌ Trade Lost',
         message: isWin
           ? `You won ${profitAmount.toFixed(2)} USDT on your ${trade.pair} delivery trade!`
           : `Your ${trade.pair} delivery trade expired as a loss.`
       });
-      io.to(`user_${user._id}`).emit('balance_updated', { wallet: user.wallet });
+      io.to(`user_${finalUser._id}`).emit('balance_updated', { wallet: finalUser.wallet });
     }
   } catch (err) {
     console.error('Error settling delivery trade:', err);
@@ -87,6 +105,9 @@ router.post('/delivery-order', auth, async (req, res) => {
   try {
     const { pair, type, deliverySeconds, price, amount } = req.body;
     const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0 || !isFinite(amountNum)) {
+      return res.status(400).json({ message: 'Invalid trade amount' });
+    }
 
     // Validate time slot
     const slotConfig = DELIVERY_SLOTS[deliverySeconds];
@@ -101,20 +122,18 @@ router.post('/delivery-order', auth, async (req, res) => {
       });
     }
 
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    // Atomic deduction: only subtract if balance is sufficient
+    const user = await User.findOneAndUpdate(
+      { _id: req.user.id, 'wallet.usdt': { $gte: amountNum } },
+      { $inc: { 'wallet.usdt': -amountNum } },
+      { new: true }
+    );
 
-    // Check USDT balance
-    if (user.wallet.usdt < amountNum) {
-      return res.status(400).json({
-        message: `Insufficient balance. Available: $${user.wallet.usdt.toFixed(2)} USDT`
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'Insufficient balance or user not found.' 
       });
     }
-
-    // Deduct from wallet immediately
-    user.wallet.usdt -= amountNum;
-    user.markModified('wallet');
-    await user.save();
 
     const profitPercent = slotConfig.profit;
     const expiresAt = new Date(Date.now() + deliverySeconds * 1000);
@@ -185,25 +204,31 @@ router.post('/order', auth, async (req, res) => {
   try {
     const { pair, type, orderType, price, amount, leverage = 1 } = req.body;
 
-    const user = await User.findById(req.user.id);
     const total = parseFloat(price) * parseFloat(amount);
+    let user;
 
-    // Check balance for buy/long orders
+    // Atomic deduction: only subtract if balance is sufficient
     if (type === 'buy' || type === 'long') {
-      if (user.wallet.usdt < total) {
-        return res.status(400).json({ message: `Insufficient USDT balance. Required: $${total.toFixed(2)}, Available: $${user.wallet.usdt.toFixed(2)}` });
+      user = await User.findOneAndUpdate(
+        { _id: req.user.id, 'wallet.usdt': { $gte: total } },
+        { $inc: { 'wallet.usdt': -total } },
+        { new: true }
+      );
+      if (!user) {
+        return res.status(400).json({ message: 'Insufficient USDT balance.' });
       }
-      user.wallet.usdt -= total;
-    }
+    } else if (type === 'sell' || type === 'short') {
+      const currency = pair.split('/')[0].toLowerCase();
+      const amountNum = parseFloat(amount);
+      const updateObj = { $inc: {} };
+      updateObj.$inc[`wallet.${currency}`] = -amountNum;
 
-    // For sell/short: check crypto balance
-    if (type === 'sell' || type === 'short') {
-      const currency = pair.split('/')[0].toLowerCase(); // e.g. 'btc'
-      if (user.wallet[currency] !== undefined && user.wallet[currency] < parseFloat(amount)) {
+      const queryObj = { _id: req.user.id };
+      queryObj[`wallet.${currency}`] = { $gte: amountNum };
+
+      user = await User.findOneAndUpdate(queryObj, updateObj, { new: true });
+      if (!user) {
         return res.status(400).json({ message: `Insufficient ${currency.toUpperCase()} balance.` });
-      }
-      if (user.wallet[currency] !== undefined) {
-        user.wallet[currency] -= parseFloat(amount);
       }
     }
 
@@ -226,13 +251,12 @@ router.post('/order', auth, async (req, res) => {
 
     await trade.save();
 
-    // For completed market orders: update trading stats
+    // For completed market orders: update trading stats atomically
     if (tradeStatus === 'completed') {
-      user.tradingStats = user.tradingStats || {};
-      user.tradingStats.totalTrades = (user.tradingStats.totalTrades || 0) + 1;
+      await User.findByIdAndUpdate(req.user.id, {
+        $inc: { 'tradingStats.totalTrades': 1 }
+      });
     }
-
-    await user.save();
 
     // Create a wallet transaction record for completed trades
     if (tradeStatus === 'completed') {
@@ -298,20 +322,19 @@ router.post('/order/:id/cancel', auth, async (req, res) => {
     if (order.status !== 'pending') return res.status(400).json({ message: 'Only pending orders can be cancelled' });
     if (order.tradeMode === 'delivery') return res.status(400).json({ message: 'Delivery orders cannot be cancelled' });
 
-    // Refund USDT for buy/long orders
+    let updatedUser;
+    // Atomic refund
     if (order.type === 'buy' || order.type === 'long') {
-      const user = await User.findById(req.user.id);
-      user.wallet.usdt += order.total;
-      await user.save();
-    }
-    // Refund crypto for sell/short orders
-    if (order.type === 'sell' || order.type === 'short') {
+      updatedUser = await User.findByIdAndUpdate(
+        req.user.id,
+        { $inc: { 'wallet.usdt': order.total } },
+        { new: true }
+      );
+    } else if (order.type === 'sell' || order.type === 'short') {
       const currency = order.pair.split('/')[0].toLowerCase();
-      const user = await User.findById(req.user.id);
-      if (user.wallet[currency] !== undefined) {
-        user.wallet[currency] += order.amount;
-        await user.save();
-      }
+      const updateObj = { $inc: {} };
+      updateObj.$inc[`wallet.${currency}`] = order.amount;
+      updatedUser = await User.findByIdAndUpdate(req.user.id, updateObj, { new: true });
     }
 
     order.status = 'cancelled';
@@ -322,7 +345,9 @@ router.post('/order/:id/cancel', auth, async (req, res) => {
       const populated = await order.populate('userId', 'email fullName');
       io.to('admin').emit('trade_updated', populated);
       io.to(`user_${req.user.id}`).emit('trade_updated', populated);
-      io.to(`user_${req.user.id}`).emit('balance_updated', { wallet: user.wallet });
+      if (updatedUser) {
+        io.to(`user_${req.user.id}`).emit('balance_updated', { wallet: updatedUser.wallet });
+      }
     }
 
     res.json({ message: 'Order cancelled' });
@@ -346,13 +371,24 @@ router.put('/order/:id/status', auth, async (req, res) => {
     const trade = await Trade.findById(req.params.id);
     if (!trade) return res.status(404).json({ message: 'Trade not found' });
 
-    // If cancelling a pending long/buy order, refund USDT to user
+    // If cancelling a pending order, refund funds to user
     if (status === 'cancelled' && trade.status === 'pending') {
-      if (trade.type === 'buy' || trade.type === 'long') {
-        const user = await User.findById(trade.userId);
-        if (user) {
+      const user = await User.findById(trade.userId);
+      if (user) {
+        if (trade.type === 'buy' || trade.type === 'long') {
           user.wallet.usdt += trade.total;
-          await user.save();
+        } else if (trade.type === 'sell' || trade.type === 'short') {
+          const currency = trade.pair.split('/')[0].toLowerCase();
+          if (user.wallet[currency] !== undefined) {
+            user.wallet[currency] += trade.amount;
+          }
+        }
+        user.markModified('wallet');
+        await user.save();
+        
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`user_${user._id}`).emit('balance_updated', { wallet: user.wallet });
         }
       }
     }

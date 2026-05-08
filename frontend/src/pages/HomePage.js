@@ -12,7 +12,7 @@ import {
   IconButton,
   LinearProgress,
 } from '@mui/material';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   TrendingUp,
   AccountBalanceWallet,
@@ -20,11 +20,16 @@ import {
   Security,
   SupportAgent,
   BarChart,
-  Notifications,
   ArrowUpward,
   ArrowDownward,
   Newspaper,
   OpenInNew,
+  ChevronLeft,
+  ChevronRight,
+  CurrencyExchange,
+  Article,
+  HeadsetMic,
+  VerifiedUser,
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 import axios from '../utils/axiosConfig';
@@ -46,23 +51,78 @@ const HomePage = ({ marketData }) => {
   ]);
 
   const [features] = useState([
-    { title: 'Asset Management', icon: '📊', desc: 'Manage your portfolio', path: '/assets', isComingSoon: true },
-    { title: 'AI Trading', icon: '🤖', desc: 'Automated strategies', path: '/ai-trading', isComingSoon: true },
-    { title: 'Lending', icon: '💰', desc: 'Earn interest', path: '/lending', isComingSoon: true },
-    { title: 'Exchange', icon: '🔄', desc: 'Spot trading', path: '/trading' },
-    { title: 'News', icon: '📰', desc: 'Market updates', path: '/news' },
-    { title: 'Support', icon: '💬', desc: '24/7 help', path: '/support' },
+    { title: 'Exchange', icon: <CurrencyExchange />, desc: 'Spot trading', path: '/trading', color: '#00D395', gradient: 'linear-gradient(135deg, rgba(0,211,149,0.15), rgba(0,211,149,0.05))' },
+    { title: 'News', icon: <Article />, desc: 'Market updates', path: '/news', color: '#4361EE', gradient: 'linear-gradient(135deg, rgba(67,97,238,0.15), rgba(67,97,238,0.05))' },
+    { title: 'Support', icon: <HeadsetMic />, desc: '24/7 help', path: '/support', color: '#F72585', gradient: 'linear-gradient(135deg, rgba(247,37,133,0.15), rgba(247,37,133,0.05))' },
+    { title: 'KYC', icon: <VerifiedUser />, desc: 'Verify identity', path: '/profile', state: { activeTab: 2 }, color: '#FFB703', gradient: 'linear-gradient(135deg, rgba(255,183,3,0.15), rgba(255,183,3,0.05))' },
   ]);
 
   useEffect(() => {
     setBalance(user?.wallet?.usdt || 0);
   }, [user, marketData]);
 
+  const getCoinIcon = (symbol) => {
+    const base = symbol.split('/')[0].toLowerCase();
+    return `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${base}.svg`;
+  };
+
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState(1);
+
+  const slides = [
+    {
+      title: 'Start Trading Today',
+      subtitle: 'Access 10+ live crypto markets with real-time Binance prices.',
+      cta: 'Trade Now',
+      path: '/trading',
+      gradient: 'linear-gradient(135deg, #00D395 0%, #0a9e70 100%)',
+      icon: '🚀',
+    },
+    {
+      title: 'Zero Hidden Fees',
+      subtitle: 'Transparent pricing. No surprises. Keep more of your profits.',
+      cta: 'View Markets',
+      path: '/markets',
+      gradient: 'linear-gradient(135deg, #4361EE 0%, #7209B7 100%)',
+      icon: '💎',
+    },
+    {
+      title: 'Bank-Grade Security',
+      subtitle: 'Your funds are protected with enterprise-level encryption.',
+      cta: 'Learn More',
+      path: '/profile',
+      gradient: 'linear-gradient(135deg, #00B4D8 0%, #0077B6 100%)',
+      icon: '🔒',
+    },
+    {
+      title: 'Verify Your Identity',
+      subtitle: 'Complete KYC to unlock full withdrawal limits and all features.',
+      cta: 'Verify Now',
+      path: '/profile',
+      state: { activeTab: 2 },
+      gradient: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
+      icon: '✅',
+    },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSlideDirection(1);
+      setSlideIndex((prev) => (prev + 1) % slides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  const goToSlide = (dir) => {
+    setSlideDirection(dir);
+    setSlideIndex((prev) => (prev + dir + slides.length) % slides.length);
+  };
+
   useEffect(() => {
     const fetchNews = async () => {
       try {
         const response = await axios.get('/api/news');
-        setNews(response.data.slice(0, 3));
+        setNews(response.data.slice(0, 6));
       } catch (error) {
         console.error('Failed to fetch news:', error);
       } finally {
@@ -87,8 +147,15 @@ const HomePage = ({ marketData }) => {
       </Box>
 
       {/* Balance Card */}
-      <motion.div whileHover={{ scale: 1.02 }}>
-        <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+        <Card 
+          onClick={() => navigate('/history')}
+          sx={{ 
+            mb: 3, 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            cursor: 'pointer'
+          }}
+        >
           <CardContent>
             <Typography color="white" variant="body2">
               Total Balance
@@ -102,9 +169,6 @@ const HomePage = ({ marketData }) => {
                 size="small"
                 sx={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
               />
-              <IconButton size="small" sx={{ color: 'white' }}>
-                <Notifications />
-              </IconButton>
             </Box>
           </CardContent>
         </Card>
@@ -114,9 +178,9 @@ const HomePage = ({ marketData }) => {
       <Typography variant="h6" sx={{ mb: 2 }}>
         Quick Actions
       </Typography>
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <Grid container spacing={1.5} sx={{ mb: 3 }}>
         {quickActions.map((action, index) => (
-          <Grid item xs={3} key={index}>
+          <Grid item xs={3} sm={3} key={index}>
             <motion.div whileTap={{ scale: 0.95 }}>
               <Button
                 fullWidth
@@ -140,47 +204,48 @@ const HomePage = ({ marketData }) => {
       <Typography variant="h6" sx={{ mb: 2 }}>
         Features
       </Typography>
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <Grid container spacing={1.5} sx={{ mb: 3 }}>
         {features.map((feature, index) => (
-          <Grid item xs={4} key={index}>
-            <motion.div whileHover={{ y: -5 }}>
-              <Card 
-                onClick={() => {
-                  if (feature.isComingSoon || !feature.path) {
-                    toast(`${feature.title} is coming soon!`, {
-                      icon: '🚀',
-                      style: {
-                        borderRadius: '10px',
-                        background: '#131A2E',
-                        color: '#fff',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                      },
-                    });
-                  } else {
-                    navigate(feature.path);
-                  }
-                }}
-                sx={{ 
-                  height: 120, 
-                  display: 'flex', 
-                  flexDirection: 'column', 
+          <Grid item xs={3} sm={3} key={index}>
+            <motion.div whileHover={{ y: -4, scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <Card
+                onClick={() => navigate(feature.path, { state: feature.state })}
+                sx={{
+                  height: 115,
+                  display: 'flex',
+                  flexDirection: 'column',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  background: feature.gradient,
+                  border: '1px solid',
+                  borderColor: `${feature.color}30`,
+                  transition: 'all 0.25s ease',
                   '&:hover': {
-                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderColor: `${feature.color}80`,
+                    boxShadow: `0 8px 24px ${feature.color}25`,
                   },
-                  '&:active': {
-                    transform: 'scale(0.98)',
-                  }
                 }}
               >
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4">{feature.icon}</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', mt: 1 }}>
+                <CardContent sx={{ textAlign: 'center', p: '10px !important' }}>
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      background: `${feature.color}20`,
+                      mb: 0.75,
+                      '& svg': { fontSize: 22, color: feature.color },
+                    }}
+                  >
+                    {feature.icon}
+                  </Box>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', lineHeight: 1.2, fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                     {feature.title}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.62rem' }}>
                     {feature.desc}
                   </Typography>
                 </CardContent>
@@ -191,12 +256,21 @@ const HomePage = ({ marketData }) => {
       </Grid>
 
       {/* Market Overview */}
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Market Overview
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">
+          Market Overview
+        </Typography>
+        <Button 
+          size="small" 
+          onClick={() => navigate('/markets')}
+          sx={{ color: '#00D395', textTransform: 'none', fontWeight: 'bold' }}
+        >
+          View All
+        </Button>
+      </Box>
       <Card>
         <CardContent>
-          {marketData.slice(0, 3).map((coin, index) => (
+          {marketData.slice(0, 10).map((coin, index) => (
             <Box
               key={index}
               sx={{
@@ -204,12 +278,29 @@ const HomePage = ({ marketData }) => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 py: 1.5,
-                borderBottom: index < 2 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                borderBottom: index < 9 ? '1px solid rgba(255,255,255,0.1)' : 'none',
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'rgba(0,211,149,0.1)', width: 36, height: 36 }}>
-                  {coin.symbol.charAt(0)}
+                <Avatar
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.05)',
+                    width: 40,
+                    height: 40,
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    p: '4px',
+                  }}
+                >
+                  <img
+                    src={getCoinIcon(coin.symbol)}
+                    alt={coin.symbol}
+                    crossOrigin="anonymous"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.parentElement.textContent = coin.symbol.split('/')[0].charAt(0);
+                    }}
+                  />
                 </Avatar>
                 <Box>
                   <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
@@ -237,7 +328,107 @@ const HomePage = ({ marketData }) => {
         </CardContent>
       </Card>
 
-      {/* Latest News Section */}
+      {/* Promotional Slideshow */}
+      <Box sx={{ position: 'relative', mt: 3, mb: 3, borderRadius: 3, overflow: 'hidden' }}>
+        <AnimatePresence initial={false} custom={slideDirection} mode="wait">
+          <motion.div
+            key={slideIndex}
+            custom={slideDirection}
+            variants={{
+              enter: (dir) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
+              center: { x: 0, opacity: 1 },
+              exit: (dir) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
+            }}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
+          >
+            <Box
+              sx={{
+                background: slides[slideIndex].gradient,
+                borderRadius: 3,
+                p: 3,
+                minHeight: 140,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Box>
+                <Typography variant="h2" sx={{ fontSize: 36, mb: 0.5 }}>
+                  {slides[slideIndex].icon}
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#fff', lineHeight: 1.2 }}>
+                  {slides[slideIndex].title}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block', mt: 0.5 }}>
+                  {slides[slideIndex].subtitle}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                <Button
+                  size="small"
+                  onClick={() => navigate(slides[slideIndex].path, { state: slides[slideIndex].state })}
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.25)',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    borderRadius: 2,
+                    px: 2,
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.4)' },
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                  }}
+                >
+                  {slides[slideIndex].cta} →
+                </Button>
+                {/* Dot indicators */}
+                <Box sx={{ display: 'flex', gap: 0.6 }}>
+                  {slides.map((_, i) => (
+                    <Box
+                      key={i}
+                      onClick={() => { setSlideDirection(i > slideIndex ? 1 : -1); setSlideIndex(i); }}
+                      sx={{
+                        width: i === slideIndex ? 18 : 7,
+                        height: 7,
+                        borderRadius: 4,
+                        bgcolor: i === slideIndex ? '#fff' : 'rgba(255,255,255,0.45)',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          </motion.div>
+        </AnimatePresence>
+        {/* Prev / Next arrows */}
+        <IconButton
+          size="small"
+          onClick={() => goToSlide(-1)}
+          sx={{
+            position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)',
+            bgcolor: 'rgba(0,0,0,0.3)', color: '#fff', p: 0.4,
+            '&:hover': { bgcolor: 'rgba(0,0,0,0.55)' },
+          }}
+        >
+          <ChevronLeft fontSize="small" />
+        </IconButton>
+        <IconButton
+          size="small"
+          onClick={() => goToSlide(1)}
+          sx={{
+            position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+            bgcolor: 'rgba(0,0,0,0.3)', color: '#fff', p: 0.4,
+            '&:hover': { bgcolor: 'rgba(0,0,0,0.55)' },
+          }}
+        >
+          <ChevronRight fontSize="small" />
+        </IconButton>
+      </Box>
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, mt: 4 }}>
         <Typography variant="h6">Latest News</Typography>
         <Button 

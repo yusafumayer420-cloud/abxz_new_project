@@ -125,7 +125,7 @@ const ProfilePage = () => {
   const fetchTransactions = async () => {
     try {
       const response = await axios.get('/api/wallet/transactions');
-      setTransactions(response.data.slice(0, 10)); // just recent
+      setTransactions(response.data.slice(0, 20)); // Fetch more to allow for filtering
     } catch (error) {
       console.error('Failed to fetch transactions');
     }
@@ -138,6 +138,16 @@ const ProfilePage = () => {
     } catch (error) {
       console.error('Failed to fetch security logs');
     }
+  };
+
+  const formatDevice = (device) => {
+    if (!device) return 'Unknown';
+    if (device.includes('Windows')) return 'Windows PC';
+    if (device.includes('iPhone')) return 'iPhone';
+    if (device.includes('Android')) return 'Android Device';
+    if (device.includes('Macintosh')) return 'MacBook';
+    if (device.includes('Linux')) return 'Linux PC';
+    return 'Web Browser';
   };
 
   const fetchTrades = async () => {
@@ -201,15 +211,19 @@ const ProfilePage = () => {
 
   const handleKYCUpload = async (documentType, file) => {
     if (!file) return;
+    if (verificationStatus === 'verified') {
+      toast.error('Your account is already verified.');
+      return;
+    }
 
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append('document', file);
       formData.append('type', documentType);
+      formData.append('document', file);
 
       const response = await axios.post('/api/users/kyc/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        timeout: 120000
       });
 
       // Update local state with the preview/file
@@ -237,11 +251,40 @@ const ProfilePage = () => {
   const handleFileSelect = (documentType, event) => {
     const file = event.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('File size must be less than 50MB');
         return;
       }
       handleKYCUpload(documentType, file);
+    }
+  };
+
+  const handleProfilePictureUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Profile picture must be less than 50MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('profile', file);
+
+      const response = await axios.post('/api/users/profile-picture', formData);
+
+      // Update user context
+      const userRes = await axios.get('/api/users/profile');
+      updateUser(userRes.data);
+      
+      toast.success('Profile picture updated');
+    } catch (error) {
+      console.error('Profile Picture Upload Error:', error);
+      toast.error(error.response?.data?.message || 'Failed to upload profile picture');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -292,7 +335,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 4, pb: 8 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 4, sm: 8 } }} {...(showChangePassword ? { inert: '' } : {})}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
@@ -311,7 +354,12 @@ const ProfilePage = () => {
           variant="scrollable"
           scrollButtons="auto"
           sx={{
-            '& .MuiTab-root': { fontSize: '0.875rem', fontWeight: 'bold' },
+            '& .MuiTab-root': { 
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }, 
+              fontWeight: 'bold',
+              minWidth: { xs: 'auto', sm: 120 },
+              px: { xs: 1.5, sm: 3 }
+            },
           }}
         >
           <Tab label="Profile" icon={<Person />} iconPosition="start" />
@@ -330,27 +378,45 @@ const ProfilePage = () => {
               <CardContent sx={{ textAlign: 'center' }}>
                 <Box sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
                   <Avatar
+                    src={user?.profilePicture}
                     sx={{
                       width: 120,
                       height: 120,
                       fontSize: 48,
                       bgcolor: '#00D395',
                       mb: 2,
+                      border: '4px solid rgba(0, 211, 149, 0.2)'
                     }}
                   >
-                    {user?.fullName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                    {!user?.profilePicture && (user?.fullName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase())}
                   </Avatar>
-                  <IconButton
-                    sx={{
-                      position: 'absolute',
-                      bottom: 10,
-                      right: 10,
-                      bgcolor: 'rgba(0, 211, 149, 0.1)',
-                      '&:hover': { bgcolor: 'rgba(0, 211, 149, 0.2)' },
-                    }}
-                  >
-                    <CameraAlt />
-                  </IconButton>
+                  <label htmlFor="profile-pic-upload">
+                    <input
+                      accept="image/*"
+                      id="profile-pic-upload"
+                      type="file"
+                      style={{ display: 'none' }}
+                      onChange={handleProfilePictureUpload}
+                      disabled={uploading}
+                    />
+                    <IconButton
+                      component="span"
+                      sx={{
+                        position: 'absolute',
+                        bottom: 10,
+                        right: 10,
+                        bgcolor: 'rgba(0, 211, 149, 0.9)',
+                        color: 'white',
+                        '&:hover': { bgcolor: '#00D395' },
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                        width: 36,
+                        height: 36
+                      }}
+                      disabled={uploading}
+                    >
+                      {uploading ? <CircularProgress size={20} color="inherit" /> : <CameraAlt sx={{ fontSize: 20 }} />}
+                    </IconButton>
+                  </label>
                 </Box>
 
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
@@ -414,6 +480,9 @@ const ProfilePage = () => {
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
                     <TextField
+                      id="profile-full-name"
+                      name="fullName"
+                      autoComplete="name"
                       fullWidth
                       label="Full Name"
                       value={formData.fullName}
@@ -430,6 +499,9 @@ const ProfilePage = () => {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
+                      id="profile-email"
+                      name="email"
+                      autoComplete="email"
                       fullWidth
                       label="Email"
                       value={formData.email}
@@ -445,6 +517,9 @@ const ProfilePage = () => {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
+                      id="profile-phone"
+                      name="phone"
+                      autoComplete="tel"
                       fullWidth
                       label="Phone Number"
                       value={formData.phone}
@@ -461,6 +536,9 @@ const ProfilePage = () => {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
+                      id="profile-country"
+                      name="country"
+                      autoComplete="country-name"
                       fullWidth
                       label="Country"
                       value={formData.country}
@@ -470,6 +548,9 @@ const ProfilePage = () => {
                   </Grid>
                   <Grid item xs={12}>
                     <TextField
+                      id="profile-address"
+                      name="address"
+                      autoComplete="street-address"
                       fullWidth
                       label="Address"
                       value={formData.address}
@@ -481,6 +562,9 @@ const ProfilePage = () => {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
+                      id="profile-city"
+                      name="city"
+                      autoComplete="address-level2"
                       fullWidth
                       label="City"
                       value={formData.city}
@@ -490,6 +574,9 @@ const ProfilePage = () => {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
+                      id="profile-zip-code"
+                      name="zipCode"
+                      autoComplete="postal-code"
                       fullWidth
                       label="ZIP Code"
                       value={formData.zipCode}
@@ -522,7 +609,14 @@ const ProfilePage = () => {
 
                 {/* Password Section */}
                 <Box sx={{ mb: 4 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: { xs: 'stretch', sm: 'center' }, 
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: 2,
+                    mb: 2 
+                  }}>
                     <Box>
                       <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                         Password
@@ -540,6 +634,7 @@ const ProfilePage = () => {
                         borderRadius: '10px',
                         textTransform: 'none',
                         px: 3,
+                        width: { xs: '100%', sm: 'auto' },
                         boxShadow: '0 4px 14px 0 rgba(0, 211, 149, 0.39)',
                       }}
                     >
@@ -557,7 +652,7 @@ const ProfilePage = () => {
                   </Typography>
                   <List>
                     {securityLogs.map((log) => (
-                      <ListItem key={log.id} divider>
+                      <ListItem key={log._id || log.id} divider>
                         <ListItemIcon>
                           {log.status === 'success' ? (
                             <CheckCircle sx={{ color: '#00D395' }} />
@@ -576,14 +671,11 @@ const ProfilePage = () => {
                               </Typography>
                             </Box>
                           }
-                          secondary={`${log.device} • ${log.ipAddress}`}
+                          secondary={`${formatDevice(log.device)} • ${log.ipAddress}`}
                         />
                       </ListItem>
                     ))}
                   </List>
-                  <Button fullWidth variant="text" sx={{ mt: 2 }}>
-                    View All Activity
-                  </Button>
                 </Box>
               </CardContent>
             </Card>
@@ -626,16 +718,16 @@ const ProfilePage = () => {
                   </Alert>
                 )}
 
-                <Grid container spacing={3}>
+                <Grid container spacing={2}>
                   {/* ID Front */}
-                  <Grid item xs={12} md={4}>
-                    <Paper sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                      <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
-                        ID Card Front
+                  <Grid item xs={12} sm={4}>
+                    <Paper sx={{ p: { xs: 1.5, sm: 2 }, textAlign: 'center', height: '100%', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', display: 'block' }}>
+                        ID Front
                       </Typography>
                       <Box
                         sx={{
-                          height: 200,
+                          height: { xs: 100, sm: 120 },
                           border: '2px dashed',
                           borderColor: kycDocuments.idFront ? 'transparent' : 'rgba(255,255,255,0.2)',
                           borderRadius: 2,
@@ -656,7 +748,7 @@ const ProfilePage = () => {
                             animate={{ opacity: 1 }}
                           />
                         ) : (
-                          <Upload sx={{ fontSize: 48, color: 'text.secondary' }} />
+                          <Upload sx={{ fontSize: 32, color: 'text.secondary' }} />
                         )}
                       </Box>
                       <input
@@ -665,30 +757,37 @@ const ProfilePage = () => {
                         id="id-front"
                         style={{ display: 'none' }}
                         onChange={(e) => handleFileSelect('idFront', e)}
+                        disabled={verificationStatus === 'verified'}
                       />
                       <label htmlFor="id-front">
                         <Button
                           component="span"
-                          variant="outlined"
-                          startIcon={<Upload />}
-                          disabled={uploading}
+                          variant="contained"
+                          size="medium"
+                          disabled={uploading || verificationStatus === 'verified'}
                           fullWidth
+                          sx={{ 
+                            textTransform: 'none',
+                            bgcolor: kycDocuments.idFront ? 'rgba(0, 211, 149, 0.1)' : 'primary.main',
+                            color: kycDocuments.idFront ? '#00D395' : 'white',
+                            '&:hover': { bgcolor: kycDocuments.idFront ? 'rgba(0, 211, 149, 0.2)' : 'primary.dark' }
+                          }}
                         >
-                          {uploading ? 'Uploading...' : kycDocuments.idFront ? 'Change' : 'Upload'}
+                          {uploading ? 'Uploading...' : kycDocuments.idFront ? (verificationStatus === 'verified' ? 'Verified' : 'Change Front') : 'Upload Front'}
                         </Button>
                       </label>
                     </Paper>
                   </Grid>
 
                   {/* ID Back */}
-                  <Grid item xs={12} md={4}>
-                    <Paper sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                      <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
-                        ID Card Back
+                  <Grid item xs={12} sm={4}>
+                    <Paper sx={{ p: { xs: 1.5, sm: 2 }, textAlign: 'center', height: '100%', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', display: 'block' }}>
+                        ID Back
                       </Typography>
                       <Box
                         sx={{
-                          height: 200,
+                          height: { xs: 100, sm: 120 },
                           border: '2px dashed',
                           borderColor: kycDocuments.idBack ? 'transparent' : 'rgba(255,255,255,0.2)',
                           borderRadius: 2,
@@ -709,7 +808,7 @@ const ProfilePage = () => {
                             animate={{ opacity: 1 }}
                           />
                         ) : (
-                          <Upload sx={{ fontSize: 48, color: 'text.secondary' }} />
+                          <Upload sx={{ fontSize: 32, color: 'text.secondary' }} />
                         )}
                       </Box>
                       <input
@@ -718,30 +817,37 @@ const ProfilePage = () => {
                         id="id-back"
                         style={{ display: 'none' }}
                         onChange={(e) => handleFileSelect('idBack', e)}
+                        disabled={verificationStatus === 'verified'}
                       />
                       <label htmlFor="id-back">
                         <Button
                           component="span"
-                          variant="outlined"
-                          startIcon={<Upload />}
-                          disabled={uploading}
+                          variant="contained"
+                          size="medium"
+                          disabled={uploading || verificationStatus === 'verified'}
                           fullWidth
+                          sx={{ 
+                            textTransform: 'none',
+                            bgcolor: kycDocuments.idBack ? 'rgba(0, 211, 149, 0.1)' : 'primary.main',
+                            color: kycDocuments.idBack ? '#00D395' : 'white',
+                            '&:hover': { bgcolor: kycDocuments.idBack ? 'rgba(0, 211, 149, 0.2)' : 'primary.dark' }
+                          }}
                         >
-                          {uploading ? 'Uploading...' : kycDocuments.idBack ? 'Change' : 'Upload'}
+                          {uploading ? 'Uploading...' : kycDocuments.idBack ? (verificationStatus === 'verified' ? 'Verified' : 'Change Back') : 'Upload Back'}
                         </Button>
                       </label>
                     </Paper>
                   </Grid>
 
                   {/* Selfie */}
-                  <Grid item xs={12} md={4}>
-                    <Paper sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                      <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
-                        Selfie with ID
+                  <Grid item xs={12} sm={4}>
+                    <Paper sx={{ p: { xs: 1.5, sm: 2 }, textAlign: 'center', height: '100%', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', display: 'block' }}>
+                        Selfie
                       </Typography>
                       <Box
                         sx={{
-                          height: 200,
+                          height: { xs: 100, sm: 120 },
                           border: '2px dashed',
                           borderColor: kycDocuments.selfie ? 'transparent' : 'rgba(255,255,255,0.2)',
                           borderRadius: 2,
@@ -762,7 +868,7 @@ const ProfilePage = () => {
                             animate={{ opacity: 1 }}
                           />
                         ) : (
-                          <Upload sx={{ fontSize: 48, color: 'text.secondary' }} />
+                          <Upload sx={{ fontSize: 32, color: 'text.secondary' }} />
                         )}
                       </Box>
                       <input
@@ -771,16 +877,23 @@ const ProfilePage = () => {
                         id="selfie"
                         style={{ display: 'none' }}
                         onChange={(e) => handleFileSelect('selfie', e)}
+                        disabled={verificationStatus === 'verified'}
                       />
                       <label htmlFor="selfie">
                         <Button
                           component="span"
-                          variant="outlined"
-                          startIcon={<Upload />}
-                          disabled={uploading}
+                          variant="contained"
+                          size="medium"
+                          disabled={uploading || verificationStatus === 'verified'}
                           fullWidth
+                          sx={{ 
+                            textTransform: 'none',
+                            bgcolor: kycDocuments.selfie ? 'rgba(0, 211, 149, 0.1)' : 'primary.main',
+                            color: kycDocuments.selfie ? '#00D395' : 'white',
+                            '&:hover': { bgcolor: kycDocuments.selfie ? 'rgba(0, 211, 149, 0.2)' : 'primary.dark' }
+                          }}
                         >
-                          {uploading ? 'Uploading...' : kycDocuments.selfie ? 'Change' : 'Upload'}
+                          {uploading ? 'Uploading...' : kycDocuments.selfie ? (verificationStatus === 'verified' ? 'Verified' : 'Change Selfie') : 'Upload Selfie'}
                         </Button>
                       </label>
                     </Paper>
@@ -805,10 +918,22 @@ const ProfilePage = () => {
                     variant="contained"
                     fullWidth
                     size="large"
-                    sx={{ mt: 3 }}
-                    onClick={() => toast.success('Documents submitted for verification')}
+                    disabled={!kycDocuments.idFront || !kycDocuments.idBack || !kycDocuments.selfie || uploading}
+                    sx={{ 
+                      mt: 3,
+                      bgcolor: '#00D395',
+                      fontWeight: 'bold',
+                      '&:hover': { bgcolor: '#00b884' },
+                      '&.Mui-disabled': {
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                        color: 'rgba(255, 255, 255, 0.3)'
+                      }
+                    }}
+                    onClick={() => toast.success('Your documents are being reviewed. Please wait 1-2 business days.')}
                   >
-                    Submit for Verification
+                    {!kycDocuments.idFront || !kycDocuments.idBack || !kycDocuments.selfie 
+                      ? 'Upload All Documents to Submit' 
+                      : 'Submit for Verification'}
                   </Button>
                 )}
               </CardContent>
@@ -840,48 +965,55 @@ const ProfilePage = () => {
                       <Typography color="text.secondary">No recent transactions</Typography>
                     </Box>
                   ) : (
-                    <List>
-                      {transactions.map((tx) => (
-                        <ListItem key={tx._id || tx.id} divider>
-                          <ListItemIcon>
-                            {tx.type === 'deposit' ? (
-                              <CheckCircle sx={{ color: '#00D395' }} />
-                            ) : tx.type === 'withdrawal' ? (
-                              <Receipt sx={{ color: '#FF6B6B' }} />
-                            ) : (
-                              <History sx={{ color: '#4361EE' }} />
-                            )}
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography variant="body2">
-                                  {tx.type.charAt(0).toUpperCase() + tx.type.slice(1)} {tx.currency}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                  {tx.amount} {tx.currency}
-                                </Typography>
+                    <List sx={{ p: 0 }}>
+                      {transactions.filter(tx => tx.type !== 'trade').slice(0, 10).map((tx) => (
+                        <ListItem 
+                          key={tx._id || tx.id} 
+                          divider 
+                          sx={{ 
+                            py: 2, 
+                            px: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'stretch'
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Box sx={{ mr: 1.5, display: 'flex', alignItems: 'center' }}>
+                                {tx.type === 'deposit' ? (
+                                  <CheckCircle sx={{ color: '#00D395', fontSize: 20 }} />
+                                ) : (
+                                  <Receipt sx={{ color: '#FF6B6B', fontSize: 20 }} />
+                                )}
                               </Box>
-                            }
-                            secondary={
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                  {tx.toAddress ? `To: ${tx.toAddress.substring(0, 16)}...` : tx.metadata?.pair || ''}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {formatDate(tx.createdAt || tx.date)}
-                                </Typography>
-                              </Box>
-                            }
-                          />
-                          <Chip
-                            label={tx.status}
-                            size="small"
-                            color={
-                              tx.status === 'completed' ? 'success' :
-                              tx.status === 'pending' ? 'warning' : 'default'
-                            }
-                          />
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                {tx.type.charAt(0).toUpperCase() + tx.type.slice(1)} {tx.currency}
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', color: tx.type === 'deposit' ? '#00D395' : '#FF6B6B' }}>
+                              {tx.type === 'deposit' ? '+' : '-'}{tx.amount} {tx.currency}
+                            </Typography>
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {formatDate(tx.createdAt || tx.date)}
+                            </Typography>
+                            <Chip
+                              label={tx.status}
+                              size="small"
+                              color={
+                                tx.status === 'completed' ? 'success' :
+                                tx.status === 'pending' ? 'warning' : 'default'
+                              }
+                              sx={{ 
+                                height: '20px', 
+                                fontSize: '0.65rem',
+                                '& .MuiChip-label': { px: 1 }
+                              }}
+                            />
+                          </Box>
                         </ListItem>
                       ))}
                     </List>
@@ -889,49 +1021,62 @@ const ProfilePage = () => {
                 )}
 
                 {activitySubTab === 1 && (
-                  trades.length === 0 ? (
+                  (trades.length === 0 && transactions.filter(tx => tx.type === 'trade').length === 0) ? (
                     <Box sx={{ textAlign: 'center', py: 4 }}>
                       <History sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                       <Typography color="text.secondary">No recent trades</Typography>
                     </Box>
                   ) : (
-                    <List>
-                      {trades.map((trade) => (
-                        <ListItem key={trade._id || trade.id} divider>
-                          <ListItemIcon>
-                            <History sx={{ color: '#4361EE' }} />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                  {trade.pair}
-                                </Typography>
-                                <Typography variant="body2" color={trade.type === 'buy' || trade.type === 'long' ? '#00D395' : '#FF6B6B'}>
-                                  {trade.type.toUpperCase()} {trade.amount}
-                                </Typography>
+                    <List sx={{ p: 0 }}>
+                      {[...trades, ...transactions.filter(tx => tx.type === 'trade')].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)).slice(0, 10).map((trade) => (
+                        <ListItem 
+                          key={trade._id || trade.id} 
+                          divider 
+                          sx={{ 
+                            py: 2, 
+                            px: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'stretch'
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Box sx={{ mr: 1.5, display: 'flex', alignItems: 'center' }}>
+                                <History sx={{ color: '#4361EE', fontSize: 20 }} />
                               </Box>
-                            }
-                            secondary={
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                  Price: {trade.price}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {formatDate(trade.createdAt)}
-                                </Typography>
-                              </Box>
-                            }
-                          />
-                          <Chip
-                            label={trade.status}
-                            size="small"
-                            color={
-                              trade.status === 'completed' ? 'success' :
-                              trade.status === 'pending' ? 'warning' : 'default'
-                            }
-                            sx={{ ml: 2 }}
-                          />
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                {trade.pair || trade.metadata?.pair || 'Trade USDT'}
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', color: trade.type === 'buy' || trade.type === 'long' || trade.metadata?.outcome === 'win' ? '#00D395' : '#FF6B6B' }}>
+                              {trade.type === 'buy' || trade.type === 'long' || trade.metadata?.outcome === 'win' ? '+' : '-'}{trade.amount} {trade.currency || 'USDT'}
+                            </Typography>
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 1 }}>
+                            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 0, sm: 2 } }}>
+                              <Typography variant="caption" color="text.secondary">
+                                {formatDate(trade.createdAt || trade.date)}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {trade.price || trade.metadata?.price ? `Price: ${trade.price || trade.metadata?.price}` : 'MARKET'}
+                              </Typography>
+                            </Box>
+                            <Chip
+                              label={trade.status}
+                              size="small"
+                              color={
+                                trade.status === 'completed' ? 'success' :
+                                trade.status === 'pending' ? 'warning' : 'default'
+                              }
+                              sx={{ 
+                                height: '20px', 
+                                fontSize: '0.65rem',
+                                '& .MuiChip-label': { px: 1 }
+                              }}
+                            />
+                          </Box>
                         </ListItem>
                       ))}
                     </List>
@@ -966,7 +1111,7 @@ const ProfilePage = () => {
                                 </Typography>
                               </Box>
                             }
-                            secondary={`${log.device} • ${log.ipAddress}`}
+                            secondary={`${formatDevice(log.device)} • ${log.ipAddress}`}
                           />
                         </ListItem>
                       ))}
@@ -1004,6 +1149,9 @@ const ProfilePage = () => {
         <DialogTitle>Change Password</DialogTitle>
         <DialogContent>
           <TextField
+            id="profile-current-password"
+            name="currentPassword"
+            autoComplete="current-password"
             fullWidth
             label="Current Password"
             type={showPassword.current ? 'text' : 'password'}
@@ -1021,6 +1169,9 @@ const ProfilePage = () => {
             }}
           />
           <TextField
+            id="profile-new-password"
+            name="newPassword"
+            autoComplete="new-password"
             fullWidth
             label="New Password"
             type={showPassword.new ? 'text' : 'password'}
@@ -1038,6 +1189,9 @@ const ProfilePage = () => {
             }}
           />
           <TextField
+            id="profile-confirm-password"
+            name="confirmPassword"
+            autoComplete="new-password"
             fullWidth
             label="Confirm New Password"
             type={showPassword.confirm ? 'text' : 'password'}

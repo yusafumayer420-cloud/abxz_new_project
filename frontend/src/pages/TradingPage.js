@@ -38,19 +38,22 @@ import {
   History,
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from '../utils/axiosConfig';
 import toast from 'react-hot-toast';
+import TradeResultModal from '../components/TradeResultModal';
+
 
 // ---------------------------------------------------------------------------
 // Delivery contract time slots definition
 // ---------------------------------------------------------------------------
 const DELIVERY_SLOTS = [
-  { seconds: 60,   label: '60s',   profit: 13, minAmount: 500 },
-  { seconds: 180,  label: '180s',  profit: 15, minAmount: 10000 },
-  { seconds: 300,  label: '300s',  profit: 20, minAmount: 30000 },
-  { seconds: 600,  label: '600s',  profit: 27, minAmount: 50000 },
-  { seconds: 900,  label: '900s',  profit: 75, minAmount: 100000 },
-  { seconds: 1800, label: '1800s', profit: 90, minAmount: 300000 },
+  { seconds: 60,   label: '60s',   profit: 13, minAmount: 100 },
+  { seconds: 180,  label: '180s',  profit: 15, minAmount: 1000 },
+  { seconds: 300,  label: '300s',  profit: 20, minAmount: 3000 },
+  { seconds: 600,  label: '600s',  profit: 27, minAmount: 5000 },
+  { seconds: 900,  label: '900s',  profit: 75, minAmount: 10000 },
+  { seconds: 1800, label: '1800s', profit: 90, minAmount: 30000 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -125,8 +128,8 @@ const DeliveryOrderBook = ({ orderBook, price }) => {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, px: 1 }}>
-        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Price(USDT)</Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Number(BTC)</Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Price</Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Number</Typography>
       </Box>
 
       {/* Asks (Sells) - Red */}
@@ -144,7 +147,7 @@ const DeliveryOrderBook = ({ orderBook, price }) => {
               {ask.price.toFixed(2)}
             </Typography>
             <Typography variant="caption" sx={{ color: '#fff', zIndex: 1, fontSize: '0.75rem' }}>
-              {ask.amount.toFixed(4)}
+              {ask.amount.toFixed(2)}
             </Typography>
           </Box>
         ))}
@@ -175,7 +178,7 @@ const DeliveryOrderBook = ({ orderBook, price }) => {
               {bid.price.toFixed(2)}
             </Typography>
             <Typography variant="caption" sx={{ color: '#fff', zIndex: 1, fontSize: '0.75rem' }}>
-              {bid.amount.toFixed(4)}
+              {bid.amount.toFixed(2)}
             </Typography>
           </Box>
         ))}
@@ -191,9 +194,12 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
   const [selectedSlot, setSelectedSlot] = useState(DELIVERY_SLOTS[0]);
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
-  const [posTab, setPosTab] = useState(0); // 0=hold, 1=history
+  const [positionsTab, setPositionsTab] = useState(0); // 0=hold, 1=history
   const [activeTrades, setActiveTrades] = useState([]);
   const [historyTrades, setHistoryTrades] = useState([]);
+  const [selectedHistoryTrade, setSelectedHistoryHistoryTrade] = useState(null);
+
+
 
   const fetchDeliveryTrades = useCallback(async () => {
     try {
@@ -212,28 +218,28 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('trade_updated', (updated) => {
+    const handleTradeUpdate = (updated) => {
       if (updated.tradeMode === 'delivery' &&
           (updated.userId === user?._id || updated.userId?._id === user?._id)) {
+        // Just refresh the trades; the popup & toast are now handled by AuthContext globally
         fetchDeliveryTrades();
-        if (updated.outcome === 'win') {
-          toast.success(`🎉 Trade Won! +${updated.profitAmount?.toFixed(2)} USDT`);
-        } else if (updated.outcome === 'loss') {
-          toast.error('❌ Trade Lost');
-        }
       }
-    });
+    };
 
-    socket.on('balance_updated', () => {
+    const handleBalanceUpdate = () => {
       // parent will re-fetch via its own listener; here just refresh trades
       fetchDeliveryTrades();
-    });
+    };
+
+    socket.on('trade_updated', handleTradeUpdate);
+    socket.on('balance_updated', handleBalanceUpdate);
 
     return () => {
-      socket.off('trade_updated');
-      socket.off('balance_updated');
+      socket.off('trade_updated', handleTradeUpdate);
+      socket.off('balance_updated', handleBalanceUpdate);
     };
   }, [socket, user, fetchDeliveryTrades]);
+
 
   const handleTrade = async (side) => {
     const amtNum = parseFloat(amount);
@@ -269,17 +275,13 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
 
   return (
     <Box>
-      <Grid container spacing={2}>
+      <Grid container spacing={1}>
         {/* Left Side: Order Form */}
-        <Grid item xs={12} md={7.5}>
-          {/* Header */}
-          <Paper sx={{ p: 2, mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>Cross</Typography>
-            <Typography variant="caption" color="text.secondary">Delivery Contract</Typography>
-          </Paper>
+        <Grid item xs={7.5}>
+
 
           {/* Delivery Time Slots */}
-          <Paper sx={{ p: 2, mb: 2, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <Paper sx={{ p: 1.5, mb: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, fontWeight: 'bold', letterSpacing: 1 }}>
               DELIVERY TIME
             </Typography>
@@ -300,7 +302,8 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        px: 1.5,
+                        gap: 0.5,
+                        px: 1,
                         py: 1,
                         borderRadius: 1.5,
                         border: `1px solid ${isSelected ? '#4361EE' : 'rgba(255,255,255,0.1)'}`,
@@ -313,11 +316,11 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
                         }
                       }}
                     >
-                      <Typography variant="body2" sx={{ fontWeight: isSelected ? 'bold' : 'normal', color: isSelected ? '#fff' : 'text.secondary', fontSize: '0.8rem' }}>
+                      <Typography variant="body2" sx={{ fontWeight: isSelected ? 'bold' : 'normal', color: isSelected ? '#fff' : 'text.secondary', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                         {slot.label}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#00D395', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                        {slot.profit}~{slot.profit}%
+                      <Typography variant="caption" sx={{ color: '#00D395', fontSize: '0.75rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                        {slot.profit}%
                       </Typography>
                     </Box>
                   </Grid>
@@ -327,7 +330,7 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
           </Paper>
 
           {/* Amount input */}
-          <Paper sx={{ p: 2, mb: 2, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <Paper sx={{ p: 1.5, mb: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             {/* Minimum notice */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
               <Typography variant="caption" color="text.secondary">
@@ -336,16 +339,12 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
               <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>USDT</Typography>
             </Box>
 
-            {/* Available balance */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, p: 1, bgcolor: 'rgba(0,211,149,0.06)', borderRadius: 1, border: '1px solid rgba(0,211,149,0.15)' }}>
-              <AccountBalanceWallet sx={{ color: '#00D395', fontSize: 16 }} />
-              <Typography variant="caption" color="text.secondary">Available:</Typography>
-              <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#00D395' }}>
-                {(user?.wallet?.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT
-              </Typography>
-            </Box>
+
 
             <TextField
+              id="delivery-amount"
+              name="deliveryAmount"
+              autoComplete="off"
               fullWidth
               label="Amount (USDT)"
               type="number"
@@ -362,49 +361,12 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
               error={!!amount && parseFloat(amount) < selectedSlot.minAmount}
             />
 
-            {/* Quick percent buttons */}
-            <Box sx={{ display: 'flex', gap: 0.5, mb: 2 }}>
-              {[0.25, 0.5, 0.75, 1].map((pct) => (
-                <Button
-                  key={pct}
-                  size="small"
-                  variant="outlined"
-                  onClick={() => setAmount(Math.floor((user?.wallet?.usdt || 0) * pct).toString())}
-                  sx={{ flex: 1, fontSize: '0.7rem', borderColor: 'rgba(255,255,255,0.2)', py: 0.5 }}
-                >
-                  {pct * 100}%
-                </Button>
-              ))}
-            </Box>
+           
 
-            {/* Selected slot summary */}
-            <Paper sx={{ p: 1.5, mb: 2, bgcolor: 'rgba(67,97,238,0.08)', border: '1px solid rgba(67,97,238,0.2)', borderRadius: 1.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ textAlign: 'center', flex: 1 }}>
-                  <Typography variant="caption" color="text.secondary">Timer</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#4361EE' }}>
-                    {selectedSlot.label}
-                  </Typography>
-                </Box>
-                <Divider orientation="vertical" flexItem />
-                <Box sx={{ textAlign: 'center', flex: 1 }}>
-                  <Typography variant="caption" color="text.secondary">Profit Rate</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#00D395' }}>
-                    {selectedSlot.profit}%
-                  </Typography>
-                </Box>
-                <Divider orientation="vertical" flexItem />
-                <Box sx={{ textAlign: 'center', flex: 1 }}>
-                  <Typography variant="caption" color="text.secondary">Est. Win</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#00D395' }}>
-                    +{amount ? (parseFloat(amount || 0) * selectedSlot.profit / 100).toFixed(2) : '0.00'} USDT
-                  </Typography>
-                </Box>
-              </Box>
-            </Paper>
+
 
             {/* Buy Long / Buy Short */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <motion.div style={{ flex: 1 }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
                 <Button
                   fullWidth
@@ -440,25 +402,23 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
                   disabled={loading}
                   onClick={() => handleTrade('short')}
                   sx={{
-                    color: '#FF6B6B !important',
-                    borderColor: '#FF6B6B !important',
-                    backgroundColor: 'rgba(29, 27, 27, 0.4) !important',
+                    bgcolor: '#131a2e',
+                    color: '#FF6B6B',
+                    border: '1px solid #FF6B6B',
                     fontWeight: 'bold',
                     py: 1.5,
-                    fontSize: '1rem',
-                    borderRadius: '50px',
-                    textTransform: 'none',
-                    '&:hover': { 
-                      backgroundColor: 'rgba(255, 107, 107, 0.1) !important',
-                      borderColor: '#ff5252 !important'
-                    },
-                    '&:disabled': { 
-                      color: 'rgba(255, 107, 107, 0.3) !important',
-                      borderColor: 'rgba(255, 107, 107, 0.2) !important'
-                    },
+                    fontSize: '0.9rem',
+                    '&:hover': { bgcolor: 'rgba(255,107,107,0.1)', border: '1px solid #FF6B6B' },
+                    '&:disabled': { borderColor: 'rgba(255,107,107,0.3)', color: 'rgba(255,107,107,0.3)' },
+                    borderRadius: 2,
                   }}
                 >
-                  {loading ? <CircularProgress size={20} color="inherit" /> : 'Sell/Short'}
+                  {loading ? <CircularProgress size={20} color="inherit" /> : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <TrendingDown fontSize="small" />
+                      Buy Short
+                    </Box>
+                  )}
                 </Button>
               </motion.div>
             </Box>
@@ -466,7 +426,7 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
         </Grid>
 
         {/* Right Side: Order Book */}
-        <Grid item xs={12} md={4.5}>
+        <Grid item xs={4.5}>
           <Paper sx={{ p: 1, height: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <DeliveryOrderBook orderBook={orderBook} price={price} />
           </Paper>
@@ -476,16 +436,25 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
       {/* Hold / Historical Positions */}
       <Box>
         <Tabs
-          value={posTab}
-          onChange={(e, v) => setPosTab(v)}
+          value={positionsTab}
+          onChange={(e, v) => setPositionsTab(v)}
           variant="fullWidth"
-          sx={{ mb: 1, '& .MuiTab-root': { fontSize: '0.8rem' } }}
+          sx={{ 
+            mb: 1, 
+            '& .MuiTab-root': { 
+              fontSize: { xs: '0.7rem', sm: '0.8rem' },
+              minWidth: 'auto',
+              px: { xs: 1, sm: 2 }
+            } 
+          }}
         >
+
           <Tab label={`Hold position (${activeTrades.length})`} icon={<AccessTime sx={{ fontSize: 16 }} />} iconPosition="start" />
           <Tab label={`Historical position`} icon={<History sx={{ fontSize: 16 }} />} iconPosition="start" />
         </Tabs>
 
-        {posTab === 0 && (
+        {positionsTab === 0 && (
+
           <Card>
             {activeTrades.length === 0 ? (
               <CardContent sx={{ textAlign: 'center', py: 5 }}>
@@ -539,7 +508,8 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
           </Card>
         )}
 
-        {posTab === 1 && (
+        {positionsTab === 1 && (
+
           <Card>
             {historyTrades.length === 0 ? (
               <CardContent sx={{ textAlign: 'center', py: 5 }}>
@@ -547,93 +517,116 @@ const DeliveryTab = ({ price, socket, user, orderBook }) => {
                 <Typography color="text.secondary">No historical positions yet.</Typography>
               </CardContent>
             ) : (
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Pair</TableCell>
-                      <TableCell>Direction</TableCell>
-                      <TableCell>Amount</TableCell>
-                      <TableCell>Timer</TableCell>
-                      <TableCell>Profit %</TableCell>
-                      <TableCell>Outcome</TableCell>
-                      <TableCell>P&L</TableCell>
-                      <TableCell>Date</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {historyTrades.map((trade) => (
-                      <TableRow key={trade._id} hover>
-                        <TableCell>
-                          <Typography variant="caption" sx={{ fontWeight: 'bold' }}>{trade.pair}</Typography>
-                        </TableCell>
-                        <TableCell>
+              <Box sx={{ p: 1 }}>
+                {historyTrades.map((trade) => (
+                  <Paper
+                    key={trade._id}
+                    onClick={() => setSelectedHistoryHistoryTrade(trade)}
+                    sx={{ 
+                      p: 2, 
+                      mb: 1.5, 
+                      border: '1px solid rgba(255,255,255,0.08)', 
+                      background: 'rgba(255,255,255,0.03)',
+                      cursor: 'pointer',
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                      <Box>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{trade.pair}</Typography>
                           <Chip
                             label={trade.type === 'long' ? 'LONG' : 'SHORT'}
                             size="small"
                             sx={{
                               fontSize: '0.6rem',
+                              height: '18px',
                               bgcolor: trade.type === 'long' ? 'rgba(0,211,149,0.15)' : 'rgba(255,107,107,0.15)',
                               color: trade.type === 'long' ? '#00D395' : '#FF6B6B',
                             }}
                           />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="caption">{trade.total?.toFixed(2)} USDT</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="caption">{trade.deliverySeconds}s</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="caption" color="#00D395">{trade.profitPercent}%</Typography>
-                        </TableCell>
-                        <TableCell>
                           <Chip
                             label={trade.outcome?.toUpperCase() || 'N/A'}
                             size="small"
                             sx={{
                               fontSize: '0.6rem',
+                              height: '18px',
                               bgcolor: trade.outcome === 'win' ? 'rgba(0,211,149,0.15)' : 'rgba(255,107,107,0.15)',
                               color: trade.outcome === 'win' ? '#00D395' : '#FF6B6B',
                               fontWeight: 'bold',
                             }}
                           />
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              fontWeight: 'bold',
-                              color: trade.outcome === 'win' ? '#00D395' : '#FF6B6B',
-                            }}
-                          >
-                            {trade.outcome === 'win'
-                              ? `+${trade.profitAmount?.toFixed(2)}`
-                              : `-${trade.total?.toFixed(2)}`}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="caption">{new Date(trade.createdAt).toLocaleDateString()}</Typography>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(trade.createdAt).toLocaleDateString()} • {trade.deliverySeconds}s
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 'bold',
+                            color: trade.outcome === 'win' ? '#00D395' : '#FF6B6B',
+                          }}
+                        >
+                          {trade.outcome === 'win'
+                            ? `+${trade.profitAmount?.toFixed(2)}`
+                            : `-${trade.total?.toFixed(2)}`}
+                          <Typography variant="caption" sx={{ ml: 0.5, color: 'text.secondary' }}>USDT</Typography>
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Amt: {trade.total?.toFixed(2)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+                ))}
+              </Box>
             )}
           </Card>
         )}
       </Box>
+
+      {/* Manual Detail Modal for History */}
+      <TradeResultModal
+        open={!!selectedHistoryTrade}
+        onClose={() => setSelectedHistoryHistoryTrade(null)}
+        trade={selectedHistoryTrade}
+        currentPrice={selectedHistoryTrade?.price}
+      />
     </Box>
   );
 };
+
+
 
 // ---------------------------------------------------------------------------
 // Main TradingPage
 // ---------------------------------------------------------------------------
 const TradingPage = ({ socket }) => {
   const { user } = useContext(AuthContext);
-  const [activeTab, setActiveTab] = useState(0);
+  const { pair } = useParams();
+  const navigate = useNavigate();
+  
+  const [activeTab, setActiveTab] = useState(pair === 'delivery' ? 1 : 0);
+  
+  useEffect(() => {
+    if (pair === 'delivery') {
+      setActiveTab(1);
+    } else if (pair === 'perpetual' || pair === 'BTC-USDT') {
+      setActiveTab(0);
+    }
+  }, [pair]);
+
+  const handleTabChange = (e, v) => {
+    setActiveTab(v);
+    if (v === 1) {
+      navigate('/trading/delivery');
+    } else {
+      navigate('/trading/perpetual');
+    }
+  };
+
   const [positionsTab, setPositionsTab] = useState(0);
   const [orderType, setOrderType] = useState('market');
   const [side, setSide] = useState('buy');
@@ -682,9 +675,7 @@ const TradingPage = ({ socket }) => {
     fetchMyTrades();
     // fetchWalletBalance(); // Removed redundant call
 
-    if (!socket) return;
-
-    socket.on('priceUpdate', (prices) => {
+    const handlePriceUpdate = (prices) => {
       const btcPrice = prices.find(p => p.symbol === 'BTC/USDT');
       if (btcPrice) {
         const livePrice = parseFloat(btcPrice.price);
@@ -710,25 +701,25 @@ const TradingPage = ({ socket }) => {
           ]
         });
       }
-    });
+    };
 
-    socket.on('trade_updated', (updatedTrade) => {
+    const handleTradeUpdate = (updatedTrade) => {
       if (updatedTrade.tradeMode !== 'delivery' &&
           (updatedTrade.userId === user?._id || updatedTrade.userId?._id === user?._id)) {
         fetchMyTrades();
-        // fetchWalletBalance(); // Handled by AuthContext
         toast.success(`Trade ${updatedTrade.status}`);
       }
-    });
+    };
 
-    // balance_updated is now handled globally in AuthContext
+    socket.on('priceUpdate', handlePriceUpdate);
+    socket.on('trade_updated', handleTradeUpdate);
 
     return () => {
-      socket.off('priceUpdate');
-      socket.off('trade_updated');
-      socket.off('balance_updated');
+      socket.off('priceUpdate', handlePriceUpdate);
+      socket.off('trade_updated', handleTradeUpdate);
     };
   }, [socket, user]);
+
 
   const handlePlaceOrder = async () => {
     if (!user) { toast.error('Please login to trade'); return; }
@@ -789,7 +780,7 @@ const TradingPage = ({ socket }) => {
   return (
     <Container maxWidth="sm" sx={{ pb: 10, pt: 2 }}>
       {/* Pair Header */}
-      <Paper sx={{ mb: 2, p: 2 }}>
+      <Paper sx={{ mb: 1, p: 1.5 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h5" sx={{ fontWeight: 'bold' }}>BTC/USDT</Typography>
           <Box sx={{ textAlign: 'right' }}>
@@ -801,13 +792,10 @@ const TradingPage = ({ socket }) => {
             </Typography>
           </Box>
         </Box>
-        <Typography variant="caption" color="text.secondary">
-          24h High: $71,200 • Low: $69,800
-        </Typography>
       </Paper>
 
       {/* Wallet Balance Banner */}
-      <Paper sx={{ mb: 2, p: 1.5, display: 'flex', alignItems: 'center', gap: 1, background: 'rgba(0,211,149,0.08)', border: '1px solid rgba(0,211,149,0.2)' }}>
+      <Paper sx={{ mb: 1, p: 1, display: 'flex', alignItems: 'center', gap: 1, background: 'rgba(0,211,149,0.08)', border: '1px solid rgba(0,211,149,0.2)' }}>
         <AccountBalanceWallet sx={{ color: '#00D395', fontSize: 20 }} />
         <Typography variant="body2" color="text.secondary">Available:</Typography>
         <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#00D395' }}>
@@ -816,10 +804,10 @@ const TradingPage = ({ socket }) => {
       </Paper>
 
       {/* Trading Mode Tabs */}
-      <Paper sx={{ mb: 2 }}>
+      <Paper sx={{ mb: 1 }}>
         <Tabs
           value={activeTab}
-          onChange={(e, v) => setActiveTab(v)}
+          onChange={handleTabChange}
           variant="fullWidth"
           sx={{
             '& .MuiTab-root': { fontSize: '0.875rem', fontWeight: 'bold' },
@@ -858,11 +846,11 @@ const TradingPage = ({ socket }) => {
       {/* ------------------------------------------------------------------ */}
       {activeTab === 0 && (
         <>
-          <Grid container spacing={2}>
+          <Grid container spacing={1}>
             {/* Order Form */}
-            <Grid item xs={12} md={8}>
+            <Grid item xs={8}>
               <Card>
-                <CardContent>
+                <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                   {/* Buy/Sell Toggle */}
                   <Box sx={{ display: 'flex', mb: 2 }}>
                     <Button
@@ -900,28 +888,21 @@ const TradingPage = ({ socket }) => {
 
                   {/* Price Input */}
                   {orderType === 'limit' && (
-                    <TextField fullWidth label="Price (USDT)" type="number" value={price}
+                    <TextField id="limit-price" name="limitPrice" autoComplete="off" fullWidth label="Price (USDT)" type="number" value={price}
                       onChange={(e) => setPrice(e.target.value)} sx={{ mb: 2 }} size="small"
                     />
                   )}
 
                   {/* Amount Input */}
                   <TextField
+                    id="order-amount" name="orderAmount" autoComplete="off"
                     fullWidth label={`Amount (${side === 'buy' ? 'BTC' : 'USDT'})`} type="number"
                     value={amount} onChange={(e) => setAmount(e.target.value)} sx={{ mb: 1 }} size="small"
                   />
-                  {/* Percentage Buttons */}
-                  <Box sx={{ display: 'flex', gap: 0.5, mb: 2 }}>
-                    {[0.1, 0.25, 0.5, 0.75, 1].map(pct => (
-                      <Button key={pct} size="small" variant="outlined" onClick={() => handleSetPercent(pct)}
-                        sx={{ flex: 1, fontSize: '0.7rem', borderColor: 'rgba(255,255,255,0.2)', py: 0.5 }}>
-                        {pct * 100}%
-                      </Button>
-                    ))}
-                  </Box>
+
 
                   {/* Total */}
-                  <Paper sx={{ p: 1.5, mb: 2, bgcolor: 'rgba(0,0,0,0.2)' }}>
+                  <Paper sx={{ p: 1, mb: 1, bgcolor: 'rgba(0,0,0,0.2)' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="body2">Total</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
@@ -945,9 +926,9 @@ const TradingPage = ({ socket }) => {
             </Grid>
 
             {/* Order Book */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={4}>
               <Card sx={{ height: '100%' }}>
-                <CardContent sx={{ p: 1.5 }}>
+                <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', fontSize: '0.8rem' }}>Order Book</Typography>
 
                   {/* Asks */}

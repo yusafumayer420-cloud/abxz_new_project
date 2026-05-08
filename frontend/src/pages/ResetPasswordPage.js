@@ -68,9 +68,11 @@ const ResetPasswordPage = () => {
         <Paper sx={{ p: 4, borderRadius: 3 }}>
           <form onSubmit={handleSubmit}>
             <TextField
+              id="reset-password"
+              name="password"
+              autoComplete="new-password"
               fullWidth
               label="New Password"
-              name="password"
               type={showPassword ? 'text' : 'password'}
               value={formData.password}
               onChange={handleChange}
@@ -93,9 +95,11 @@ const ResetPasswordPage = () => {
             />
 
             <TextField
+              id="reset-confirm-password"
+              name="confirmPassword"
+              autoComplete="new-password"
               fullWidth
               label="Confirm New Password"
-              name="confirmPassword"
               type={showPassword ? 'text' : 'password'}
               value={formData.confirmPassword}
               onChange={handleChange}
