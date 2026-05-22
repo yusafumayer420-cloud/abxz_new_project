@@ -49,9 +49,9 @@ import {
   Image,
   Person,
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import api from '../api';
+import SecureImage from '../components/SecureImage';
 
 const KYCVerification = () => {
   const [kycRequests, setKycRequests] = useState([]);
@@ -90,7 +90,7 @@ const KYCVerification = () => {
 
       // Handle tabs
       if (activeTab === 1) params.kycStatus = 'pending';
-      if (activeTab === 2) params.kycStatus = 'under_review'; // Note: check if backend supports this
+      if (activeTab === 2) params.kycStatus = 'unverified';
       if (activeTab === 3) params.kycStatus = 'verified';
       if (activeTab === 4) params.kycStatus = 'rejected';
 
@@ -173,8 +173,8 @@ const KYCVerification = () => {
   const getStatusColor = (status) => {
     switch(status) {
       case 'pending': return 'warning';
-      case 'under_review': return 'info';
-      case 'approved': return 'success';
+      case 'unverified': return 'info';
+      case 'verified': return 'success';
       case 'rejected': return 'error';
       default: return 'default';
     }
@@ -183,8 +183,8 @@ const KYCVerification = () => {
   const getStatusIcon = (status) => {
     switch(status) {
       case 'pending': return <HourglassEmpty />;
-      case 'under_review': return <Security />;
-      case 'approved': return <VerifiedUser />;
+      case 'unverified': return <Security />;
+      case 'verified': return <VerifiedUser />;
       case 'rejected': return <GppBad />;
       default: return null;
     }
@@ -314,9 +314,9 @@ const KYCVerification = () => {
               sx={{ width: 150 }}
             >
               <MenuItem value="">All Status</MenuItem>
+              <MenuItem value="unverified">Unverified</MenuItem>
               <MenuItem value="pending">Pending</MenuItem>
-              <MenuItem value="under_review">Under Review</MenuItem>
-              <MenuItem value="approved">Approved</MenuItem>
+              <MenuItem value="verified">Verified</MenuItem>
               <MenuItem value="rejected">Rejected</MenuItem>
             </TextField>
 
@@ -365,8 +365,8 @@ const KYCVerification = () => {
         >
           <Tab label="All Requests" />
           <Tab label="Pending" />
-          <Tab label="Under Review" />
-          <Tab label="Approved" />
+          <Tab label="Unverified" />
+          <Tab label="Verified" />
           <Tab label="Rejected" />
         </Tabs>
       </Paper>
@@ -559,11 +559,10 @@ const KYCVerification = () => {
                   </Typography>
                   <ImageList cols={3} gap={16}>
                     <ImageListItem>
-                      <img
+                      <SecureImage
                         src={selectedRequest.kycDocuments?.idFront}
                         alt="ID Front"
-                        loading="lazy"
-                        style={{ borderRadius: 8 }}
+                        style={{ borderRadius: 8, width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                       <ImageListItemBar
                         title="ID Front"
@@ -571,11 +570,10 @@ const KYCVerification = () => {
                       />
                     </ImageListItem>
                     <ImageListItem>
-                      <img
+                      <SecureImage
                         src={selectedRequest.kycDocuments?.idBack}
                         alt="ID Back"
-                        loading="lazy"
-                        style={{ borderRadius: 8 }}
+                        style={{ borderRadius: 8, width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                       <ImageListItemBar
                         title="ID Back"
@@ -583,11 +581,10 @@ const KYCVerification = () => {
                       />
                     </ImageListItem>
                     <ImageListItem>
-                      <img
+                      <SecureImage
                         src={selectedRequest.kycDocuments?.selfie}
                         alt="Selfie"
-                        loading="lazy"
-                        style={{ borderRadius: 8 }}
+                        style={{ borderRadius: 8, width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                       <ImageListItemBar
                         title="Selfie with ID"

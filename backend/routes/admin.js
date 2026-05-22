@@ -676,14 +676,21 @@ router.delete('/users/:id', protect, adminAuth, async (req, res) => {
   }
 });
 
-// Get pending KYC requests
+// Get pending KYC requests (only users who have actually uploaded documents)
 router.get('/kyc/pending', protect, adminAuth, async (req, res) => {
   try {
-    const users = await User.find({ kycStatus: { $in: ['pending', 'rejected'] } })
+    const users = await User.find({
+      kycStatus: { $in: ['pending', 'rejected'] },
+      $or: [
+        { 'kycDocuments.idFront': { $exists: true, $ne: null, $ne: '' } },
+        { 'kycDocuments.idBack': { $exists: true, $ne: null, $ne: '' } },
+        { 'kycDocuments.selfie': { $exists: true, $ne: null, $ne: '' } }
+      ]
+    })
       .select('-password')
       .sort({ createdAt: -1 });
     
-    res.json({ users });
+    res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -693,6 +700,15 @@ router.get('/kyc/pending', protect, adminAuth, async (req, res) => {
 router.put('/kyc/:userId', protect, adminAuth, async (req, res) => {
   try {
     const { status, reviewNote } = req.body;
+    
+    // Validate status against allowed values
+    const validStatuses = ['unverified', 'pending', 'verified', 'rejected'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        message: `Invalid KYC status. Must be one of: ${validStatuses.join(', ')}` 
+      });
+    }
+    
     const user = await User.findById(req.params.userId);
     
     if (!user) {

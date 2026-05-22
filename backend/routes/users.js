@@ -33,8 +33,19 @@ const storage = multer.diskStorage({
   }
 });
 
+// File type validation
+const fileFilter = (req, file, cb) => {
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, PNG, WebP and PDF files are allowed.'), false);
+  }
+};
+
 const upload = multer({ 
   storage: storage,
+  fileFilter: fileFilter,
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
 
@@ -96,14 +107,30 @@ router.post('/profile-picture', auth, upload.single('profile'), async (req, res)
   }
 });
 
-// Update KYC documents
-router.post('/kyc/upload', auth, upload.single('document'), async (req, res) => {
+// Update KYC documents (with multer error handling)
+router.post('/kyc/upload', auth, (req, res, next) => {
+  upload.single('document')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ message: 'File is too large. Maximum size is 50MB.' });
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ message: 'Unexpected file field. Please use the correct upload form.' });
+      }
+      if (err.message) {
+        return res.status(400).json({ message: err.message });
+      }
+      return res.status(500).json({ message: 'File upload failed. Please try again.' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const { type } = req.body;
     
     if (!req.file) {
       console.log('KYC Upload: No file received in req.file');
-      return res.status(400).json({ message: 'No file uploaded' });
+      return res.status(400).json({ message: 'No file uploaded. Please select a file and try again.' });
     }
     
     if (!type) {
@@ -120,10 +147,8 @@ router.post('/kyc/upload', auth, upload.single('document'), async (req, res) => 
       return res.status(400).json({ message: 'Your account is already verified. You cannot re-upload documents.' });
     }
     
-    // Construct the URL to the uploaded file
-    // e.g., http://localhost:5000/uploads/kyc/document-12345.jpg
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const fileUrl = `${baseUrl}/uploads/kyc/${req.file.filename}`;
+    // Store authenticated URL path (not a public static URL)
+    const fileUrl = `/api/users/kyc/file/${req.file.filename}`;
     
     if (!user.kycDocuments) {
       user.kycDocuments = {};
@@ -131,18 +156,40 @@ router.post('/kyc/upload', auth, upload.single('document'), async (req, res) => 
     
     // type should be 'idFront', 'idBack', or 'selfie'
     if (['idFront', 'idBack', 'selfie'].includes(type)) {
+      // Delete old file if re-uploading
+      const oldUrl = user.kycDocuments?.[type];
+      if (oldUrl) {
+        try {
+          const oldFilename = oldUrl.split('/').pop();
+          const oldFilePath = path.join(uploadDir, oldFilename);
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+          }
+        } catch (cleanupErr) {
+          console.warn('Failed to cleanup old KYC file:', cleanupErr.message);
+        }
+      }
       user.set(`kycDocuments.${type}`, fileUrl);
     } else {
       console.log('Invalid KYC document type received:', type);
-      return res.status(400).json({ message: 'Invalid document type' });
+      return res.status(400).json({ message: 'Invalid document type. Must be idFront, idBack, or selfie.' });
     }
     
-    user.kycStatus = 'pending';
+    let justCompleted = false;
+    
+    // Set status to pending and submission timestamp when all 3 documents are uploaded
+    if (user.kycDocuments.idFront && user.kycDocuments.idBack && user.kycDocuments.selfie) {
+      if (user.kycStatus !== 'pending') {
+        justCompleted = true;
+      }
+      user.kycStatus = 'pending';
+      user.kycSubmittedAt = new Date();
+    }
     
     await user.save();
     
-    // Notify admins if this was the last document needed
-    if (user.kycDocuments.idFront && user.kycDocuments.idBack && user.kycDocuments.selfie) {
+    // Notify admins if this was the last document needed to complete the submission
+    if (justCompleted) {
       await createAdminNotification(req.app.get('io'), {
         title: 'New KYC Submission',
         message: `User ${user.fullName || user.email} submitted all KYC documents`,
@@ -158,7 +205,82 @@ router.post('/kyc/upload', auth, upload.single('document'), async (req, res) => 
     });
   } catch (error) {
     console.error('KYC Upload Error in Route:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'An error occurred while uploading your document. Please try again.' });
+  }
+});
+
+// Serve KYC files securely (authenticated access only)
+router.get('/kyc/file/:filename', auth, async (req, res) => {
+  try {
+    const { filename } = req.params;
+    
+    // Prevent path traversal attacks
+    const sanitizedFilename = path.basename(filename);
+    if (sanitizedFilename !== filename || filename.includes('..')) {
+      return res.status(400).json({ message: 'Invalid filename' });
+    }
+    
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Check if user owns this file or is admin
+    const isAdmin = user.role === 'admin';
+    const isOwner = user.kycDocuments && (
+      user.kycDocuments.idFront?.includes(filename) ||
+      user.kycDocuments.idBack?.includes(filename) ||
+      user.kycDocuments.selfie?.includes(filename)
+    );
+    
+    if (!isOwner && !isAdmin) {
+      // If admin, also check if the file belongs to ANY user (admin can view all)
+      if (!isAdmin) {
+        return res.status(403).json({ message: 'Access denied. You can only view your own documents.' });
+      }
+    }
+    
+    // If admin but not owner, verify the file exists for some user
+    if (isAdmin && !isOwner) {
+      // Create a regex that matches the filename at the end of the stored URL
+      const fileRegex = new RegExp(`/${filename}$`);
+      const fileOwner = await User.findOne({
+        $or: [
+          { 'kycDocuments.idFront': fileRegex },
+          { 'kycDocuments.idBack': fileRegex },
+          { 'kycDocuments.selfie': fileRegex }
+        ]
+      });
+      if (!fileOwner) {
+        return res.status(404).json({ message: 'Document not found' });
+      }
+    }
+    
+    const filePath = path.join(uploadDir, sanitizedFilename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+    
+    // Set proper content type based on extension
+    const ext = path.extname(sanitizedFilename).toLowerCase();
+    const mimeTypes = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+      '.pdf': 'application/pdf'
+    };
+    
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('KYC File Serve Error:', error);
+    res.status(500).json({ message: 'Failed to load document' });
   }
 });
 

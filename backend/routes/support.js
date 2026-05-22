@@ -140,6 +140,62 @@ router.post('/tickets', auth, async (req, res) => {
   }
 });
 
+// Reply to ticket
+router.post('/tickets/:id/reply', auth, async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message) {
+      return res.status(400).json({ message: 'Message is required' });
+    }
+
+    const ticket = await SupportTicket.findById(req.params.id);
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+
+    // Check if user has access
+    if (req.user.role !== 'admin' && ticket.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const chatMessage = new ChatMessage({
+      userId: req.user.id,
+      message,
+      type: req.user.role === 'admin' ? 'admin' : 'user',
+      room: `user_${ticket.userId}`,
+    });
+
+    await chatMessage.save();
+    
+    ticket.messages.push(chatMessage._id);
+    ticket.status = req.user.role === 'admin' ? 'in_progress' : 'open';
+    ticket.lastMessage = message.substring(0, 100);
+    ticket.lastMessageAt = new Date();
+    await ticket.save();
+
+    // Emit via Socket
+    const io = req.app.get('io');
+    if (io) {
+      const chatNamespace = io.of('/chat');
+      const populatedMessage = await ChatMessage.findById(chatMessage._id).populate('userId', 'email fullName role');
+      
+      chatNamespace.to(`user_${ticket.userId}`).emit('receive_message', {
+        ...populatedMessage.toObject(),
+        ticketId: ticket._id
+      });
+      
+      chatNamespace.to('admin_room').emit('receive_message', {
+        ...populatedMessage.toObject(),
+        ticketId: ticket._id
+      });
+    }
+
+    res.json(chatMessage);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Update ticket (admin only)
 router.put('/tickets/:id', auth, admin, async (req, res) => {
   try {

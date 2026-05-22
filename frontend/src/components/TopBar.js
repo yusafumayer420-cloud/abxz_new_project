@@ -64,6 +64,7 @@ const TopBar = ({ onMenuClick }) => {
       case 'verified': return 'success';
       case 'pending': return 'warning';
       case 'rejected': return 'error';
+      case 'unverified': return 'info';
       default: return 'default';
     }
   };
@@ -152,7 +153,7 @@ const TopBar = ({ onMenuClick }) => {
           </Typography>
           <Box sx={{ mt: 1 }}>
             <Chip
-              label={`KYC: ${user?.kycStatus || 'pending'}`}
+              label={`KYC: ${user?.kycStatus || 'unverified'}`}
               size="small"
               color={getKYCColor(user?.kycStatus)}
             />

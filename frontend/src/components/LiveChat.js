@@ -208,9 +208,13 @@ const LiveChat = () => {
   }, [isOpen, socket, selectedTicket]);
 
   const playNotificationSound = () => {
+    // Note: notification.mp3 is missing from public folder. 
+    // Uncomment and add the file to enable sounds.
+    /*
     const audio = new Audio('/notification.mp3');
     audio.volume = 0.3;
     audio.play().catch(console.error);
+    */
   };
 
   const handleSendMessage = async () => {
@@ -503,13 +507,14 @@ const LiveChat = () => {
                                   {message.attachments && message.attachments.length > 0 && (
                                     <Box sx={{ mb: 1 }}>
                                       {message.attachments.map((url, i) => (
-                                        <img 
-                                          key={i} 
-                                          src={url} 
-                                          alt="Attachment" 
-                                          style={{ maxWidth: '100%', borderRadius: 8, maxHeight: 200, objectFit: 'contain' }} 
-                                          onClick={() => window.open(url, '_blank')}
-                                        />
+                                          <img 
+                                            key={i} 
+                                            src={url} 
+                                            alt="Attachment" 
+                                            style={{ maxWidth: '100%', borderRadius: 8, maxHeight: 200, objectFit: 'contain' }} 
+                                            onClick={() => window.open(url, '_blank')}
+                                            loading="eager"
+                                          />
                                       ))}
                                     </Box>
                                   )}
@@ -1065,6 +1070,20 @@ const AdminChatView = ({ socket, user }) => {
                             <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
                               {message.userId._id === user.id ? 'You' : message.userId?.email}
                             </Typography>
+                            {message.attachments && message.attachments.length > 0 && (
+                              <Box sx={{ mb: 1 }}>
+                                {message.attachments.map((url, i) => (
+                                  <img 
+                                    key={i} 
+                                    src={url} 
+                                    alt="Attachment" 
+                                    style={{ maxWidth: '100%', borderRadius: 8, maxHeight: 200, objectFit: 'contain', cursor: 'pointer' }} 
+                                    onClick={() => window.open(url, '_blank')}
+                                    loading="eager"
+                                  />
+                                ))}
+                              </Box>
+                            )}
                             <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere', fontStyle: message.isDeleted ? 'italic' : 'normal', opacity: message.isDeleted ? 0.7 : 1 }}>
                               {message.message}
                               {message.isEdited && !message.isDeleted && (

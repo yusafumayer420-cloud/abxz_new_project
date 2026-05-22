@@ -101,7 +101,6 @@ function AppContent({ marketData, sidebarOpen, setSidebarOpen }) {
     <div 
       className={`App ${!isHomePage ? 'premium-gradient' : ''}`} 
       style={{ background: 'transparent', minHeight: '100vh' }}
-      {...(showTradeResult ? { inert: '' } : {})}
     >
       <Toaster 
         position="top-right" 

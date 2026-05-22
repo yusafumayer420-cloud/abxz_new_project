@@ -45,6 +45,7 @@ import { motion } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
 import axios from '../utils/axiosConfig';
 import toast from 'react-hot-toast';
+import SecureImage from '../components/SecureImage';
 
 const AdminPage = () => {
   const { user } = useContext(AuthContext);
@@ -54,8 +55,10 @@ const AdminPage = () => {
   const [withdrawals, setWithdrawals] = useState([]);
   const [trades, setTrades] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedKycUser, setSelectedKycUser] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openKycDialog, setOpenKycDialog] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -87,7 +90,8 @@ const AdminPage = () => {
 
       // Fetch KYC requests
       const kycRes = await axios.get('/api/admin/kyc/pending');
-      setKycRequests(kycRes.data);
+      // Backend returns array of users directly
+      setKycRequests(Array.isArray(kycRes.data) ? kycRes.data : kycRes.data.users || []);
 
       // Fetch recent trades
       const tradesRes = await axios.get('/api/admin/trades?limit=10');
@@ -102,7 +106,7 @@ const AdminPage = () => {
 
   const handleApproveKYC = async (userId) => {
     try {
-      await axios.put(`/api/admin/users/${userId}/kyc`, { status: 'verified' });
+      await axios.put(`/api/admin/kyc/${userId}`, { status: 'verified' });
       toast.success('KYC approved successfully');
       fetchData();
     } catch (error) {
@@ -112,7 +116,7 @@ const AdminPage = () => {
 
   const handleRejectKYC = async (userId) => {
     try {
-      await axios.put(`/api/admin/users/${userId}/kyc`, { status: 'rejected' });
+      await axios.put(`/api/admin/kyc/${userId}`, { status: 'rejected' });
       toast.success('KYC rejected');
       fetchData();
     } catch (error) {
@@ -140,6 +144,7 @@ const AdminPage = () => {
       case 'verified': return 'success';
       case 'pending': return 'warning';
       case 'rejected': return 'error';
+      case 'unverified': return 'info';
       default: return 'default';
     }
   };
@@ -349,6 +354,15 @@ const AdminPage = () => {
                         <IconButton size="small" onClick={() => setSelectedUser(user)}>
                           <Edit fontSize="small" />
                         </IconButton>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => {
+                            setSelectedKycUser(user);
+                            setOpenKycDialog(true);
+                          }}
+                        >
+                          <Security fontSize="small" />
+                        </IconButton>
                         <IconButton size="small" onClick={() => handleUserAction(user._id, 'disable')}>
                           <Cancel fontSize="small" />
                         </IconButton>
@@ -391,26 +405,33 @@ const AdminPage = () => {
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Avatar sx={{ bgcolor: '#00D395', width: 32, height: 32 }}>
-                              {request.userId?.fullName?.charAt(0).toUpperCase() || 'U'}
+                              {request.fullName?.charAt(0).toUpperCase() || 'U'}
                             </Avatar>
                             <Box>
                               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                {request.userId?.fullName || 'Unknown User'}
+                                {request.fullName || 'Unknown User'}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                {request.userId?.email}
+                                {request.email}
                               </Typography>
                             </Box>
                           </Box>
                         </TableCell>
-                        <TableCell>{formatDate(request.submittedAt)}</TableCell>
+                        <TableCell>{formatDate(request.createdAt)}</TableCell>
                         <TableCell>
-                          <Button size="small" variant="outlined">
+                          <Button 
+                            size="small" 
+                            variant="outlined"
+                            onClick={() => {
+                              setSelectedKycUser(request);
+                              setOpenKycDialog(true);
+                            }}
+                          >
                             View Docs
                           </Button>
                         </TableCell>
                         <TableCell>
-                          <Chip label={request.status} color="warning" size="small" />
+                          <Chip label={request.kycStatus} color={getKYCColor(request.kycStatus)} size="small" />
                         </TableCell>
                         <TableCell>
                           <Button
@@ -418,7 +439,7 @@ const AdminPage = () => {
                             variant="contained"
                             color="success"
                             startIcon={<CheckCircle />}
-                            onClick={() => handleApproveKYC(request.userId?._id)}
+                            onClick={() => handleApproveKYC(request._id)}
                             sx={{ mr: 1 }}
                           >
                             Approve
@@ -428,7 +449,7 @@ const AdminPage = () => {
                             variant="outlined"
                             color="error"
                             startIcon={<Cancel />}
-                            onClick={() => handleRejectKYC(request.userId?._id)}
+                            onClick={() => handleRejectKYC(request._id)}
                           >
                             Reject
                           </Button>
@@ -591,6 +612,77 @@ const AdminPage = () => {
             </DialogActions>
           </>
         )}
+      </Dialog>
+
+      {/* KYC Documents Dialog */}
+      <Dialog
+        open={openKycDialog}
+        onClose={() => setOpenKycDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          KYC Documents: {selectedKycUser?.fullName || selectedKycUser?.email}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} md={4}>
+              <Typography variant="subtitle2" gutterBottom>ID Front</Typography>
+              <Paper variant="outlined" sx={{ height: 250, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {selectedKycUser?.kycDocuments?.idFront ? (
+                  <SecureImage 
+                    src={selectedKycUser.kycDocuments.idFront} 
+                    alt="ID Front" 
+                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                  />
+                ) : (
+                  <Typography color="text.secondary">Not uploaded</Typography>
+                )}
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography variant="subtitle2" gutterBottom>ID Back</Typography>
+              <Paper variant="outlined" sx={{ height: 250, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {selectedKycUser?.kycDocuments?.idBack ? (
+                  <SecureImage 
+                    src={selectedKycUser.kycDocuments.idBack} 
+                    alt="ID Back" 
+                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                  />
+                ) : (
+                  <Typography color="text.secondary">Not uploaded</Typography>
+                )}
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Typography variant="subtitle2" gutterBottom>Selfie</Typography>
+              <Paper variant="outlined" sx={{ height: 250, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {selectedKycUser?.kycDocuments?.selfie ? (
+                  <SecureImage 
+                    src={selectedKycUser.kycDocuments.selfie} 
+                    alt="Selfie" 
+                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                  />
+                ) : (
+                  <Typography color="text.secondary">Not uploaded</Typography>
+                )}
+              </Paper>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenKycDialog(false)}>Close</Button>
+          {selectedKycUser?.kycStatus === 'pending' && (
+            <>
+              <Button color="error" variant="outlined" onClick={() => { handleRejectKYC(selectedKycUser._id); setOpenKycDialog(false); }}>
+                Reject
+              </Button>
+              <Button color="success" variant="contained" onClick={() => { handleApproveKYC(selectedKycUser._id); setOpenKycDialog(false); }}>
+                Approve
+              </Button>
+            </>
+          )}
+        </DialogActions>
       </Dialog>
     </Container>
   );

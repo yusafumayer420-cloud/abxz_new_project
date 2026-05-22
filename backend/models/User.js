@@ -23,14 +23,20 @@ const UserSchema = new mongoose.Schema({
   profilePicture: String,
   kycStatus: {
     type: String,
-    enum: ['pending', 'verified', 'rejected'],
-    default: 'pending'
+    enum: ['unverified', 'pending', 'verified', 'rejected'],
+    default: 'unverified'
   },
   kycDocuments: {
     idFront: String,
     idBack: String,
     selfie: String
   },
+  kycDetails: {
+    reviewNote: String,
+    idType: String,
+    country: String
+  },
+  kycSubmittedAt: Date,
   wallet: {
     usdt: { type: Number, default: 0 },
     btc: { type: Number, default: 0 },

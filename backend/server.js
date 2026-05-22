@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const http = require('http');
 const socketIo = require('socket.io');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -144,9 +145,24 @@ startPriceFeed(io);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve static files (like KYC uploads)
+// Serve static files
 const path = require('path');
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Profile pictures: public (they're user avatars shown in the app)
+app.use('/uploads/profiles', express.static(path.join(__dirname, 'uploads/profiles')));
+
+// Chat attachments: public (they're shared in support chats)
+app.use('/uploads/chat', express.static(path.join(__dirname, 'uploads/chat')));
+
+// Ensure upload directories exist
+const uploadDirs = ['uploads/profiles', 'uploads/kyc', 'uploads/chat'];
+uploadDirs.forEach(dir => {
+  const dirPath = path.join(__dirname, dir);
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+});
+
+// KYC documents: NOT served statically - served via authenticated endpoint in users.js
 
 // Connect to MongoDB
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/crypto-trading';

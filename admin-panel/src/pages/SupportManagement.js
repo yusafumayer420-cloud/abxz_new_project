@@ -199,7 +199,22 @@ const SupportManagement = () => {
 
       // Add to chat messages if the dialog is open for this ticket
       if (selectedTicket && (message.ticketId === selectedTicket._id || message.ticketId === selectedTicket.id)) {
-        setChatMessages(prev => [...prev, message]);
+        setChatMessages(prev => {
+          // Check if message already exists (either by real ID or by content matching a temp message)
+          const isDuplicate = prev.some(msg => 
+            String(msg._id) === String(message._id) || 
+            (msg._id.startsWith('temp-') && msg.message === message.message && msg.userId?._id === message.userId?._id)
+          );
+          if (isDuplicate) {
+            // Replace the temp message with the real one to get the proper ID
+            return prev.map(msg => 
+              (msg._id.startsWith('temp-') && msg.message === message.message && msg.userId?._id === message.userId?._id)
+                ? message
+                : msg
+            );
+          }
+          return [...prev, message];
+        });
         // Auto scroll to bottom when new message arrives
         setTimeout(() => {
           const chatContainer = document.querySelector('.chat-messages-container');
@@ -833,7 +848,7 @@ const SupportManagement = () => {
                 </TableHead>
                 <TableBody>
                   {filteredTickets.map((ticket) => (
-                    <TableRow key={ticket.id} hover>
+                    <TableRow key={ticket._id || ticket.id} hover>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                           {ticket.id}
@@ -1194,7 +1209,7 @@ const SupportManagement = () => {
                 <Box className="chat-messages-container" sx={{ flex: 1, overflow: "auto", p: 2 }}>
                   <List sx={{ width: "100%" }}>
                     {chatMessages.map((msg) => (
-                      <React.Fragment key={msg.id}>
+                      <React.Fragment key={msg._id || msg.id}>
                         <ListItem
                           alignItems="flex-start"
                           sx={{

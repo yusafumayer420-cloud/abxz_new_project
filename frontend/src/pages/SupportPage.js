@@ -404,6 +404,20 @@ const SupportPage = () => {
                           <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5, opacity: 0.8 }}>
                             {message.userId?._id === (user?._id || user?.id) ? 'You' : 'Support Team'}
                           </Typography>
+                          {message.attachments && message.attachments.length > 0 && (
+                            <Box sx={{ mb: 1 }}>
+                              {message.attachments.map((url, i) => (
+                                <img 
+                                  key={i} 
+                                  src={url} 
+                                  alt="Attachment" 
+                                  style={{ maxWidth: '100%', borderRadius: 8, maxHeight: 250, objectFit: 'contain', cursor: 'pointer' }} 
+                                  onClick={() => window.open(url, '_blank')}
+                                  loading="eager"
+                                />
+                              ))}
+                            </Box>
+                          )}
                           <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>{message.message}</Typography>
                           <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.5, textAlign: 'right' }}>
                             {formatDate(message.createdAt)}

@@ -56,6 +56,7 @@ import { AuthContext } from '../context/AuthContext';
 import axios from '../utils/axiosConfig';
 import toast from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
+import SecureImage from '../components/SecureImage';
 
 const ProfilePage = () => {
   const { user, updateUser, logout } = useContext(AuthContext);
@@ -70,9 +71,10 @@ const ProfilePage = () => {
   }, [location.state]);
   const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState({ idFront: false, idBack: false, selfie: false });
   const [showChangePassword, setShowChangePassword] = useState(false);
 
-  const [verificationStatus, setVerificationStatus] = useState('pending');
+  const [verificationStatus, setVerificationStatus] = useState('unverified');
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -113,7 +115,7 @@ const ProfilePage = () => {
         city: user.city || '',
         zipCode: user.zipCode || '',
       });
-      setVerificationStatus(user.kycStatus || 'pending');
+      setVerificationStatus(user.kycStatus || 'unverified');
       setKycDocuments(user.kycDocuments || {});
     }
     
@@ -217,6 +219,7 @@ const ProfilePage = () => {
     }
 
     setUploading(true);
+    setUploadingDoc(prev => ({ ...prev, [documentType]: true }));
     try {
       const formData = new FormData();
       formData.append('type', documentType);
@@ -232,24 +235,27 @@ const ProfilePage = () => {
         [documentType]: response.data.url || URL.createObjectURL(file)
       }));
       
-      setVerificationStatus('pending');
+      setVerificationStatus(response.data.status);
       
-      // Update global user context so other components (like FundsPage) know KYC is pending
+      // Update global user context so other components (like FundsPage) know KYC status
       const userRes = await axios.get('/api/users/profile');
       updateUser(userRes.data);
       
       toast.success('Document uploaded successfully');
     } catch (error) {
       console.error('KYC Upload Error:', error);
-      toast.error(error.response?.data?.message || 'Failed to upload document');
+      toast.error(error.response?.data?.message || 'Failed to upload document. Please try again.');
     } finally {
       setUploading(false);
+      setUploadingDoc(prev => ({ ...prev, [documentType]: false }));
     }
   };
 
 
   const handleFileSelect = (documentType, event) => {
     const file = event.target.files[0];
+    // Reset file input so the same file can be re-selected
+    event.target.value = '';
     if (file) {
       if (file.size > 50 * 1024 * 1024) {
         toast.error('File size must be less than 50MB');
@@ -293,6 +299,7 @@ const ProfilePage = () => {
       case 'verified': return <VerifiedUser sx={{ color: '#00D395' }} />;
       case 'pending': return <Pending sx={{ color: '#FFC107' }} />;
       case 'rejected': return <Error sx={{ color: '#FF6B6B' }} />;
+      case 'unverified': return <Upload sx={{ color: '#90CAF9' }} />;
       default: return <Pending />;
     }
   };
@@ -302,6 +309,7 @@ const ProfilePage = () => {
       case 'verified': return 'success';
       case 'pending': return 'warning';
       case 'rejected': return 'error';
+      case 'unverified': return 'info';
       default: return 'default';
     }
   };
@@ -335,7 +343,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 4, sm: 8 } }} {...(showChangePassword ? { inert: '' } : {})}>
+    <Container maxWidth="lg" sx={{ py: { xs: 4, sm: 8 } }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
@@ -712,9 +720,13 @@ const ProfilePage = () => {
                   <Alert severity="info" sx={{ mb: 3 }}>
                     Your documents are under review. This usually takes 1-2 business days.
                   </Alert>
-                ) : (
+                ) : verificationStatus === 'rejected' ? (
                   <Alert severity="error" sx={{ mb: 3 }}>
                     Your verification was rejected. Please upload new documents.
+                  </Alert>
+                ) : (
+                  <Alert severity="warning" sx={{ mb: 3 }}>
+                    Please upload your identity documents to verify your account and unlock all features.
                   </Alert>
                 )}
 
@@ -740,7 +752,8 @@ const ProfilePage = () => {
                         }}
                       >
                         {kycDocuments.idFront ? (
-                          <motion.img
+                          <SecureImage
+                            isMotion={true}
                             src={kycDocuments.idFront}
                             alt="ID Front"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -764,7 +777,7 @@ const ProfilePage = () => {
                           component="span"
                           variant="contained"
                           size="medium"
-                          disabled={uploading || verificationStatus === 'verified'}
+                          disabled={uploadingDoc.idFront || verificationStatus === 'verified'}
                           fullWidth
                           sx={{ 
                             textTransform: 'none',
@@ -773,7 +786,7 @@ const ProfilePage = () => {
                             '&:hover': { bgcolor: kycDocuments.idFront ? 'rgba(0, 211, 149, 0.2)' : 'primary.dark' }
                           }}
                         >
-                          {uploading ? 'Uploading...' : kycDocuments.idFront ? (verificationStatus === 'verified' ? 'Verified' : 'Change Front') : 'Upload Front'}
+                          {uploadingDoc.idFront ? 'Uploading...' : kycDocuments.idFront ? (verificationStatus === 'verified' ? 'Verified' : 'Change Front') : 'Upload Front'}
                         </Button>
                       </label>
                     </Paper>
@@ -800,7 +813,8 @@ const ProfilePage = () => {
                         }}
                       >
                         {kycDocuments.idBack ? (
-                          <motion.img
+                          <SecureImage
+                            isMotion={true}
                             src={kycDocuments.idBack}
                             alt="ID Back"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -824,7 +838,7 @@ const ProfilePage = () => {
                           component="span"
                           variant="contained"
                           size="medium"
-                          disabled={uploading || verificationStatus === 'verified'}
+                          disabled={uploadingDoc.idBack || verificationStatus === 'verified'}
                           fullWidth
                           sx={{ 
                             textTransform: 'none',
@@ -833,7 +847,7 @@ const ProfilePage = () => {
                             '&:hover': { bgcolor: kycDocuments.idBack ? 'rgba(0, 211, 149, 0.2)' : 'primary.dark' }
                           }}
                         >
-                          {uploading ? 'Uploading...' : kycDocuments.idBack ? (verificationStatus === 'verified' ? 'Verified' : 'Change Back') : 'Upload Back'}
+                          {uploadingDoc.idBack ? 'Uploading...' : kycDocuments.idBack ? (verificationStatus === 'verified' ? 'Verified' : 'Change Back') : 'Upload Back'}
                         </Button>
                       </label>
                     </Paper>
@@ -860,7 +874,8 @@ const ProfilePage = () => {
                         }}
                       >
                         {kycDocuments.selfie ? (
-                          <motion.img
+                          <SecureImage
+                            isMotion={true}
                             src={kycDocuments.selfie}
                             alt="Selfie"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -884,7 +899,7 @@ const ProfilePage = () => {
                           component="span"
                           variant="contained"
                           size="medium"
-                          disabled={uploading || verificationStatus === 'verified'}
+                          disabled={uploadingDoc.selfie || verificationStatus === 'verified'}
                           fullWidth
                           sx={{ 
                             textTransform: 'none',
@@ -893,7 +908,7 @@ const ProfilePage = () => {
                             '&:hover': { bgcolor: kycDocuments.selfie ? 'rgba(0, 211, 149, 0.2)' : 'primary.dark' }
                           }}
                         >
-                          {uploading ? 'Uploading...' : kycDocuments.selfie ? (verificationStatus === 'verified' ? 'Verified' : 'Change Selfie') : 'Upload Selfie'}
+                          {uploadingDoc.selfie ? 'Uploading...' : kycDocuments.selfie ? (verificationStatus === 'verified' ? 'Verified' : 'Change Selfie') : 'Upload Selfie'}
                         </Button>
                       </label>
                     </Paper>
@@ -913,7 +928,7 @@ const ProfilePage = () => {
                   </Typography>
                 </Alert>
 
-                {verificationStatus === 'pending' && (
+                {(verificationStatus === 'pending' || verificationStatus === 'unverified') && (
                   <Button
                     variant="contained"
                     fullWidth

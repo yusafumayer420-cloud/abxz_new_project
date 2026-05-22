@@ -88,7 +88,7 @@ const UserManagement = () => {
     setEditData({
       fullName: user.fullName || '',
       phone: user.phone || '',
-      kycStatus: user.kycStatus || 'pending',
+      kycStatus: user.kycStatus || 'unverified',
       deliveryTradeEnabled: user.deliveryTradeEnabled !== undefined ? user.deliveryTradeEnabled : true,
       wallet: {
         usdt: user.wallet?.usdt || 0,
@@ -203,6 +203,7 @@ const UserManagement = () => {
       case 'verified': return 'success';
       case 'pending': return 'warning';
       case 'rejected': return 'error';
+      case 'unverified': return 'info';
       default: return 'default';
     }
   };
@@ -702,6 +703,7 @@ const UserManagement = () => {
               value={editData.kycStatus}
               onChange={(e) => setEditData({ ...editData, kycStatus: e.target.value })}
             >
+              <MenuItem value="unverified">Unverified</MenuItem>
               <MenuItem value="pending">Pending</MenuItem>
               <MenuItem value="verified">Verified</MenuItem>
               <MenuItem value="rejected">Rejected</MenuItem>
