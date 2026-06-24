@@ -6,6 +6,7 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { createAdminNotification } = require('../utils/notificationHelper');
+const { getLatestPrices } = require('../utils/priceFeed');
 const router = express.Router();
 
 // Cloudinary Configuration
@@ -220,6 +221,102 @@ router.get('/transactions', auth, async (req, res) => {
     const transactions = await WalletTransaction.find({ userId: req.user.id })
       .sort({ createdAt: -1 });
     res.json(transactions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Instant Exchange
+router.post('/exchange', auth, async (req, res) => {
+  try {
+    const { fromCurrency, toCurrency, amount } = req.body;
+    
+    if (!fromCurrency || !toCurrency || !amount || amount <= 0) {
+      return res.status(400).json({ message: 'Invalid exchange parameters' });
+    }
+
+    if (fromCurrency === toCurrency) {
+      return res.status(400).json({ message: 'Cannot exchange the same currency' });
+    }
+
+    const latestPrices = getLatestPrices();
+    
+    // Function to get price in USDT
+    const getPriceInUSDT = (currency) => {
+      if (currency === 'USDT') return 1;
+      const coin = latestPrices.find(p => p.symbol === `${currency}/USDT`);
+      return coin ? coin.price : null;
+    };
+
+    const fromPrice = getPriceInUSDT(fromCurrency);
+    const toPrice = getPriceInUSDT(toCurrency);
+
+    if (!fromPrice || !toPrice) {
+      return res.status(400).json({ message: 'Live price not available for these currencies' });
+    }
+
+    // Exchange rate calculation
+    const exchangeRate = fromPrice / toPrice;
+    const convertedAmount = amount * exchangeRate;
+
+    // Check user balance and atomic deduction
+    const fromKey = fromCurrency.toLowerCase();
+    const toKey = toCurrency.toLowerCase();
+    
+    const queryObj = { _id: req.user.id };
+    queryObj[`wallet.${fromKey}`] = { $gte: amount };
+    
+    const updateObj = { $inc: {} };
+    updateObj.$inc[`wallet.${fromKey}`] = -amount;
+    updateObj.$inc[`wallet.${toKey}`] = convertedAmount;
+
+    const updatedUser = await User.findOneAndUpdate(queryObj, updateObj, { new: true });
+
+    if (!updatedUser) {
+      return res.status(400).json({ message: `Insufficient ${fromCurrency} balance` });
+    }
+
+    // Record transaction for From Currency
+    const fromTransaction = new WalletTransaction({
+      userId: req.user.id,
+      type: 'exchange',
+      currency: fromCurrency,
+      amount: -amount,
+      status: 'completed',
+      metadata: { toCurrency, convertedAmount, exchangeRate }
+    });
+    
+    // Record transaction for To Currency
+    const toTransaction = new WalletTransaction({
+      userId: req.user.id,
+      type: 'exchange',
+      currency: toCurrency,
+      amount: convertedAmount,
+      status: 'completed',
+      metadata: { fromCurrency, originalAmount: amount, exchangeRate }
+    });
+
+    await Promise.all([fromTransaction.save(), toTransaction.save()]);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${req.user.id}`).emit('balance_updated', { wallet: updatedUser.wallet });
+      io.to(`user_${req.user.id}`).emit('transaction_requested', {
+        title: 'Exchange Successful',
+        message: `Exchanged ${amount} ${fromCurrency} to ${convertedAmount.toFixed(4)} ${toCurrency}`,
+        type: 'success'
+      });
+    }
+
+    res.json({
+      message: 'Exchange successful',
+      fromCurrency,
+      toCurrency,
+      originalAmount: amount,
+      convertedAmount,
+      exchangeRate
+    });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

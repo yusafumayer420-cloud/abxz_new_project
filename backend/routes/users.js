@@ -62,12 +62,16 @@ router.get('/profile', auth, async (req, res) => {
 // Update user profile
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { fullName, phone } = req.body;
+    const { fullName, phone, country, address, city, zipCode } = req.body;
     
     const user = await User.findById(req.user.id);
     
-    if (fullName) user.fullName = fullName;
-    if (phone) user.phone = phone;
+    if (fullName !== undefined) user.fullName = fullName;
+    if (phone !== undefined) user.phone = phone;
+    if (country !== undefined) user.country = country;
+    if (address !== undefined) user.address = address;
+    if (city !== undefined) user.city = city;
+    if (zipCode !== undefined) user.zipCode = zipCode;
     
     await user.save();
     

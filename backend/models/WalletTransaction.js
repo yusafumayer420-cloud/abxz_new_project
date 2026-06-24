@@ -8,7 +8,7 @@ const WalletTransactionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['deposit', 'withdrawal', 'trade', 'transfer'],
+    enum: ['deposit', 'withdrawal', 'trade', 'transfer', 'exchange'],
     required: true
   },
   currency: {
@@ -30,9 +30,11 @@ const WalletTransactionSchema = new mongoose.Schema({
   chain: String,
   voucher: String,
   metadata: {
-    pair: String,
-    price: Number,
-    orderId: String
+    type: new mongoose.Schema({
+      pair: String,
+      price: Number,
+      orderId: String
+    }, { _id: false, strict: false })
   },
   createdAt: {
     type: Date,

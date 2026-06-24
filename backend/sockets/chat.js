@@ -73,7 +73,7 @@ module.exports = (io) => {
     })
     .sort({ createdAt: -1 })
     .limit(50)
-    .populate('userId', 'email fullName role');
+    .populate('userId', 'email fullName role profilePicture');
     
     messages = messages.reverse();
     
@@ -164,7 +164,7 @@ module.exports = (io) => {
         await chatMessage.save();
         
         // Populate user info
-        await chatMessage.populate('userId', 'email fullName role');
+        await chatMessage.populate('userId', 'email fullName role profilePicture');
         
         // 4. Update ticket
         if (ticket) {
@@ -317,7 +317,7 @@ module.exports = (io) => {
           ticket.messages.push(chatMessage._id);
           await ticket.save();
           
-          await chatMessage.populate('userId', 'email fullName role');
+          await chatMessage.populate('userId', 'email fullName role profilePicture');
           
           // Emit to user and admins
           chatNamespace.to(userRoom).emit('receive_message', {
@@ -371,7 +371,7 @@ module.exports = (io) => {
           if (filters.priority) query.priority = filters.priority;
           
           const tickets = await SupportTicket.find(query)
-            .populate('userId', 'email fullName role kycStatus')
+            .populate('userId', 'email fullName role kycStatus profilePicture')
             .populate('assignedTo', 'email fullName')
             .sort({ updatedAt: -1 })
             .limit(100);

@@ -28,8 +28,6 @@ const UserManagement = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [viewDialog, setViewDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
-  const [messageDialog, setMessageDialog] = useState(false);
-  const [messageText, setMessageText] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [editData, setEditData] = useState({
     fullName: '',
@@ -108,28 +106,6 @@ const UserManagement = () => {
   const handleEditUser = () => {
     setEditDialog(true);
     handleMenuClose();
-  };
-  
-  const handleOpenMessageDialog = () => {
-    setMessageDialog(true);
-    setMessageText('');
-    handleMenuClose();
-  };
-
-  const handleSendMessage = async () => {
-    if (!messageText.trim()) return;
-    try {
-      await api.post('/api/support/admin/send-message', {
-        userId: selectedUser._id,
-        message: messageText
-      });
-      toast.success('Message sent successfully');
-      setMessageDialog(false);
-      navigate('/support');
-    } catch (error) {
-      toast.error('Failed to send message');
-      console.error(error);
-    }
   };
 
   const handleUpdateUser = async () => {
@@ -433,7 +409,7 @@ const UserManagement = () => {
                     <TableRow key={user._id} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ bgcolor: '#00D395' }}>
+                          <Avatar sx={{ bgcolor: '#00D395' }} src={user.profilePicture}>
                             {getInitials(user.fullName)}
                           </Avatar>
                           <Box>
@@ -555,10 +531,7 @@ const UserManagement = () => {
           <Edit sx={{ mr: 2 }} />
           Edit User
         </MenuItem>
-        <MenuItem onClick={handleOpenMessageDialog}>
-          <ChatBubble sx={{ mr: 2, color: '#00D395' }} />
-          Message User
-        </MenuItem>
+
         <MenuItem onClick={handleVerifyKYC}>
           <CheckCircle sx={{ mr: 2 }} />
           Verify KYC
@@ -589,7 +562,7 @@ const UserManagement = () => {
               <Grid container spacing={3} sx={{ mt: 1 }}>
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
-                    <Avatar sx={{ bgcolor: '#00D395', width: 80, height: 80, fontSize: 32 }}>
+                    <Avatar sx={{ bgcolor: '#00D395', width: 80, height: 80, fontSize: 32 }} src={selectedUser.profilePicture}>
                       {getInitials(selectedUser.fullName)}
                     </Avatar>
                     <Box>
@@ -749,43 +722,6 @@ const UserManagement = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Message User Dialog */}
-      <Dialog
-        open={messageDialog}
-        onClose={() => setMessageDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Send Message to {selectedUser?.fullName}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              This will create a new support ticket and send the message to the user.
-            </Typography>
-            <TextField
-              label="Compose Message"
-              placeholder="Type your message here..."
-              fullWidth
-              multiline
-              rows={4}
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              autoFocus
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setMessageDialog(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            onClick={handleSendMessage}
-            disabled={!messageText.trim()}
-            sx={{ bgcolor: '#00D395', '&:hover': { bgcolor: '#00b37e' } }}
-          >
-            Send Message
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

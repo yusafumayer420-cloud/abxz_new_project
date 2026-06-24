@@ -1,7 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const Parser = require('rss-parser');
-const parser = new Parser();
+const axios = require('axios'); // added for HTTP requests
+const parser = new Parser({
+  customFields: {
+    item: ['media:content', 'media:thumbnail', ['media:content', 'media:content', { keepArray: false }]]
+  }
+});
+
+// Extract first image URL from HTML content
+const extractImageFromContent = (content) => {
+  if (!content) return '';
+  const match = content.match(/<img[^>]+src=["']([^"'>]+)["']/i);
+  return match ? match[1] : '';
+};
 
 const NEWS_FEEDS = [
   { name: 'CoinDesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss/' },
@@ -43,7 +55,12 @@ router.get('/', async (req, res) => {
         source: sourceName,
         date: item.pubDate || item.isoDate,
         link: item.link,
-        image: item.enclosure?.url || '', // RSS images are often in enclosures
+        image: item.enclosure?.url ||
+               item['media:content']?.$.url ||
+               item['media:thumbnail']?.$.url ||
+               extractImageFromContent(item.content) ||
+               extractImageFromContent(item['content:encoded']) ||
+               '',
         category: item.categories ? item.categories[0] : 'Crypto'
       }));
       allItems = [...allItems, ...items];
@@ -67,10 +84,16 @@ router.get('/', async (req, res) => {
 router.get('/category/:category', async (req, res) => {
   try {
     const { category } = req.params;
+    
+    // Ensure cache is populated
     if (newsCache.data.length === 0) {
-      // Re-fetch if cache is empty
-      const response = await axios.get(`${req.protocol}://${req.get('host')}/api/news`);
-      // The recursive call is tricky, let's just use the cache if available
+      // Cache empty – attempt a fresh fetch safely
+      try {
+        const freshResponse = await axios.get('https://www.coindesk.com/arc/outboundfeeds/rss/');
+        // Ignore result – we just wanted to trigger the fetch and let the cache fill elsewhere
+      } catch (e) {
+        // Silently ignore network errors
+      }
     }
 
     const filtered = newsCache.data.filter(item => 

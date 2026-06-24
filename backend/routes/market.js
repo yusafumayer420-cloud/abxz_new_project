@@ -150,4 +150,45 @@ router.get('/pairs', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Binance Klines (OHLCV) Proxy — used by TradingChart for historical candles
+// GET /api/market/klines?symbol=BTCUSDT&interval=1m&limit=500
+// ---------------------------------------------------------------------------
+router.get('/klines', async (req, res) => {
+  try {
+    const { symbol = 'BTCUSDT', interval = '1m', limit = 500 } = req.query;
+
+    // Sanitize inputs
+    const safeSymbol   = String(symbol).replace(/[^A-Z0-9]/g, '').toUpperCase();
+    const safeInterval = String(interval).replace(/[^0-9a-zA-Z]/g, '');
+    const safeLimit    = Math.min(Math.max(parseInt(limit, 10) || 500, 1), 1000);
+
+    const response = await axios.get('https://api.binance.com/api/v3/klines', {
+      params: {
+        symbol:   safeSymbol,
+        interval: safeInterval,
+        limit:    safeLimit
+      },
+      timeout: 10000,
+      headers: { 'User-Agent': 'CrokTrade/1.0' }
+    });
+
+    // Transform Binance klines format into lightweight-charts format:
+    // [openTime, open, high, low, close, volume, ...]
+    const candles = response.data.map(k => ({
+      time:   Math.floor(k[0] / 1000), // Unix seconds
+      open:   parseFloat(k[1]),
+      high:   parseFloat(k[2]),
+      low:    parseFloat(k[3]),
+      close:  parseFloat(k[4]),
+      volume: parseFloat(k[5])
+    }));
+
+    res.json(candles);
+  } catch (error) {
+    console.error('Klines proxy error:', error.message);
+    res.status(502).json({ message: 'Failed to fetch klines from Binance', error: error.message });
+  }
+});
+
 module.exports = router;

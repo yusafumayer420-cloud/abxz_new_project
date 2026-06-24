@@ -50,6 +50,7 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
     { text: 'Transactions', icon: <AccountBalanceWallet />, path: '/transactions' },
     { text: 'Notifications', icon: <Notifications />, path: '/notifications' },
     { text: 'Support Center', icon: <SupportAgent />, path: '/support' },
+
     { text: 'System Settings', icon: <Settings />, path: '/settings' },
   ];
 

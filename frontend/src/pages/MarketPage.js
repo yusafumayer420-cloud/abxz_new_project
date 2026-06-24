@@ -42,6 +42,9 @@ const MarketPage = ({ marketData }) => {
   const navigate = useNavigate();
   const sparklinesRef = React.useRef({});
   const lastUpdateRef = React.useRef({});
+  const lastSortTimeRef = React.useRef(0);
+  const currentOrderRef = React.useRef([]);
+  const lastConfigRef = React.useRef({});
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('volume');
@@ -60,11 +63,11 @@ const MarketPage = ({ marketData }) => {
         const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/market/settings`);
         const data = await response.json();
         if (data) {
-          setMarketStats({
-            marketCap: data.marketCap,
-            volume24h: data.volume24h,
-            btcDominance: data.btcDominance
-          });
+          setMarketStats(prev => ({
+            marketCap: data.marketCap || prev.marketCap,
+            volume24h: data.volume24h || prev.volume24h,
+            btcDominance: data.btcDominance || prev.btcDominance
+          }));
         }
       } catch (error) {
         console.error('Failed to fetch market stats:', error);
@@ -99,6 +102,56 @@ const MarketPage = ({ marketData }) => {
     { pair: 'MATIC/USDT', price: 0.78, change24h: 1.23, volume: 425678432, marketCap: 7200000000 },
     { pair: 'AVAX/USDT', price: 36.85, change24h: -0.89, volume: 325678432, marketCap: 13600000000 },
     { pair: 'LINK/USDT', price: 14.32, change24h: 2.15, volume: 456783210, marketCap: 8400000000 },
+    { pair: 'UNI/USDT', price: 7.82, change24h: 1.45, volume: 187654321, marketCap: 5900000000 },
+    { pair: 'ATOM/USDT', price: 8.96, change24h: -1.11, volume: 145678432, marketCap: 3500000000 },
+    { pair: 'FTM/USDT', price: 0.6994, change24h: -0.77, volume: 198765432, marketCap: 1960000000 },
+    { pair: 'NEAR/USDT', price: 5.23, change24h: 2.34, volume: 234567890, marketCap: 5400000000 },
+    { pair: 'ICP/USDT', price: 12.42, change24h: -5.72, volume: 156789012, marketCap: 5700000000 },
+    { pair: 'FIL/USDT', price: 5.67, change24h: -1.89, volume: 178654321, marketCap: 3200000000 },
+    { pair: 'AAVE/USDT', price: 92.15, change24h: 3.21, volume: 123456789, marketCap: 1350000000 },
+    { pair: 'XTZ/USDT', price: 0.2425, change24h: 1.13, volume: 276543210, marketCap: 2100000000 },
+    { pair: 'MANA/USDT', price: 0.0693, change24h: 1.32, volume: 487654321, marketCap: 4800000000 },
+    { pair: 'SAND/USDT', price: 0.4812, change24h: -0.56, volume: 198765432, marketCap: 2100000000 },
+    { pair: 'AXS/USDT', price: 0.9940, change24h: 0.51, volume: 156789012, marketCap: 1500000000 },
+    { pair: 'THETA/USDT', price: 0.1625, change24h: -1.99, volume: 334567890, marketCap: 3300000000 },
+    { pair: 'ETC/USDT', price: 7.37, change24h: 1.51, volume: 87654321, marketCap: 3400000000 },
+    { pair: 'ALGO/USDT', price: 0.1834, change24h: -0.92, volume: 134567890, marketCap: 1500000000 },
+    { pair: 'VET/USDT', price: 0.0312, change24h: 0.89, volume: 167890123, marketCap: 2300000000 },
+    { pair: 'HBAR/USDT', price: 0.0745, change24h: 1.67, volume: 145678901, marketCap: 2700000000 },
+    { pair: 'EOS/USDT', price: 0.7823, change24h: -0.34, volume: 112345678, marketCap: 870000000 },
+    { pair: 'SHIB/USDT', price: 0.00001745, change24h: 2.34, volume: 567890123, marketCap: 10300000000 },
+    { pair: 'PEPE/USDT', price: 0.00001123, change24h: 5.67, volume: 456789012, marketCap: 4700000000 },
+    { pair: 'ARB/USDT', price: 1.12, change24h: -2.34, volume: 234567890, marketCap: 3400000000 },
+    { pair: 'OP/USDT', price: 2.45, change24h: 1.89, volume: 198765432, marketCap: 2800000000 },
+    { pair: 'SUI/USDT', price: 1.34, change24h: 3.45, volume: 312345678, marketCap: 3200000000 },
+    { pair: 'APT/USDT', price: 8.67, change24h: -1.23, volume: 178654321, marketCap: 3600000000 },
+    { pair: 'INJ/USDT', price: 24.56, change24h: 4.12, volume: 145678901, marketCap: 2300000000 },
+    { pair: 'SEI/USDT', price: 0.5234, change24h: 2.78, volume: 123456789, marketCap: 1600000000 },
+    { pair: 'TIA/USDT', price: 9.87, change24h: -3.45, volume: 167890123, marketCap: 1900000000 },
+    { pair: 'RENDER/USDT', price: 7.89, change24h: 5.23, volume: 198765432, marketCap: 3100000000 },
+    { pair: 'FET/USDT', price: 2.13, change24h: 4.56, volume: 234567890, marketCap: 5400000000 },
+    { pair: 'TAO/USDT', price: 412.34, change24h: -2.67, volume: 112345678, marketCap: 3000000000 },
+    { pair: 'WIF/USDT', price: 2.87, change24h: 8.91, volume: 345678901, marketCap: 2900000000 },
+    { pair: 'TON/USDT', price: 6.75, change24h: 1.25, volume: 215436789, marketCap: 23500000000 },
+    { pair: 'TRX/USDT', price: 0.1245, change24h: -0.32, volume: 312546879, marketCap: 10900000000 },
+    { pair: 'BCH/USDT', price: 456.78, change24h: 2.15, volume: 425136879, marketCap: 8900000000 },
+    { pair: 'LDO/USDT', price: 2.15, change24h: -1.45, volume: 95412368, marketCap: 1900000000 },
+    { pair: 'STX/USDT', price: 1.85, change24h: 4.56, volume: 125436789, marketCap: 2600000000 },
+    { pair: 'IMX/USDT', price: 2.45, change24h: -2.15, volume: 185436789, marketCap: 3500000000 },
+    { pair: 'GRT/USDT', price: 0.28, change24h: 3.45, volume: 145123687, marketCap: 2600000000 },
+    { pair: 'RNDR/USDT', price: 8.45, change24h: -1.25, volume: 215436789, marketCap: 3200000000 },
+    { pair: 'MKR/USDT', price: 2845.67, change24h: 1.85, volume: 98541236, marketCap: 2600000000 },
+    { pair: 'GALA/USDT', price: 0.045, change24h: -3.15, volume: 165436789, marketCap: 1600000000 },
+    { pair: 'QNT/USDT', price: 115.45, change24h: 0.85, volume: 45123687, marketCap: 1400000000 },
+    { pair: 'SNX/USDT', price: 3.25, change24h: -1.45, volume: 54123687, marketCap: 1100000000 },
+    { pair: 'EGLD/USDT', price: 45.67, change24h: 2.15, volume: 85412368, marketCap: 1200000000 },
+    { pair: 'ASTR/USDT', price: 0.12, change24h: -0.45, volume: 35412368, marketCap: 650000000 },
+    { pair: 'MINA/USDT', price: 1.15, change24h: 1.85, volume: 65412368, marketCap: 1200000000 },
+    { pair: 'FXS/USDT', price: 4.85, change24h: -2.15, volume: 25412368, marketCap: 380000000 },
+    { pair: 'DYDX/USDT', price: 2.15, change24h: 1.45, volume: 85412368, marketCap: 650000000 },
+    { pair: 'COMP/USDT', price: 56.78, change24h: -1.25, volume: 45123687, marketCap: 380000000 },
+    { pair: 'CRV/USDT', price: 0.45, change24h: 2.15, volume: 125436789, marketCap: 480000000 },
+    { pair: 'CHZ/USDT', price: 0.12, change24h: -0.85, volume: 85412368, marketCap: 1100000000 },
   ];
 
   const mockETFData = [
@@ -163,37 +216,60 @@ const MarketPage = ({ marketData }) => {
     if (selectedCategory !== 'All') {
       // Mock category logic for now
       if (selectedCategory === 'Meme') {
-        data = data.filter(item => ['DOGE', 'SHIB', 'PEPE'].some(m => item.pair.includes(m)));
+        data = data.filter(item => ['DOGE', 'SHIB', 'PEPE', 'WIF'].some(m => item.pair.includes(m)));
       } else if (selectedCategory === 'Layer 1') {
-        data = data.filter(item => ['BTC', 'ETH', 'SOL', 'ADA', 'AVAX', 'DOT'].some(m => item.pair.includes(m)));
+        data = data.filter(item => ['BTC', 'ETH', 'SOL', 'ADA', 'AVAX', 'DOT', 'NEAR', 'APT', 'SUI', 'SEI'].some(m => item.pair.includes(m)));
       } else if (selectedCategory === 'DeFi') {
-        data = data.filter(item => ['LINK', 'UNI', 'AAVE'].some(m => item.pair.includes(m)));
+        data = data.filter(item => ['LINK', 'UNI', 'AAVE', 'INJ', 'ARB', 'OP'].some(m => item.pair.includes(m)));
+      } else if (selectedCategory === 'AI') {
+        data = data.filter(item => ['RENDER', 'FET', 'TAO', 'THETA', 'NEAR'].some(m => item.pair.includes(m)));
+      } else if (selectedCategory === 'GameFi') {
+        data = data.filter(item => ['AXS', 'MANA', 'SAND', 'ICP'].some(m => item.pair.includes(m)));
       }
     }
 
     // Apply sorting
-    data.sort((a, b) => {
-      let aValue, bValue;
-      
-      if (sortBy === 'volume') {
-        aValue = a.volume;
-        bValue = b.volume;
-      } else if (sortBy === 'price') {
-        aValue = a.price;
-        bValue = b.price;
-      } else if (sortBy === 'change') {
-        aValue = a.change24h;
-        bValue = b.change24h;
-      } else if (sortBy === 'marketCap') {
-        aValue = a.marketCap || 0;
-        bValue = b.marketCap || 0;
-      }
-      
-      return sortOrder === 'desc' ? bValue - aValue : aValue - bValue;
-    });
+    const currentConfig = { activeTab, searchTerm, selectedCategory, sortBy, sortOrder };
+    const configString = JSON.stringify(currentConfig);
+    const configChanged = configString !== lastConfigRef.current;
+    if (configChanged) {
+       lastConfigRef.current = configString;
+    }
 
+    const now = Date.now();
+    let shouldResort = configChanged || (now - lastSortTimeRef.current > 3000) || (data.length !== currentOrderRef.current.length);
 
-
+    if (shouldResort) {
+      data.sort((a, b) => {
+        let aValue, bValue;
+        if (sortBy === 'volume') {
+          aValue = a.volume || 0;
+          bValue = b.volume || 0;
+        } else if (sortBy === 'price') {
+          aValue = a.price || 0;
+          bValue = b.price || 0;
+        } else if (sortBy === 'change') {
+          aValue = a.change24h || 0;
+          bValue = b.change24h || 0;
+        } else if (sortBy === 'marketCap') {
+          aValue = a.marketCap || 0;
+          bValue = b.marketCap || 0;
+        }
+        return sortOrder === 'desc' ? bValue - aValue : aValue - bValue;
+      });
+      currentOrderRef.current = data.map(d => d.pair);
+      lastSortTimeRef.current = now;
+    } else {
+      const orderMap = new Map();
+      currentOrderRef.current.forEach((pair, index) => {
+        orderMap.set(pair, index);
+      });
+      data.sort((a, b) => {
+        const indexA = orderMap.has(a.pair) ? orderMap.get(a.pair) : 999999;
+        const indexB = orderMap.has(b.pair) ? orderMap.get(b.pair) : 999999;
+        return indexA - indexB;
+      });
+    }
 
     // Show all coins
     setFilteredPairs(data);
@@ -275,37 +351,44 @@ const MarketPage = ({ marketData }) => {
       )}
 
       {/* Market Stats */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={4}>
-          <Card sx={{ textAlign: 'center', p: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              Total Market Cap
-            </Typography>
-            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-              {marketStats.marketCap}
-            </Typography>
-          </Card>
-        </Grid>
-        <Grid item xs={4}>
-          <Card sx={{ textAlign: 'center', p: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              24h Volume
-            </Typography>
-            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-              {marketStats.volume24h}
-            </Typography>
-          </Card>
-        </Grid>
-        <Grid item xs={4}>
-          <Card sx={{ textAlign: 'center', p: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              BTC Dominance
-            </Typography>
-            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-              {marketStats.btcDominance}
-            </Typography>
-          </Card>
-        </Grid>
+      <Grid container spacing={1.5} sx={{ mb: 3 }}>
+        {[
+          { label: 'Total Market Cap', value: marketStats.marketCap, color: '#00E5FF' },
+          { label: '24h Volume', value: marketStats.volume24h, color: '#4F7CFF' },
+          { label: 'BTC Dominance', value: marketStats.btcDominance, color: '#904CC2' },
+        ].map((stat, index) => (
+          <Grid item xs={4} key={stat.label}>
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: index * 0.1 }}
+            >
+              <Card sx={{ 
+                textAlign: 'center', 
+                p: 1.5,
+                bgcolor: 'rgba(26,29,36,0.5)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '16px',
+                boxShadow: `0 4px 16px rgba(0,0,0,0.15)`,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: `0 8px 24px ${stat.color}25`,
+                  borderColor: `${stat.color}40`
+                }
+              }}>
+                <Typography variant="caption" sx={{ color: '#8b93a6', fontWeight: 500, fontSize: '0.65rem' }}>
+                  {stat.label}
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 800, color: stat.color, fontSize: '0.9rem' }}>
+                  {stat.value}
+                </Typography>
+              </Card>
+            </motion.div>
+          </Grid>
+        ))}
       </Grid>
 
       {/* Tabs */}
@@ -361,61 +444,71 @@ const MarketPage = ({ marketData }) => {
     )}
 
     {/* Market List */}
-    <TableContainer component={Paper}>
+    <TableContainer component={Paper} sx={{ 
+      bgcolor: 'rgba(26,29,36,0.4)', 
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: '20px',
+      overflow: 'hidden'
+    }}>
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell sx={{ width: '35%', fontWeight: 'bold' }}>Pair</TableCell>
-            <TableCell align="right" sx={{ fontWeight: 'bold' }}>Price</TableCell>
-            <TableCell align="right" sx={{ fontWeight: 'bold', display: { xs: 'none', sm: 'table-cell' } }}>Last 24h</TableCell>
-            <TableCell align="right" sx={{ fontWeight: 'bold' }}>24h %</TableCell>
-
+            <TableCell sx={{ width: '35%', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Pair</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Price</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 'bold', display: { xs: 'none', sm: 'table-cell' }, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Last 24h</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>24h %</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {filteredPairs.map((item, index) => (
-            <TableRow 
-              key={item.pair || item.symbol} 
-              hover
-              component={motion.tr}
-              sx={{ 
-                cursor: 'pointer',
-                transition: 'background-color 0.3s ease',
-                '&:hover': { 
-                  bgcolor: 'rgba(255, 255, 255, 0.05) !important'
-                }
-              }}
+            <motion.tr 
+              key={item.pair || item.symbol}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.9) }}
+              style={{ cursor: 'pointer' }}
               onClick={() => activeTab === 0 && handleTradeClick(item.pair)}
             >
-              <TableCell>
+              <TableCell sx={{ 
+                borderBottom: '1px solid rgba(255,255,255,0.04)',
+                transition: 'all 0.25s',
+                '&:hover': { bgcolor: 'transparent' }
+              }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Avatar
                     src={`https://assets.coincap.io/assets/icons/${(item.pair || item.symbol).toLowerCase().split('/')[0]}@2x.png`}
-                    sx={{ width: 24, height: 24, mr: 1.5, bgcolor: 'rgba(255,255,255,0.05)' }}
+                    sx={{ 
+                      width: 32, height: 32, mr: 1.5, 
+                      bgcolor: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                    }}
                   >
                     {(item.pair || item.symbol).charAt(0)}
                   </Avatar>
                   <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
                       {item.pair || item.symbol}
                     </Typography>
                     {item.volume && (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{ color: '#8b93a6', fontSize: '0.65rem' }}>
                         Vol: ${(item.volume / 1000000).toFixed(1)}M
                       </Typography>
                     )}
                   </Box>
                 </Box>
               </TableCell>
-              <TableCell align="right">
-                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+              <TableCell align="right" sx={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>
                   ${typeof item.price === 'number' ? item.price.toLocaleString('en-US', {
                     minimumFractionDigits: item.price < 1 ? 4 : 2,
                     maximumFractionDigits: item.price < 1 ? 4 : 2
                   }) : item.price}
                 </Typography>
               </TableCell>
-              <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+              <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' }, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <Sparkline 
                   data={item.sparkline} 
                   color={item.change24h >= 0 ? '#00D395' : '#FF6B6B'} 
@@ -423,7 +516,7 @@ const MarketPage = ({ marketData }) => {
                   height={25} 
                 />
               </TableCell>
-              <TableCell align="right">
+              <TableCell align="right" sx={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <Chip
                   label={`${item.change24h >= 0 ? '+' : ''}${item.change24h}%`}
                   size="small"
@@ -432,12 +525,12 @@ const MarketPage = ({ marketData }) => {
                     color: item.change24h >= 0 ? '#00D395' : '#FF6B6B',
                     fontWeight: 'bold',
                     minWidth: 70,
+                    border: `1px solid ${item.change24h >= 0 ? 'rgba(0,211,149,0.2)' : 'rgba(255,107,107,0.2)'}`,
                   }}
                   icon={item.change24h >= 0 ? <TrendingUp sx={{ fontSize: 14 }} /> : <TrendingDown sx={{ fontSize: 14 }} />}
                 />
               </TableCell>
-
-            </TableRow>
+            </motion.tr>
           ))}
         </TableBody>
       </Table>
@@ -446,46 +539,85 @@ const MarketPage = ({ marketData }) => {
     {/* Hot Pairs Section */}
     {activeTab === 0 && (
       <>
-        <Typography variant="h6" sx={{ mt: 3, mb: 2, fontWeight: 'bold' }}>
-          Hot Pairs
+        <Typography variant="h6" sx={{ mt: 3, mb: 2, fontWeight: 800 }}>
+          🔥 Hot Pairs
         </Typography>
-        <Grid container spacing={2}>
+        <Grid container spacing={1.5}>
           {filteredPairs.slice(0, 4).map((pair, index) => (
             <Grid item xs={6} key={index}>
-              <motion.div whileHover={{ y: -5 }}>
-                <Card>
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, delay: index * 0.1 }}
+                whileHover={{ y: -6, scale: 1.02 }}
+              >
+                <Card sx={{ 
+                  bgcolor: 'rgba(26,29,36,0.5)', 
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '20px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    boxShadow: '0 12px 32px rgba(0, 229, 255, 0.2), inset 0 0 12px rgba(0, 229, 255, 0.05)',
+                    borderColor: 'rgba(0, 229, 255, 0.3)'
+                  }
+                }}>
                   <CardContent sx={{ p: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Avatar
                           src={`https://assets.coincap.io/assets/icons/${(pair.pair || pair.symbol).toLowerCase().split('/')[0]}@2x.png`}
-                          sx={{ width: 20, height: 20, mr: 1 }}
+                          sx={{ width: 24, height: 24, mr: 1, border: '1px solid rgba(255,255,255,0.1)' }}
                         />
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.8rem' }}>
                           {pair.pair}
                         </Typography>
                       </Box>
                       <Chip
-                        label={`${pair.change24h}%`}
+                        label={`${pair.change24h >= 0 ? '+' : ''}${pair.change24h}%`}
                         size="small"
                         sx={{
                           bgcolor: pair.change24h >= 0 ? 'rgba(0, 211, 149, 0.1)' : 'rgba(255, 107, 107, 0.1)',
                           color: pair.change24h >= 0 ? '#00D395' : '#FF6B6B',
-                          fontSize: '0.7rem',
+                          fontSize: '0.65rem',
+                          fontWeight: 700,
+                          border: `1px solid ${pair.change24h >= 0 ? 'rgba(0,211,149,0.2)' : 'rgba(255,107,107,0.2)'}`,
                         }}
                       />
                     </Box>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.1rem' }}>
                       ${pair.price.toLocaleString()}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: '#8b93a6', fontSize: '0.65rem' }}>
                       Vol: ${(pair.volume / 1000000).toFixed(1)}M
                     </Typography>
                     <Button
                       fullWidth
                       size="small"
-                      variant="outlined"
-                      sx={{ mt: 1, fontSize: '0.75rem' }}
+                      variant="contained"
+                      sx={{ 
+                        mt: 1.5,
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        py: 0.8,
+                        lineHeight: 1.4,
+                        bgcolor: 'rgba(0, 229, 255, 0.15)',
+                        color: '#ffffff',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(0, 229, 255, 0.25)',
+                        boxShadow: 'none',
+                        textTransform: 'none',
+                        minHeight: 32,
+                        overflow: 'visible',
+                        whiteSpace: 'nowrap',
+                        '&:hover': { 
+                          bgcolor: 'rgba(0, 229, 255, 0.25)',
+                          boxShadow: '0 4px 16px rgba(0, 229, 255, 0.2)',
+                          color: '#ffffff'
+                        }
+                      }}
                       onClick={() => handleTradeClick(pair.pair)}
                     >
                       Trade

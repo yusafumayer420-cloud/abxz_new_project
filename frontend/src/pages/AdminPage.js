@@ -347,7 +347,7 @@ const AdminPage = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        ${(user.wallet?.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${Math.floor(user.wallet?.usdt || 0).toLocaleString('en-US')}
                       </TableCell>
                       <TableCell>{formatDate(user.createdAt)}</TableCell>
                       <TableCell>
@@ -503,7 +503,7 @@ const AdminPage = () => {
                         />
                       </TableCell>
                       <TableCell>${trade.price.toLocaleString()}</TableCell>
-                      <TableCell>{trade.amount.toFixed(4)}</TableCell>
+                      <TableCell>{trade.amount.toFixed(2)}</TableCell>
                       <TableCell>${trade.total.toLocaleString()}</TableCell>
                       <TableCell>
                         {new Date(trade.createdAt).toLocaleTimeString([], { 
@@ -563,7 +563,7 @@ const AdminPage = () => {
                       {Object.entries(selectedUser.wallet || {}).map(([currency, balance]) => (
                         <Grid item xs={6} sm={3} key={currency}>
                           <Typography variant="body2">
-                            <strong>{currency.toUpperCase()}:</strong> {balance}
+                            <strong>{currency.toUpperCase()}:</strong> {Math.floor(balance).toLocaleString('en-US')}
                           </Typography>
                         </Grid>
                       ))}

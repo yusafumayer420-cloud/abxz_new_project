@@ -39,6 +39,7 @@ import {
   CheckCircle,
   FilterList,
   AttachFile,
+  HeadsetMic,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
@@ -191,6 +192,13 @@ const LiveChat = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Allow other pages to open the chat via a custom event
+  useEffect(() => {
+    const handleOpenChat = () => setIsOpen(true);
+    window.addEventListener('open-live-chat', handleOpenChat);
+    return () => window.removeEventListener('open-live-chat', handleOpenChat);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -345,7 +353,7 @@ const LiveChat = () => {
   return (
     <>
       {/* Chat Button */}
-      {!isOpen && !['/trading', '/markets', '/funds', '/profile'].some(path => location.pathname.startsWith(path)) && (
+      {!isOpen && location.pathname === '/' && (
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -353,8 +361,8 @@ const LiveChat = () => {
         whileTap={{ scale: 0.9 }}
         style={{
           position: 'fixed',
-          bottom: 80,
-          right: 20,
+          bottom: 90,
+          right: 16,
           zIndex: 9999,
         }}
       >
@@ -363,24 +371,22 @@ const LiveChat = () => {
           color="error"
           overlap="circular"
         >
-          <Button
-            variant="contained"
-            startIcon={<ChatIcon />}
+          <IconButton
             onClick={() => setIsOpen(true)}
             sx={{
-              borderRadius: '50px',
-              px: 3,
-              py: 1.5,
-              background: 'linear-gradient(135deg, #00D395 0%, #00B884 100%)',
-              boxShadow: '0 4px 20px rgba(0, 211, 149, 0.3)',
-              fontWeight: 'bold',
+              width: 48,
+              height: 48,
+              bgcolor: '#00E5FF',
+              boxShadow: '0 8px 32px rgba(0, 229, 255, 0.4)',
+              color: '#131A2E',
               '&:hover': {
-                background: 'linear-gradient(135deg, #00B884 0%, #00A071 100%)',
+                bgcolor: '#00B3CC',
+                boxShadow: '0 8px 32px rgba(0, 229, 255, 0.6)',
               }
             }}
           >
-            Support
-          </Button>
+            <HeadsetMic sx={{ fontSize: 24 }} />
+          </IconButton>
         </Badge>
       </motion.div>
       )}
@@ -411,34 +417,40 @@ const LiveChat = () => {
                 flexDirection: 'column',
                 borderRadius: 3,
                 overflow: 'hidden',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'linear-gradient(135deg, #131A2E 0%, #0F172A 100%)',
+                border: '1px solid rgba(0, 229, 255, 0.15)',
+                background: '#0D1117',
               }}
             >
               {/* Header */}
               <Box
                 sx={{
                   p: 2,
-                  bgcolor: 'rgba(0, 211, 149, 0.1)',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'linear-gradient(135deg, rgba(0,229,255,0.12), rgba(79,124,255,0.08))',
+                  borderBottom: '1px solid rgba(0, 229, 255, 0.15)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <SupportAgent sx={{ color: '#00D395' }} />
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    Live Support
-                  </Typography>
-
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={{ p: 0.8, borderRadius: 2, bgcolor: 'rgba(0,229,255,0.15)', display: 'flex' }}>
+                    <SupportAgent sx={{ color: '#00E5FF', fontSize: 22 }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1, color: '#F8FAFC' }}>
+                      Live Support
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#00E5FF', fontSize: '0.65rem' }}>
+                      ● Online
+                    </Typography>
+                  </Box>
                 </Box>
                 <Box>
-                  <IconButton size="small" onClick={() => setIsMinimized(!isMinimized)}>
+                  <IconButton size="small" onClick={() => setIsMinimized(!isMinimized)} sx={{ color: '#94A3B8' }}>
                     {isMinimized ? '🗖' : '🗕'}
                   </IconButton>
-                  <IconButton size="small" onClick={() => setIsOpen(false)}>
-                    <Close />
+                  <IconButton size="small" onClick={() => setIsOpen(false)} sx={{ color: '#94A3B8' }}>
+                    <Close fontSize="small" />
                   </IconButton>
                 </Box>
               </Box>
@@ -483,15 +495,17 @@ const LiveChat = () => {
                               >
                                 <Box
                                   sx={{
-                                    maxWidth: { xs: '85%', sm: '70%' },
-                                    p: 2,
-                                    borderRadius: 3,
+                                    maxWidth: { xs: '85%', sm: '72%' },
+                                    p: '10px 14px',
+                                    borderRadius: message.userId?._id === (user?._id || user?.id)
+                                      ? '18px 18px 4px 18px'
+                                      : '18px 18px 18px 4px',
                                     bgcolor: message.userId?._id === (user?._id || user?.id)
-                                      ? 'rgba(0, 211, 149, 0.1)'
-                                      : 'rgba(255, 255, 255, 0.05)',
+                                      ? 'rgba(0, 229, 255, 0.18)'
+                                      : 'rgba(255, 255, 255, 0.06)',
                                     border: message.userId?._id === (user?._id || user?.id)
-                                      ? '1px solid rgba(0, 211, 149, 0.2)'
-                                      : '1px solid rgba(255, 255, 255, 0.1)',
+                                      ? '1px solid rgba(0, 229, 255, 0.25)'
+                                      : '1px solid rgba(255, 255, 255, 0.08)',
                                   }}
                                 >
                                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
@@ -566,7 +580,7 @@ const LiveChat = () => {
                       </Box>
 
                       {/* Input Area */}
-                      <Box sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                      <Box sx={{ p: 2, borderTop: '1px solid rgba(0, 229, 255, 0.1)', bgcolor: 'rgba(13,17,23,0.95)' }}>
                         {selectedFile && (
                           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
                             <Typography variant="caption" sx={{ flexGrow: 1 }} noWrap>
@@ -591,7 +605,7 @@ const LiveChat = () => {
                           <IconButton
                             size="small"
                             onClick={() => fileInputRef.current?.click()}
-                            sx={{ color: selectedFile ? '#00D395' : 'text.secondary' }}
+                            sx={{ color: selectedFile ? '#00E5FF' : '#64748B' }}
                           >
                             <AttachFile />
                           </IconButton>
@@ -618,10 +632,10 @@ const LiveChat = () => {
                             onClick={handleSendMessage}
                             disabled={(!newMessage.trim() && !selectedFile) || isUploading}
                             sx={{
-                              bgcolor: '#00D395',
-                              color: 'white',
-                              '&:hover': { bgcolor: '#00B884' },
-                              '&.Mui-disabled': { bgcolor: 'rgba(0, 211, 149, 0.3)' }
+                              bgcolor: '#00E5FF',
+                              color: '#0D1117',
+                              '&:hover': { bgcolor: '#33EAFF', boxShadow: '0 4px 16px rgba(0,229,255,0.4)' },
+                              '&.Mui-disabled': { bgcolor: 'rgba(0, 229, 255, 0.2)' }
                             }}
                           >
                             {isUploading ? <CircularProgress size={24} color="inherit" /> : <Send />}

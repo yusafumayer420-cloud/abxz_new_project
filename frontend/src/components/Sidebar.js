@@ -27,6 +27,8 @@ import {
   Settings,
   Notifications,
   AccountBalance,
+  HelpOutline,
+  PieChart,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -40,7 +42,9 @@ const Sidebar = ({ open, onClose }) => {
   const menuItems = [
     { text: 'Home', icon: <Home />, path: '/' },
     { text: 'Markets', icon: <ShowChart />, path: '/markets' },
+    { text: 'Portfolio', icon: <PieChart />, path: '/portfolio' },
     { text: 'Wallet', icon: <AccountBalanceWallet />, path: '/funds' },
+    { text: 'Exchange', icon: <SwapHoriz />, path: '/exchange' },
     { text: 'Profile', icon: <Person />, path: '/profile' },
   ];
 
@@ -50,7 +54,7 @@ const Sidebar = ({ open, onClose }) => {
   ];
 
   const otherItems = [
-    { text: 'Support', icon: <SupportAgent />, path: '/support' },
+    { text: 'FAQ', icon: <HelpOutline />, path: '/faq' },
     { text: 'Notifications', icon: <Notifications />, path: '/notifications' },
   ];
 

@@ -27,9 +27,15 @@ import AuthPage from './pages/AuthPage';
 import AdminPage from './pages/AdminPage';
 import SupportPage from './pages/SupportPage';
 import NewsPage from './pages/NewsPage';
+import AboutPage from './pages/AboutPage';
+import FAQPage from './pages/FAQPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import ExchangePage from './pages/ExchangePage';
+import ExchangeHistoryPage from './pages/ExchangeHistoryPage';
+import PortfolioPage from './pages/PortfolioPage';
+import LearnMorePage from './pages/LearnMorePage';
 
 // Context
 // import { AuthProvider } from './context/AuthContext'; // already imported above
@@ -138,10 +144,17 @@ function AppContent({ marketData, sidebarOpen, setSidebarOpen }) {
           <Route path="/trading/:pair?" element={<TradingPage socket={socket} />} />
           <Route path="/funds" element={<FundsPage />} />
           <Route path="/history" element={<TransactionHistoryPage />} />
+          <Route path="/exchange" element={<ExchangePage />} />
+          <Route path="/exchange/history" element={<ExchangeHistoryPage />} />
+          <Route path="/portfolio" element={<PortfolioPage />} />
           <Route path="/notifications" element={<NotificationPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/support" element={<SupportPage />} />
+
           <Route path="/news" element={<NewsPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/learn-more" element={<LearnMorePage />} />
         </Route>
 
         {/* Admin Routes */}

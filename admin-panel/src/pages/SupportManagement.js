@@ -861,7 +861,7 @@ const SupportManagement = () => {
                         <Box
                           sx={{ display: "flex", alignItems: "center", gap: 1 }}
                         >
-                          <Avatar sx={{ width: 24, height: 24, fontSize: 12 }}>
+                          <Avatar sx={{ width: 24, height: 24, fontSize: 12 }} src={typeof ticket.userId === 'object' ? ticket.userId?.profilePicture : undefined}>
                             {(typeof ticket.userId === 'object' ? (ticket.userId?.fullName || ticket.userId?.email || 'U') : 'U').charAt(0)}
                           </Avatar>
                           <Box>
@@ -1220,6 +1220,7 @@ const SupportManagement = () => {
                         >
                             <ListItemAvatar sx={{ minWidth: 40 }}>
                             <Avatar
+                              src={msg.type !== 'admin' ? (msg.userId?.profilePicture || undefined) : undefined}
                               sx={{
                                 bgcolor:
                                   msg.type === "admin" ? "#00D395" : "#4361EE",

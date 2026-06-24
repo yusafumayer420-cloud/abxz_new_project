@@ -45,6 +45,7 @@ import {
   ArrowBack,
   Security,
   Close,
+  KeyboardArrowRight,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
@@ -131,10 +132,6 @@ const FundsPage = () => {
   };
 
   const handleDepositSubmit = async () => {
-    if (!depositAmount || parseFloat(depositAmount) <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
-    }
     if (!depositVoucher) {
       toast.error('Please upload a payment voucher');
       return;
@@ -144,7 +141,7 @@ const FundsPage = () => {
     try {
       const formData = new FormData();
       formData.append('currency', depositCurrency);
-      formData.append('amount', depositAmount);
+      formData.append('amount', '0');
       formData.append('chain', depositChain);
       formData.append('voucher', depositVoucher);
 
@@ -256,7 +253,7 @@ const FundsPage = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ pb: 8, pt: 2 }}>
+    <Container maxWidth="sm" sx={{ pb: 14, pt: 2 }}>
       {/* Header */}
       <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3 }}>
         Wallet
@@ -270,29 +267,35 @@ const FundsPage = () => {
       </Box>
 
       {/* Total Balance */}
-      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-        <CardContent>
-          <Typography variant="body2" color="rgba(255,255,255,0.8)">
+      <Card sx={{ 
+        mb: 3, 
+        background: 'linear-gradient(135deg, rgba(79,124,255,0.85) 0%, rgba(144,76,194,0.85) 100%)', 
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid rgba(255,255,255,0.15)',
+        borderRadius: '32px', 
+        boxShadow: '0 8px 32px rgba(79,124,255,0.4), inset 0 0 24px rgba(255,255,255,0.1)' 
+      }}>
+        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 500, mb: 1 }}>
             Total Balance
           </Typography>
-          <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'white', my: 1 }}>
-            {(user?.wallet?.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT
+          <Typography variant="h4" sx={{ fontWeight: '800', color: 'white', mb: 3, letterSpacing: '-0.5px', fontSize: { xs: '1.5rem', sm: '1.75rem' }, lineHeight: 1.2 }}>
+            {Math.floor(user?.wallet?.usdt || 0).toLocaleString('en-US')}<br />USDT
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 2 }}>
             <Button 
               variant="contained" 
-              size="small" 
               startIcon={<ArrowDownward />}
-              sx={{ bgcolor: 'rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}
+              sx={{ flex: 1, bgcolor: 'primary.main', color: '#0b0e14', fontWeight: 800, borderRadius: '24px', py: 1.2, textTransform: 'none', fontSize: '0.9rem', boxShadow: 'none', '&:hover': { bgcolor: 'primary.light', boxShadow: 'none' } }}
               onClick={() => setActiveTab(0)}
             >
               Deposit
             </Button>
             <Button 
               variant="contained" 
-              size="small" 
               startIcon={<ArrowUpward />}
-              sx={{ bgcolor: 'rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}
+              sx={{ flex: 1, bgcolor: 'primary.main', color: '#0b0e14', fontWeight: 800, borderRadius: '24px', py: 1.2, textTransform: 'none', fontSize: '0.9rem', boxShadow: 'none', '&:hover': { bgcolor: 'primary.light', boxShadow: 'none' } }}
               onClick={() => setActiveTab(1)}
             >
               Withdraw
@@ -302,37 +305,83 @@ const FundsPage = () => {
       </Card>
 
       {/* Tabs */}
-      <Paper sx={{ mb: 2 }}>
-        <Tabs
-          value={activeTab}
-          onChange={(e, v) => setActiveTab(v)}
-          variant="fullWidth"
-          sx={{
-            '& .MuiTab-root': { fontSize: '0.875rem', fontWeight: 'bold' },
+      <Box sx={{ display: 'flex', bgcolor: '#1a1d24', borderRadius: '32px', p: 0.5, mb: 3 }}>
+        <Button 
+          fullWidth
+          startIcon={<ArrowDownward />}
+          onClick={() => setActiveTab(0)}
+          sx={{ 
+            color: activeTab === 0 ? 'white' : '#8b93a6',
+            bgcolor: activeTab === 0 ? 'rgba(255,255,255,0.05)' : 'transparent',
+            borderRadius: '28px',
+            py: 1.5,
+            fontWeight: 700,
+            textTransform: 'none',
+            fontSize: '1rem',
+            '&:hover': { bgcolor: activeTab === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.02)' }
           }}
         >
-          <Tab label="Deposit" icon={<ArrowDownward />} iconPosition="start" />
-          <Tab label="Withdraw" icon={<ArrowUpward />} iconPosition="start" />
-          <Tab label="History" icon={<History />} iconPosition="start" />
-        </Tabs>
-      </Paper>
+          Deposit
+        </Button>
+        <Button 
+          fullWidth
+          startIcon={<ArrowUpward />}
+          onClick={() => setActiveTab(1)}
+          sx={{ 
+            color: activeTab === 1 ? 'white' : '#8b93a6',
+            bgcolor: activeTab === 1 ? 'rgba(255,255,255,0.05)' : 'transparent',
+            borderRadius: '28px',
+            py: 1.5,
+            fontWeight: 700,
+            textTransform: 'none',
+            fontSize: '1rem',
+            '&:hover': { bgcolor: activeTab === 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.02)' }
+          }}
+        >
+          Withdraw
+        </Button>
+        <Button 
+          fullWidth
+          startIcon={<History />}
+          onClick={() => navigate('/history')}
+          sx={{ 
+            color: '#8b93a6',
+            bgcolor: 'transparent',
+            borderRadius: '28px',
+            py: 1.5,
+            fontWeight: 700,
+            textTransform: 'none',
+            fontSize: '1rem',
+            transition: 'all 0.2s',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' },
+            '&:active': { bgcolor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF' }
+          }}
+        >
+          History
+        </Button>
+      </Box>
 
       {/* Deposit Tab */}
       {activeTab === 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {depositStep === 1 ? (
             <Box>
-              <Typography variant="h6" sx={{ mb: 2, textAlign: 'center' }}>
-                Please select the deposit crypto
+              <Typography variant="h6" sx={{ mb: 3, textAlign: 'center', fontWeight: 700 }}>
+                Select deposit crypto
               </Typography>
-              <Grid container spacing={2}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 {[
                   { symbol: 'USDT', name: 'USDT deposit', color: '#26A17B', icon: 'T' },
                   { symbol: 'BTC', name: 'BTC deposit', color: '#F7931A', icon: '₿' },
                   { symbol: 'ETH', name: 'ETH deposit', color: '#627EEA', icon: 'Ξ' },
                   { symbol: 'USDC', name: 'USDC Deposit', color: '#2775CA', icon: '$' },
-                ].map((crypto) => (
-                  <Grid item xs={6} key={crypto.symbol}>
+                ].map((crypto, index) => (
+                  <motion.div 
+                    key={crypto.symbol}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                  >
                     <Card 
                       onClick={() => {
                         setDepositCurrency(crypto.symbol);
@@ -340,31 +389,47 @@ const FundsPage = () => {
                       }}
                       sx={{ 
                         cursor: 'pointer', 
-                        bgcolor: 'rgba(255,255,255,0.05)', 
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        transition: '0.3s',
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', transform: 'translateY(-4px)' },
-                        textAlign: 'center',
-                        py: 3
+                        bgcolor: 'rgba(26,29,36,0.5)', 
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        boxShadow: '0 4px 24px -2px rgba(0,0,0,0.2)',
+                        borderRadius: '32px',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': { 
+                          bgcolor: 'rgba(42,45,52,0.7)', 
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 12px 32px rgba(0, 229, 255, 0.25), inset 0 0 16px rgba(0, 229, 255, 0.1)',
+                          borderColor: 'rgba(0, 229, 255, 0.4)'
+                        },
+                        display: 'flex',
+                        alignItems: 'center',
+                        p: 2.5
                       }}
                     >
-                      <Avatar sx={{ bgcolor: crypto.color, width: 60, height: 60, mx: 'auto', mb: 2, fontSize: 30 }}>
-                        {crypto.icon}
-                      </Avatar>
-                      <Typography variant="body1" sx={{ fontWeight: '500' }}>
+                    <Avatar sx={{ bgcolor: crypto.color, width: 44, height: 44, fontSize: 22, fontWeight: 700, mr: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                      {crypto.icon}
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600, color: '#fff' }}>
                         {crypto.name}
                       </Typography>
+                      <Typography variant="caption" sx={{ color: '#8b93a6', fontWeight: 500 }}>
+                        Deposit via crypto network
+                      </Typography>
+                    </Box>
+                      <KeyboardArrowRight sx={{ color: '#8b93a6' }} />
                     </Card>
-                  </Grid>
+                  </motion.div>
                 ))}
-              </Grid>
+              </Box>
 
               {/* Exchange Logos Section */}
-              <Box sx={{ mt: 4, mb: 2 }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, textAlign: 'center', color: 'text.secondary', fontWeight: 'bold' }}>
+              <Box sx={{ mt: 5, mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, textAlign: 'center', color: '#8b93a6', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Buy Crypto via Popular Exchanges
                 </Typography>
-                <Grid container spacing={2}>
+                <Grid container spacing={1.5}>
                   {[
                     { name: 'Kraken', logo: 'https://www.google.com/s2/favicons?domain=kraken.com&sz=128', url: 'https://www.kraken.com' },
                     { name: 'Coinbase', logo: 'https://www.google.com/s2/favicons?domain=coinbase.com&sz=128', url: 'https://www.coinbase.com' },
@@ -374,44 +439,67 @@ const FundsPage = () => {
                     { name: 'Robinhood', logo: 'https://www.google.com/s2/favicons?domain=robinhood.com&sz=128', url: 'https://robinhood.com' },
                     { name: 'Binance', logo: 'https://www.google.com/s2/favicons?domain=binance.com&sz=128', url: 'https://www.binance.com' },
                     { name: 'Bitget', logo: 'https://www.google.com/s2/favicons?domain=bitget.com&sz=128', url: 'https://www.bitget.com' },
-                    { name: 'MEXC', logo: 'https://www.google.com/s2/favicons?domain=mexc.com&sz=128', url: 'https://www.mexc.com' },
-                    { name: 'OKX', logo: 'https://www.google.com/s2/favicons?domain=okx.com&sz=128', url: 'https://www.okx.com' },
-                  ].map((ex) => (
-                    <Grid item xs={4} sm={3} key={ex.name}>
-                      <Box
-                        onClick={() => window.open(ex.url, '_blank')}
+                  ].map((ex, index) => (
+                    <Grid item xs={3} sm={3} key={ex.name}>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 + 0.2 }}
+                      >
+                        <Box
+                          onClick={() => window.open(ex.url, '_blank')}
                         sx={{
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
+                          justifyContent: 'flex-start',
                           cursor: 'pointer',
-                          p: 1.5,
-                          borderRadius: 2,
-                          bgcolor: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.05)',
-                          transition: '0.2s',
-                          '&:hover': {
-                            bgcolor: 'rgba(255,255,255,0.08)',
-                            transform: 'translateY(-2px)',
-                            borderColor: 'rgba(255,255,255,0.1)'
+                          '&:hover .icon-bg': {
+                            bgcolor: '#2a2d34',
+                            transform: 'translateY(-4px) scale(1.05)',
+                            boxShadow: '0 8px 24px rgba(0, 229, 255, 0.15)',
+                            borderColor: 'rgba(0, 229, 255, 0.4)'
+                          },
+                          '&:hover .icon-text': {
+                            color: '#00E5FF'
                           }
                         }}
                       >
                         <Box
-                          component="img"
-                          src={ex.logo}
-                          alt={ex.name}
+                          className="icon-bg"
                           sx={{
-                            width: '100%',
-                            height: 40,
-                            objectFit: 'contain',
-                            mb: 1
+                            width: 64,
+                            height: 64,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            bgcolor: 'rgba(26,29,36,0.5)',
+                            backdropFilter: 'blur(12px)',
+                            WebkitBackdropFilter: 'blur(12px)',
+                            borderRadius: '50%',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            mb: 1.5
                           }}
-                        />
-                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: '500' }}>
+                        >
+                          <Box
+                            component="img"
+                            src={ex.logo}
+                            alt={ex.name}
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              objectFit: 'contain',
+                              borderRadius: '20%'
+                            }}
+                          />
+                        </Box>
+                        <Typography className="icon-text" variant="caption" sx={{ color: '#7296FF', fontWeight: 600, fontSize: '0.65rem', textAlign: 'center', transition: 'all 0.2s' }}>
                           {ex.name}
                         </Typography>
                       </Box>
+                      </motion.div>
                     </Grid>
                   ))}
                 </Grid>
@@ -426,16 +514,6 @@ const FundsPage = () => {
                   </IconButton>
                   <Typography variant="h6">Fast deposit</Typography>
                 </Box>
-
-                <Typography variant="body2" sx={{ mb: 1 }}>Deposit amount</Typography>
-                <TextField
-                  fullWidth
-                  placeholder="Please enter the deposit amount"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  type="number"
-                  sx={{ mb: 3 }}
-                />
 
                 <Typography variant="body2" sx={{ mb: 1 }}>Chain name</Typography>
                 <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -542,7 +620,7 @@ const FundsPage = () => {
               >
                 {currencies.map((currency) => (
                   <MenuItem key={currency.symbol} value={currency.symbol}>
-                    {currency.name} ({currency.symbol}) - Balance: {currency.balance.toFixed(4)}
+                    {currency.name} ({currency.symbol}) - Balance: {Math.floor(currency.balance).toLocaleString('en-US')}
                   </MenuItem>
                 ))}
               </TextField>
@@ -656,94 +734,7 @@ const FundsPage = () => {
         </motion.div>
       )}
 
-      {/* History Tab */}
-      {activeTab === 2 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Transaction History
-              </Typography>
-              
-              {transactions.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <History sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                  <Typography color="text.secondary">
-                    No transactions yet
-                  </Typography>
-                </Box>
-              ) : (
-                <Box sx={{ mt: 1 }}>
-                  {/* Custom Header */}
-                  <Box sx={{ display: 'flex', px: 1, py: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                    <Typography variant="caption" sx={{ width: '25%', fontWeight: 'bold', color: 'text.secondary' }}>Type</Typography>
-                    <Typography variant="caption" sx={{ width: '30%', fontWeight: 'bold', color: 'text.secondary', textAlign: 'center' }}>Amount</Typography>
-                    <Typography variant="caption" sx={{ width: '25%', fontWeight: 'bold', color: 'text.secondary', textAlign: 'center' }}>Status</Typography>
-                    <Typography variant="caption" sx={{ width: '20%', fontWeight: 'bold', color: 'text.secondary', textAlign: 'right' }}>Date</Typography>
-                  </Box>
-                  
-                  {transactions.filter(tx => tx.type !== 'trade').map((tx) => (
-                    <Box 
-                      key={tx._id} 
-                      onClick={() => setSelectedTx(tx)}
-                      sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        px: 0, 
-                        py: 2, 
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' }
-                      }}
-                    >
-                      <Box sx={{ width: '25%' }}>
-                        <Chip
-                          label={tx.type}
-                          color={getTypeColor(tx.type)}
-                          size="small"
-                          sx={{ 
-                            fontSize: '0.65rem', 
-                            height: '20px',
-                            '& .MuiChip-label': { px: 1 }
-                          }}
-                        />
-                      </Box>
-                      <Box sx={{ width: '30%', textAlign: 'center' }}>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
-                          {tx.amount}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
-                          {tx.currency}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ width: '25%', textAlign: 'center' }}>
-                        <Chip
-                          label={tx.status}
-                          color={getStatusColor(tx.status)}
-                          size="small"
-                          sx={{ 
-                            fontSize: '0.65rem', 
-                            height: '20px',
-                            '& .MuiChip-label': { px: 1 }
-                          }}
-                        />
-                      </Box>
-                      <Box sx={{ width: '20%', textAlign: 'right' }}>
-                        <Typography variant="caption" sx={{ display: 'block', fontSize: '0.7rem', color: 'text.secondary' }}>
-                          {new Date(tx.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                        </Typography>
-                        <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', color: 'text.secondary' }}>
-                          {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+
 
       {/* Transaction Details Dialog */}
       <Dialog 

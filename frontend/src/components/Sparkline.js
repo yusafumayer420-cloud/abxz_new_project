@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
-const Sparkline = ({ data, color = '#00D395', width = 100, height = 30 }) => {
+const Sparkline = ({ data, color = '#00E5FF', width = 100, height = 30, fill = true, strokeWidth = 1.5 }) => {
+  const id = useMemo(() => `sparkline-grad-${Math.random().toString(36).substr(2, 9)}`, []);
+
   if (!data || data.length < 2) return null;
 
   const min = Math.min(...data);
@@ -9,19 +11,39 @@ const Sparkline = ({ data, color = '#00D395', width = 100, height = 30 }) => {
 
   const points = data.map((val, i) => {
     const x = (i / (data.length - 1)) * width;
-    const y = height - ((val - min) / range) * height;
-    return `${x},${y}`;
-  }).join(' ');
+    const y = height - ((val - min) / range) * (height - 4) - 2;
+    return { x, y };
+  });
+
+  const linePoints = points.map(p => `${p.x},${p.y}`).join(' ');
+
+  const areaPath = fill
+    ? `M${points[0].x},${height} ` +
+      points.map(p => `L${p.x},${p.y}`).join(' ') +
+      ` L${points[points.length - 1].x},${height} Z`
+    : null;
 
   return (
-    <svg width={width} height={height} style={{ overflow: 'visible' }}>
+    <svg width={width} height={height} style={{ overflow: 'visible', display: 'block' }}>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {fill && areaPath && (
+        <path
+          d={areaPath}
+          fill={`url(#${id})`}
+        />
+      )}
       <polyline
         fill="none"
         stroke={color}
-        strokeWidth="2"
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
-        points={points}
+        points={linePoints}
       />
     </svg>
   );

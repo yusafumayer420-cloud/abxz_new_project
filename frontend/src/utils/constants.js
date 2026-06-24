@@ -1,6 +1,5 @@
 export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 export const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
-
 export const CURRENCIES = [
   { symbol: 'BTC', name: 'Bitcoin', icon: '₿', color: '#F7931A' },
   { symbol: 'ETH', name: 'Ethereum', icon: 'Ξ', color: '#627EEA' },
@@ -10,6 +9,29 @@ export const CURRENCIES = [
   { symbol: 'ADA', name: 'Cardano', icon: 'A', color: '#0033AD' },
   { symbol: 'DOGE', name: 'Dogecoin', icon: 'Ð', color: '#C2A633' },
   { symbol: 'DOT', name: 'Polkadot', icon: '●', color: '#E6007A' },
+  { symbol: 'LTC', name: 'Litecoin', icon: 'Ł', color: '#345D9D' },
+  { symbol: 'BNB', name: 'Binance Coin', icon: 'B', color: '#F3BA2F' },
+  { symbol: 'MATIC', name: 'Polygon', icon: 'M', color: '#8247E5' },
+  { symbol: 'AVAX', name: 'Avalanche', icon: 'A', color: '#E84142' },
+  { symbol: 'LINK', name: 'Chainlink', icon: 'L', color: '#2A5ADA' },
+  { symbol: 'SHIB', name: 'Shiba Inu', icon: 'S', color: '#E64600' },
+  { symbol: 'TRX', name: 'Tron', icon: 'T', color: '#FF0013' },
+  { symbol: 'UNI', name: 'Uniswap', icon: 'U', color: '#FF007A' },
+  { symbol: 'ATOM', name: 'Cosmos', icon: 'A', color: '#2E3148' },
+  { symbol: 'XLM', name: 'Stellar', icon: 'X', color: '#14B6E7' },
+  { symbol: 'ETC', name: 'Ethereum Classic', icon: 'E', color: '#328332' },
+  { symbol: 'FIL', name: 'Filecoin', icon: 'F', color: '#0090FF' },
+  { symbol: 'NEAR', name: 'NEAR Protocol', icon: 'N', color: '#000000' },
+  { symbol: 'ALGO', name: 'Algorand', icon: 'A', color: '#000000' },
+  { symbol: 'VET', name: 'VeChain', icon: 'V', color: '#15BDFF' },
+  { symbol: 'ICP', name: 'Internet Computer', icon: 'I', color: '#29ABE2' },
+  { symbol: 'MANA', name: 'Decentraland', icon: 'M', color: '#FF2D55' },
+  { symbol: 'SAND', name: 'The Sandbox', icon: 'S', color: '#00ADEF' },
+  { symbol: 'AXS', name: 'Axie Infinity', icon: 'A', color: '#0055D5' },
+  { symbol: 'THETA', name: 'Theta Network', icon: 'T', color: '#2AB8E6' },
+  { symbol: 'FTM', name: 'Fantom', icon: 'F', color: '#1969FF' },
+  { symbol: 'EGLD', name: 'Elrond', icon: 'E', color: '#1D1D2C' },
+  { symbol: 'XTZ', name: 'Tezos', icon: 'X', color: '#2C7DF7' },
 ];
 
 export const TRADING_PAIRS = [

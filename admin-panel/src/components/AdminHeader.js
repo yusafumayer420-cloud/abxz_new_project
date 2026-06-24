@@ -80,6 +80,7 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
     '/trading': 'Trading Management',
     '/transactions': 'Transaction Management',
     '/support': 'Support Center',
+
     '/settings': 'System Settings',
   };
 
