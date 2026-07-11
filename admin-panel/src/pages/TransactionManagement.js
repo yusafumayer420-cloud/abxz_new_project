@@ -122,6 +122,7 @@ const TransactionManagement = () => {
           status: requestStatus,
           page: currentPage,
           limit: TRANSACTIONS_PER_PAGE,
+          search: searchTerm,
         },
       });
       const txs = response.data.transactions || [];
@@ -134,7 +135,7 @@ const TransactionManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, currentPage, activeTab]);
+  }, [filters, currentPage, activeTab, searchTerm]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -229,22 +230,12 @@ const TransactionManagement = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters.type, filters.status, activeTab]);
+  }, [filters.type, filters.status, activeTab, searchTerm]);
 
   useEffect(() => {
     let filtered = transactions.filter((tx) =>
       ALLOWED_TRANSACTION_TYPES.includes(tx.type),
     );
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (tx) =>
-          (tx.userId?.fullName || '').toLowerCase().includes(term) ||
-          tx._id.toLowerCase().includes(term) ||
-          (tx.txHash || '').toLowerCase().includes(term),
-      );
-    }
 
     if (filters.type) {
       filtered = filtered.filter((tx) => tx.type === filters.type);
@@ -268,7 +259,7 @@ const TransactionManagement = () => {
     });
 
     setFilteredTransactions(filtered);
-  }, [searchTerm, filters, activeTab, transactions]);
+  }, [filters, activeTab, transactions]);
 
   const handleMenuClick = (event, transaction) => {
     setAnchorEl(event.currentTarget);
@@ -505,7 +496,7 @@ const TransactionManagement = () => {
             {change && (
               <Typography
                 variant="caption"
-                sx={{ color: change >= 0 ? "#00D395" : "#FF6B6B" }}
+                sx={{ color: change >= 0 ? "#8b5cf6" : "#f43f5e" }}
               >
                 {change >= 0 ? "+" : ""}
                 {change}% from yesterday
@@ -548,23 +539,12 @@ const TransactionManagement = () => {
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
           <Button
-            variant="outlined"
-            startIcon={<Refresh />}
-            onClick={fetchTransactions}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
-          <Button
             variant="contained"
             color="success"
             startIcon={<AccountBalance />}
             onClick={() => { fetchUsers(); setDepositDialog(true); }}
           >
             Add Deposit
-          </Button>
-          <Button variant="contained" startIcon={<Download />}>
-            Export Report
           </Button>
         </Box>
       </Box>
@@ -577,7 +557,6 @@ const TransactionManagement = () => {
             value={`$${transactions.filter(t => t.type === 'deposit' && t.status === 'completed').reduce((sum, t) => sum + (t.amount || 0), 0).toLocaleString()}`}
             icon={<TrendingUp />}
             color="#4361EE"
-            change="+15.5%"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -585,8 +564,7 @@ const TransactionManagement = () => {
             title="Total Withdrawals"
             value={`$${transactions.filter(t => t.type === 'withdrawal' && t.status === 'completed').reduce((sum, t) => sum + (t.amount || 0), 0).toLocaleString()}`}
             icon={<TrendingDown />}
-            color="#00D395"
-            change="+8.3%"
+            color="#8b5cf6"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -595,7 +573,6 @@ const TransactionManagement = () => {
             value={transactions.filter(t => t.status === 'pending').length.toString()}
             icon={<Refresh />}
             color="#7209B7"
-            change="-2.1%"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -603,8 +580,7 @@ const TransactionManagement = () => {
             title="Total Volume"
             value={`$${transactions.filter(t => t.status === 'completed').reduce((sum, t) => sum + (t.amount || 0), 0).toLocaleString()}`}
             icon={<AccountBalance />}
-            color="#FF6B6B"
-            change="+12.7%"
+            color="#f43f5e"
           />
         </Grid>
       </Grid>
@@ -628,7 +604,7 @@ const TransactionManagement = () => {
                     <YAxis stroke="rgba(255,255,255,0.5)" />
                     <Tooltip
                       contentStyle={{
-                        background: "#131A2E",
+                        background: "#1e293b",
                         border: "1px solid rgba(255,255,255,0.1)",
                         borderRadius: 8,
                       }}
@@ -639,13 +615,13 @@ const TransactionManagement = () => {
                     />
                     <Bar
                       dataKey="deposits"
-                      fill="#00D395"
+                      fill="#8b5cf6"
                       name="Deposits"
                       radius={[4, 4, 0, 0]}
                     />
                     <Bar
                       dataKey="withdrawals"
-                      fill="#FF6B6B"
+                      fill="#f43f5e"
                       name="Withdrawals"
                       radius={[4, 4, 0, 0]}
                     />
@@ -666,11 +642,10 @@ const TransactionManagement = () => {
                   {
                     label: "Process Pending Withdrawals",
                     icon: "💸",
-                    count: 5,
+                    count: transactions.filter(t => t.type === 'withdrawal' && t.status === 'pending').length,
                   },
-                  { label: "Review Large Deposits", icon: "🔍", count: 3 },
-                  { label: "Check Failed Transactions", icon: "⚠️", count: 2 },
-                  { label: "Generate Daily Report", icon: "📊", count: 0 },
+                  { label: "Review Large Deposits", icon: "🔍", count: transactions.filter(t => t.type === 'deposit' && (t.amount || 0) >= 1000).length },
+                  { label: "Check Failed Transactions", icon: "⚠️", count: transactions.filter(t => t.status === 'failed').length },
                 ].map((action, index) => (
                   <motion.div
                     key={index}
@@ -687,7 +662,7 @@ const TransactionManagement = () => {
                         borderRadius: 2,
                         borderColor: "rgba(255,255,255,0.1)",
                         "&:hover": {
-                          borderColor: "#00D395",
+                          borderColor: "#8b5cf6",
                           background: "rgba(0, 211, 149, 0.05)",
                         },
                       }}
@@ -860,7 +835,7 @@ const TransactionManagement = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ bgcolor: '#4361EE', width: 32, height: 32 }}>
+                          <Avatar sx={{ bgcolor: '#4361EE', width: 32, height: 32 }} src={tx.userId?.profilePicture || undefined}>
                             {(tx.userId?.fullName || tx.userName || 'U').charAt(0)}
                           </Avatar>
                           <Box>
@@ -879,8 +854,8 @@ const TransactionManagement = () => {
                           size="small"
                           icon={tx.type === 'deposit' ? <TrendingUp /> : <TrendingDown />}
                           sx={{
-                            bgcolor: (tx.type === 'deposit' ? '#4361EE' : '#00D395') + '20',
-                            color: tx.type === 'deposit' ? '#4361EE' : '#00D395',
+                            bgcolor: (tx.type === 'deposit' ? '#4361EE' : '#8b5cf6') + '20',
+                            color: tx.type === 'deposit' ? '#4361EE' : '#8b5cf6',
                             fontWeight: 'bold',
                           }}
                         />
@@ -976,20 +951,20 @@ const TransactionManagement = () => {
         {(selectedTransaction?.status === "pending" &&
           (selectedTransaction?.type === "withdrawal" || selectedTransaction?.type === "deposit")) && (
             <MenuItem onClick={handleProcessTransaction}>
-              <CheckCircle sx={{ mr: 2, color: "#00D395" }} />
+              <CheckCircle sx={{ mr: 2, color: "#8b5cf6" }} />
               Process {selectedTransaction?.type === "withdrawal" ? "Withdrawal" : "Deposit"}
             </MenuItem>
           )}
         {selectedTransaction?.status === "pending" && (
           <MenuItem onClick={handleCancelTransaction}>
-            <Cancel sx={{ mr: 2, color: "#FF6B6B" }} />
+            <Cancel sx={{ mr: 2, color: "#f43f5e" }} />
             Cancel Transaction
           </MenuItem>
         )}
         {selectedTransaction?.status !== "completed" &&
           selectedTransaction?.status !== "failed" && (
             <MenuItem onClick={handleRejectTransaction}>
-              <Cancel sx={{ mr: 2, color: "#FF6B6B" }} />
+              <Cancel sx={{ mr: 2, color: "#f43f5e" }} />
               Mark as Failed
             </MenuItem>
           )}

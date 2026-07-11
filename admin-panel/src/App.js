@@ -29,18 +29,18 @@ const adminTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#00D395',
+      main: '#8b5cf6',
       light: '#33DCA5',
-      dark: '#00B884',
+      dark: '#7c3aed',
     },
     secondary: {
-      main: '#FF6B6B',
+      main: '#f43f5e',
       light: '#FF8989',
-      dark: '#E05555',
+      dark: '#e11d48',
     },
     background: {
-      default: '#0A0E17',
-      paper: '#131A2E',
+      default: '#0a0f1d',
+      paper: '#111827',
     },
     text: {
       primary: '#FFFFFF',
@@ -88,7 +88,7 @@ const App = () => {
               position="top-right"
               toastOptions={{
                 style: {
-                  background: '#131A2E',
+                  background: '#1e293b',
                   color: '#fff',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
                 },
@@ -116,7 +116,7 @@ const App = () => {
                         transition: 'margin-left 0.3s ease',
                         pt: '64px',
                         minHeight: '100vh',
-                        backgroundColor: '#0A0E17',
+                        backgroundColor: '#0a0f1d',
                       }}
                     >
                       <Box sx={{ p: 3 }}>

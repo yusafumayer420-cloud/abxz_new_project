@@ -30,6 +30,7 @@ const ProfilePage = () => {
   const [showSecurityLogs, setShowSecurityLogs] = useState(false);
   const [showProfilePicPreview, setShowProfilePicPreview] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
+  const [showReferral, setShowReferral] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(() => JSON.parse(localStorage.getItem('appLanguage') || '{"code":"en","name":"English","flag":"🇺🇸","native":"English"}'));
   const [languageSearch, setLanguageSearch] = useState('');
 
@@ -248,7 +249,7 @@ const ProfilePage = () => {
             { icon: <Security />, label: 'Security logs', action: () => setShowSecurityLogs(true) },
             { icon: <Lock />, label: 'Change Password', action: () => setShowChangePassword(true) },
             { icon: <Receipt />, label: 'Record', action: () => navigate('/history') },
-            { icon: <SupervisorAccount />, label: 'Referral Program', action: () => toast('Referral program coming soon', { icon: '🚀' }) },
+            { icon: <SupervisorAccount />, label: 'Referral Program', action: () => setShowReferral(true) },
           ].map((item, index) => (
             <Grid item xs={3} key={index} sx={{ textAlign: 'center' }}>
               <motion.div
@@ -561,18 +562,25 @@ const ProfilePage = () => {
                   setShowLanguage(false);
                   setLanguageSearch('');
                   
-                  // Google Translate integration
-                  const langCode = lang.code === 'zh' ? 'zh-CN' : lang.code;
-                  if (lang.code === 'en') {
-                    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                    document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + window.location.hostname;
-                  } else {
-                    document.cookie = `googtrans=/en/${langCode}; path=/`;
-                    document.cookie = `googtrans=/en/${langCode}; path=/; domain=${window.location.hostname}`;
+                  // Use fast Google Translate switching (no page reload)
+                  const switched = window.switchGoogleTranslateLanguage
+                    ? window.switchGoogleTranslateLanguage(lang.code)
+                    : false;
+                  
+                  if (!switched) {
+                    // Fallback: set cookie and reload only if instant switch failed
+                    const langCode = lang.code === 'zh' ? 'zh-CN' : lang.code;
+                    if (lang.code === 'en') {
+                      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + window.location.hostname;
+                    } else {
+                      document.cookie = `googtrans=/en/${langCode}; path=/`;
+                      document.cookie = `googtrans=/en/${langCode}; path=/; domain=${window.location.hostname}`;
+                    }
+                    window.location.reload();
                   }
                   
                   toast.success(`Language changed to ${lang.name}`, { icon: lang.flag });
-                  setTimeout(() => window.location.reload(), 500);
                 }}
                 sx={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -596,6 +604,43 @@ const ProfilePage = () => {
               </Box>
             ))}
           </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* Referral Program Dialog */}
+      <Dialog open={showReferral} onClose={() => setShowReferral(false)} maxWidth="sm" fullWidth {...sharedDialogProps}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 3, pt: 3, pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#fff' }}>Referral Program</Typography>
+          <IconButton onClick={() => setShowReferral(false)} size="small" sx={{ color: '#8b93a6' }}><Close /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, pb: 4, textAlign: 'center' }}>
+          <SupervisorAccount sx={{ fontSize: 64, color: '#00E5FF', mb: 2 }} />
+          <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1 }}>Invite Friends, Earn Crypto</Typography>
+          <Typography variant="body2" sx={{ color: '#8b93a6', mb: 4 }}>
+            Share your unique referral link with your friends. When they sign up and verify their account, you will instantly receive <strong style={{ color: '#00E5FF' }}>5 USDT</strong>!
+          </Typography>
+
+          <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Typography variant="caption" sx={{ color: '#8b93a6', display: 'block', mb: 1, textAlign: 'left' }}>Your Referral Link</Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                fullWidth
+                size="small"
+                value={`${window.location.origin}/register?ref=${user?.referralCode || ''}`}
+                InputProps={{
+                  readOnly: true,
+                  sx: { bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2, color: '#fff' }
+                }}
+              />
+              <Button 
+                variant="contained" 
+                onClick={() => copyToClipboard(`${window.location.origin}/register?ref=${user?.referralCode || ''}`)}
+                sx={{ bgcolor: '#00E5FF', color: '#0b0e14', fontWeight: 'bold', borderRadius: 2, minWidth: '100px', '&:hover': { bgcolor: '#33eaff' } }}
+              >
+                COPY
+              </Button>
+            </Box>
+          </Paper>
         </DialogContent>
       </Dialog>
     </Box>

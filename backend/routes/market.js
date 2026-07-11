@@ -3,6 +3,10 @@ const axios = require('axios');
 const SystemSettings = require('../models/SystemSettings');
 const router = express.Router();
 
+// Simple in-memory cache for market data (klines)
+const klineCache = new Map();
+const KLINE_CACHE_TTL = 10000; // 10 seconds
+
 // Get system settings (Market Cap, Volume, etc)
 router.get('/settings', async (req, res) => {
   try {
@@ -163,6 +167,13 @@ router.get('/klines', async (req, res) => {
     const safeInterval = String(interval).replace(/[^0-9a-zA-Z]/g, '');
     const safeLimit    = Math.min(Math.max(parseInt(limit, 10) || 500, 1), 1000);
 
+    // Check cache first
+    const cacheKey = `${safeSymbol}_${safeInterval}_${safeLimit}`;
+    const cachedEntry = klineCache.get(cacheKey);
+    if (cachedEntry && (Date.now() - cachedEntry.timestamp < KLINE_CACHE_TTL)) {
+      return res.json(cachedEntry.data);
+    }
+
     const response = await axios.get('https://api.binance.com/api/v3/klines', {
       params: {
         symbol:   safeSymbol,
@@ -170,7 +181,7 @@ router.get('/klines', async (req, res) => {
         limit:    safeLimit
       },
       timeout: 10000,
-      headers: { 'User-Agent': 'CrokTrade/1.0' }
+      headers: { 'User-Agent': 'Cryptosimia/1.0' }
     });
 
     // Transform Binance klines format into lightweight-charts format:
@@ -183,6 +194,9 @@ router.get('/klines', async (req, res) => {
       close:  parseFloat(k[4]),
       volume: parseFloat(k[5])
     }));
+
+    // Save to cache
+    klineCache.set(cacheKey, { timestamp: Date.now(), data: candles });
 
     res.json(candles);
   } catch (error) {

@@ -9,6 +9,11 @@ const darkTheme = createTheme({
       dark: '#00B8CC',
       contrastText: '#050816',
     },
+    accent: {
+      main: '#00D395',
+      light: '#33DCAA',
+      dark: '#00B17D',
+    },
     secondary: {
       main: '#4F7CFF',
       light: '#7296FF',
@@ -188,7 +193,7 @@ const darkTheme = createTheme({
           },
         },
         containedPrimary: {
-          background: 'linear-gradient(135deg, #00E5FF 0%, #00B8CC 100%)',
+          background: 'linear-gradient(135deg, #00E5FF 0%, #00BCD4 100%)',
           color: '#050816',
           boxShadow: '0 4px 16px rgba(0, 229, 255, 0.25)',
           '&:hover': {

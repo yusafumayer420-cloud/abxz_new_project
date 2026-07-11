@@ -87,7 +87,7 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
               sx={{
-                bgcolor: '#00D395',
+                bgcolor: '#8b5cf6',
                 width: 40,
                 height: 40,
                 fontWeight: 'bold',
@@ -141,7 +141,7 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
                 }}
               >
                 <ListItemIcon sx={{ 
-                  color: isActive(item.path) ? '#00D395' : 'white', 
+                  color: isActive(item.path) ? '#8b5cf6' : 'white', 
                   minWidth: 40,
                 }}>
                   {item.icon}
@@ -150,7 +150,7 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
                   primary={
                     <Typography variant="body2" sx={{ 
                       fontWeight: isActive(item.path) ? 'bold' : 'normal',
-                      color: isActive(item.path) ? '#00D395' : 'white'
+                      color: isActive(item.path) ? '#8b5cf6' : 'white'
                     }}>
                       {item.text}
                     </Typography>
@@ -161,46 +161,7 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
           ))}
         </List>
 
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: 2 }} />
 
-        {/* Reports Submenu */}
-        <ListItem 
-          button 
-          onClick={() => handleToggleSubmenu('reports')}
-          sx={{ borderRadius: 2, mb: 1 }}
-        >
-          <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
-            <BarChart />
-          </ListItemIcon>
-          <ListItemText primary="Reports & Analytics" />
-          {openSubmenu.reports ? <ExpandLess /> : <ExpandMore />}
-        </ListItem>
-
-        <Collapse in={openSubmenu.reports} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {[
-              { text: 'Daily Reports', path: '/reports/daily' },
-              { text: 'Weekly Analytics', path: '/reports/weekly' },
-              { text: 'Monthly Summary', path: '/reports/monthly' },
-              { text: 'User Activity', path: '/reports/activity' },
-            ].map((item) => (
-              <ListItem
-                key={item.text}
-                button
-                onClick={() => handleNavigation(item.path)}
-                sx={{ pl: 4, mb: 0.5, borderRadius: 2 }}
-              >
-                <ListItemText 
-                  primary={
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                      {item.text}
-                    </Typography>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Collapse>
       </Box>
 
       {/* Footer */}
@@ -210,13 +171,13 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
           onClick={handleLogout}
           sx={{
             borderRadius: 2,
-            color: '#FF6B6B',
+            color: '#f43f5e',
             '&:hover': {
               bgcolor: 'rgba(255, 107, 107, 0.1)',
             },
           }}
         >
-          <ListItemIcon sx={{ color: '#FF6B6B', minWidth: 40 }}>
+          <ListItemIcon sx={{ color: '#f43f5e', minWidth: 40 }}>
             <Logout />
           </ListItemIcon>
           <ListItemText primary="Logout" />
@@ -224,7 +185,7 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
         
         <Box sx={{ mt: 2, textAlign: 'center' }}>
           <Typography variant="caption" color="text.secondary">
-            System Status: <span style={{ color: '#00D395' }}>● Online</span>
+            System Status: <span style={{ color: '#8b5cf6' }}>● Online</span>
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
             Last updated: Just now
@@ -244,7 +205,7 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
           ModalProps={{ keepMounted: true }}
           sx={{
             '& .MuiDrawer-paper': {
-              background: 'linear-gradient(135deg, #0A0E17 0%, #131A2E 100%)',
+              background: 'linear-gradient(135deg, #0a0f1d 0%, #111827 100%)',
               borderRight: '1px solid rgba(255, 255, 255, 0.1)',
             },
           }}
@@ -261,7 +222,7 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
             flexShrink: 0,
             '& .MuiDrawer-paper': {
               width: 280,
-              background: 'linear-gradient(135deg, #0A0E17 0%, #131A2E 100%)',
+              background: 'linear-gradient(135deg, #0a0f1d 0%, #111827 100%)',
               borderRight: '1px solid rgba(255, 255, 255, 0.1)',
               transition: 'width 0.3s ease',
               overflowX: 'hidden',

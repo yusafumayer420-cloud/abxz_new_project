@@ -10,7 +10,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #0A0E17 0%, #131A2E 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #FFFFFF;
   min-height: 100vh;
 }
@@ -70,7 +70,7 @@ body {
 
 /* Status Colors */
 .status-success {
-  color: #00D395;
+  color: #8b5cf6;
 }
 
 .status-warning {
@@ -78,7 +78,7 @@ body {
 }
 
 .status-error {
-  color: #FF6B6B;
+  color: #f43f5e;
 }
 
 .status-info {
@@ -88,7 +88,7 @@ body {
 /* Loading Spinner */
 .spinner {
   border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top: 3px solid #00D395;
+  border-top: 3px solid #8b5cf6;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -138,7 +138,7 @@ body {
 }
 
 .admin-input:focus {
-  border-color: #00D395;
+  border-color: #8b5cf6;
   box-shadow: 0 0 0 2px rgba(0, 211, 149, 0.2);
 }
 
@@ -153,11 +153,11 @@ body {
 }
 
 .admin-btn-primary {
-  background: linear-gradient(135deg, #00D395 0%, #00B884 100%);
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
 }
 
 .admin-btn-secondary {
-  background: linear-gradient(135deg, #FF6B6B 0%, #E05555 100%);
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
 }
 
 /* Responsive Design */

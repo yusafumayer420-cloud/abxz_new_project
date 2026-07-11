@@ -1,4 +1,5 @@
 import React, { useContext, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import {
   AppBar,
   Toolbar,
@@ -29,6 +30,7 @@ const TopBar = ({ onMenuClick }) => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [logoHovered, setLogoHovered] = useState(false);
 
   const handleMenuClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -92,16 +94,86 @@ const TopBar = ({ onMenuClick }) => {
             <MenuIcon />
           </IconButton>
 
-          <Box sx={{ flexGrow: 1 }}>
+          <Box
+            sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer' }}
+            onMouseEnter={() => setLogoHovered(true)}
+            onMouseLeave={() => setLogoHovered(false)}
+            onClick={() => navigate('/')}
+          >
+            {/* Logo Circle */}
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
+              animate={{
+                scale: logoHovered ? 1.08 : 1,
+                rotate: logoHovered ? 360 : 0,
+              }}
+              transition={{ duration: logoHovered ? 0.6 : 0.3, ease: 'easeInOut' }}
             >
-              <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: '-0.01em' }}>
-                Crok<span style={{ color: '#00E5FF' }}>Trade</span>
-              </Typography>
+              <Box
+                component="img"
+                src="/logo.png"
+                alt="Cryptosimia Logo"
+                sx={{
+                  height: 44,
+                  width: 44,
+                  objectFit: 'cover',
+                  display: 'block',
+                  borderRadius: '50%',
+                  border: logoHovered
+                    ? '2px solid rgba(0, 200, 255, 0.9)'
+                    : '2px solid rgba(0, 120, 255, 0.4)',
+                  boxShadow: logoHovered
+                    ? '0 0 20px rgba(0, 200, 255, 0.7), 0 0 40px rgba(0, 120, 255, 0.3)'
+                    : '0 0 12px rgba(0, 120, 255, 0.4)',
+                  transition: 'border 0.3s ease, box-shadow 0.3s ease',
+                }}
+              />
             </motion.div>
+
+            {/* Brand Text - appears on hover */}
+            <AnimatePresence>
+              {logoHovered && (
+                <motion.div
+                  key="brand-text"
+                  initial={{ opacity: 0, x: -16, width: 0 }}
+                  animate={{ opacity: 1, x: 0, width: 'auto' }}
+                  exit={{ opacity: 0, x: -10, width: 0 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                  style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
+                >
+                  <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                    <Box
+                      component="span"
+                      sx={{
+                        fontSize: '1.15rem',
+                        fontWeight: 800,
+                        letterSpacing: '0.04em',
+                        background: 'linear-gradient(90deg, #ffffff 0%, #00E5FF 50%, #4F7CFF 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        textShadow: 'none',
+                        fontFamily: '"Inter", sans-serif',
+                      }}
+                    >
+                      CRYPTO<Box component="span" sx={{ color: '#00E5FF', WebkitTextFillColor: '#00E5FF' }}>SIMIA</Box>
+                    </Box>
+                    <Box
+                      component="span"
+                      sx={{
+                        fontSize: '0.55rem',
+                        fontWeight: 500,
+                        letterSpacing: '0.18em',
+                        color: 'rgba(0, 229, 255, 0.7)',
+                        textTransform: 'uppercase',
+                        mt: '2px',
+                      }}
+                    >
+                      Trade • Invest • Grow
+                    </Box>
+                  </Box>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

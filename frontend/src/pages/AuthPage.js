@@ -22,12 +22,13 @@ import {
   Group
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const AuthPage = ({ isRegister = false }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, register } = useContext(AuthContext);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -36,7 +37,7 @@ const AuthPage = ({ isRegister = false }) => {
     fullName: '',
     confirmPassword: '',
     phone: '',
-    referralCode: ''
+    referralCode: searchParams.get('ref') || ''
   });
 
   const handleChange = (e) => {
@@ -78,9 +79,23 @@ const AuthPage = ({ isRegister = false }) => {
       >
         {/* Header */}
         <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
-            Crok<span style={{ color: '#00D395' }}>Trade</span>
-          </Typography>
+            <Box
+              component="img"
+              src="/logo.png"
+              alt="Cryptosimia Logo"
+              sx={{
+                height: 120,
+                width: 120,
+                objectFit: 'cover',
+                display: 'block',
+                mx: 'auto',
+                mb: 2,
+                borderRadius: '50%',
+                mixBlendMode: 'normal',
+                border: '3px solid rgba(0, 120, 255, 0.5)',
+                boxShadow: '0 0 24px rgba(0, 120, 255, 0.5), 0 0 48px rgba(0, 120, 255, 0.2)',
+              }}
+            />
           <Typography variant="body1" color="text.secondary">
             {isRegister ? 'Create your account' : 'Welcome back to your trading dashboard'}
           </Typography>
@@ -182,7 +197,7 @@ const AuthPage = ({ isRegister = false }) => {
                 <Link
                   onClick={() => navigate('/forgot-password')}
                   sx={{
-                    color: '#00D395',
+                    color: '#00E5FF',
                     fontSize: '0.875rem',
                     textDecoration: 'none',
                     cursor: 'pointer',
@@ -221,7 +236,7 @@ const AuthPage = ({ isRegister = false }) => {
                   fullWidth
                   label="Referral Code (Optional)"
                   name="referralCode"
-                  placeholder="e.g. CROK-123456"
+                  placeholder="e.g. CSIM-123456"
                   value={formData.referralCode}
                   onChange={handleChange}
                   sx={{ mb: 3 }}
@@ -246,12 +261,15 @@ const AuthPage = ({ isRegister = false }) => {
                 variant="contained"
                 size="large"
                 sx={{
-                  bgcolor: '#00D395',
+                  background: 'linear-gradient(135deg, #00E5FF 0%, #00BCD4 100%)',
+                  color: '#050816',
                   fontWeight: 'bold',
                   py: 1.5,
                   mb: 2,
+                  boxShadow: '0 4px 16px rgba(0, 229, 255, 0.25)',
                   '&:hover': {
-                    bgcolor: '#00b884'
+                    background: 'linear-gradient(135deg, #33EAFF 0%, #00E5FF 100%)',
+                    boxShadow: '0 6px 24px rgba(0, 229, 255, 0.35)',
                   }
                 }}
               >
@@ -266,7 +284,7 @@ const AuthPage = ({ isRegister = false }) => {
                 <Link
                   href={isRegister ? '/login' : '/register'}
                   sx={{
-                    color: '#00D395',
+                    color: '#00E5FF',
                     textDecoration: 'none',
                     fontWeight: 'bold',
                     cursor: 'pointer',
@@ -285,7 +303,7 @@ const AuthPage = ({ isRegister = false }) => {
         {/* Features */}
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Why choose CrokTrade?
+            Why choose Cryptosimia?
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
             {['🔒 Secure', '⚡ Fast', '💰 Low Fees', '📱 Mobile First'].map((feature, index) => (

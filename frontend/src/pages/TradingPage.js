@@ -50,11 +50,11 @@ import TradingChart from '../components/TradingChart';
 // Delivery contract time slots definition
 // ---------------------------------------------------------------------------
 const DELIVERY_SLOTS = [
-  { seconds: 60,   label: '60s',   profit: 13, minAmount: 100 },
-  { seconds: 180,  label: '180s',  profit: 15, minAmount: 1000 },
-  { seconds: 300,  label: '300s',  profit: 20, minAmount: 3000 },
-  { seconds: 600,  label: '600s',  profit: 27, minAmount: 5000 },
-  { seconds: 900,  label: '900s',  profit: 75, minAmount: 10000 },
+  { seconds: 60, label: '60s', profit: 13, minAmount: 100 },
+  { seconds: 180, label: '180s', profit: 15, minAmount: 1000 },
+  { seconds: 300, label: '300s', profit: 20, minAmount: 3000 },
+  { seconds: 600, label: '600s', profit: 27, minAmount: 5000 },
+  { seconds: 900, label: '900s', profit: 75, minAmount: 10000 },
   { seconds: 1800, label: '1800s', profit: 90, minAmount: 30000 },
 ];
 
@@ -138,9 +138,9 @@ const DeliveryOrderBook = ({ orderBook, price }) => {
       <Box sx={{ display: 'flex', flexDirection: 'column-reverse', gap: '2px', mb: 1 }}>
         {orderBook.asks.slice(0, 7).map((ask, i) => (
           <Box key={i} sx={{ position: 'relative', display: 'flex', justifyContent: 'space-between', px: 1, py: '2px', cursor: 'pointer' }}>
-            <Box sx={{ 
-              position: 'absolute', right: 0, top: 0, bottom: 0, 
-              width: `${(ask.amount / maxAmount) * 100}%`, 
+            <Box sx={{
+              position: 'absolute', right: 0, top: 0, bottom: 0,
+              width: `${(ask.amount / maxAmount) * 100}%`,
               bgcolor: 'rgba(255, 51, 102, 0.15)',
               zIndex: 0,
               transition: 'width 0.3s'
@@ -169,9 +169,9 @@ const DeliveryOrderBook = ({ orderBook, price }) => {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {orderBook.bids.slice(0, 7).map((bid, i) => (
           <Box key={i} sx={{ position: 'relative', display: 'flex', justifyContent: 'space-between', px: 1, py: '2px', cursor: 'pointer' }}>
-            <Box sx={{ 
-              position: 'absolute', right: 0, top: 0, bottom: 0, 
-              width: `${(bid.amount / maxAmount) * 100}%`, 
+            <Box sx={{
+              position: 'absolute', right: 0, top: 0, bottom: 0,
+              width: `${(bid.amount / maxAmount) * 100}%`,
               bgcolor: 'rgba(0, 229, 255, 0.15)',
               zIndex: 0,
               transition: 'width 0.3s'
@@ -222,7 +222,7 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
 
     const handleTradeUpdate = (updated) => {
       if (updated.tradeMode === 'delivery' &&
-          (updated.userId === user?._id || updated.userId?._id === user?._id)) {
+        (updated.userId === user?._id || updated.userId?._id === user?._id)) {
         // Just refresh the trades; the popup & toast are now handled by AuthContext globally
         fetchDeliveryTrades();
       }
@@ -363,11 +363,11 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
               error={!!amount && parseFloat(amount) < selectedSlot.minAmount}
             />
 
-           
 
 
 
-            {/* Buy Long / Buy Short */}
+
+            {/* Buy Long /Sell Short */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <motion.div style={{ flex: 1 }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
                 <Button
@@ -418,7 +418,7 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
                   {loading ? <CircularProgress size={20} color="inherit" /> : (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <TrendingDown fontSize="small" />
-                      Buy Short
+                      Sell Short
                     </Box>
                   )}
                 </Button>
@@ -441,13 +441,13 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
           value={positionsTab}
           onChange={(e, v) => setPositionsTab(v)}
           variant="fullWidth"
-          sx={{ 
-            mb: 1, 
-            '& .MuiTab-root': { 
+          sx={{
+            mb: 1,
+            '& .MuiTab-root': {
               fontSize: { xs: '0.7rem', sm: '0.8rem' },
               minWidth: 'auto',
               px: { xs: 1, sm: 2 }
-            } 
+            }
           }}
         >
 
@@ -524,10 +524,10 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
                   <Paper
                     key={trade._id}
                     onClick={() => setSelectedHistoryHistoryTrade(trade)}
-                    sx={{ 
-                      p: 2, 
-                      mb: 1.5, 
-                      border: '1px solid rgba(148, 163, 184, 0.05)', 
+                    sx={{
+                      p: 2,
+                      mb: 1.5,
+                      border: '1px solid rgba(148, 163, 184, 0.05)',
                       background: 'rgba(17, 24, 39, 0.4)',
                       cursor: 'pointer',
                       '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
@@ -609,11 +609,11 @@ const TradingPage = ({ socket }) => {
   const { user } = useContext(AuthContext);
   const { pair } = useParams();
   const navigate = useNavigate();
-  
+
   const currentPair = (pair && pair !== 'delivery' && pair !== 'perpetual') ? pair.replace('-', '/') : 'BTC/USDT';
-  
+
   const [activeTab, setActiveTab] = useState(pair === 'delivery' ? 1 : 0);
-  
+
   useEffect(() => {
     if (pair === 'delivery') {
       setActiveTab(1);
@@ -682,8 +682,8 @@ const TradingPage = ({ socket }) => {
         setPrice(livePrice);
         setOrderBook({
           bids: [
-            { price: livePrice - 2,  amount: parseFloat((Math.random() * 2).toFixed(4)) },
-            { price: livePrice - 5,  amount: parseFloat((Math.random() * 5).toFixed(4)) },
+            { price: livePrice - 2, amount: parseFloat((Math.random() * 2).toFixed(4)) },
+            { price: livePrice - 5, amount: parseFloat((Math.random() * 5).toFixed(4)) },
             { price: livePrice - 10, amount: parseFloat((Math.random() * 10).toFixed(4)) },
             { price: livePrice - 15, amount: parseFloat((Math.random() * 4).toFixed(4)) },
             { price: livePrice - 22, amount: parseFloat((Math.random() * 8).toFixed(4)) },
@@ -691,8 +691,8 @@ const TradingPage = ({ socket }) => {
             { price: livePrice - 45, amount: parseFloat((Math.random() * 12).toFixed(4)) },
           ],
           asks: [
-            { price: livePrice + 2,  amount: parseFloat((Math.random() * 2).toFixed(4)) },
-            { price: livePrice + 5,  amount: parseFloat((Math.random() * 5).toFixed(4)) },
+            { price: livePrice + 2, amount: parseFloat((Math.random() * 2).toFixed(4)) },
+            { price: livePrice + 5, amount: parseFloat((Math.random() * 5).toFixed(4)) },
             { price: livePrice + 10, amount: parseFloat((Math.random() * 10).toFixed(4)) },
             { price: livePrice + 16, amount: parseFloat((Math.random() * 3).toFixed(4)) },
             { price: livePrice + 24, amount: parseFloat((Math.random() * 7).toFixed(4)) },
@@ -705,7 +705,7 @@ const TradingPage = ({ socket }) => {
 
     const handleTradeUpdate = (updatedTrade) => {
       if (updatedTrade.tradeMode !== 'delivery' &&
-          (updatedTrade.userId === user?._id || updatedTrade.userId?._id === user?._id)) {
+        (updatedTrade.userId === user?._id || updatedTrade.userId?._id === user?._id)) {
         fetchMyTrades();
         toast.success(`Trade ${updatedTrade.status}`);
       }
@@ -733,7 +733,7 @@ const TradingPage = ({ socket }) => {
         orderType,
         price: parseFloat(price),
         amount: parseFloat(amount),
-        leverage: activeTab === 1 ? leverage : 1
+        leverage: leverage
       });
 
       toast.success(`${side === 'buy' ? 'Buy' : 'Sell'} order placed!`);
@@ -771,9 +771,9 @@ const TradingPage = ({ socket }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed': return '#00E5FF';
-      case 'pending':   return '#FFC107';
+      case 'pending': return '#FFC107';
       case 'cancelled': return '#FF3366';
-      default:          return '#aaa';
+      default: return '#aaa';
     }
   };
 
@@ -834,7 +834,7 @@ const TradingPage = ({ socket }) => {
             animation: 'slideDown 0.25s ease-out',
             '@keyframes slideDown': {
               from: { opacity: 0, transform: 'translateY(-8px)' },
-              to:   { opacity: 1, transform: 'translateY(0)' },
+              to: { opacity: 1, transform: 'translateY(0)' },
             },
           }}
         >

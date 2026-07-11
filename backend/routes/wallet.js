@@ -95,7 +95,7 @@ router.post('/deposit', auth, upload.single('voucher'), async (req, res) => {
     await transaction.save();
 
     // Notify admins
-    transaction.populate('userId', 'email fullName').then(populated => {
+    transaction.populate('userId', 'email fullName profilePicture').then(populated => {
       createAdminNotification(req.app.get('io'), {
         title: 'New Deposit Request',
         message: `${populated.userId.fullName || populated.userId.email} deposited ${amount} ${currency}`,
@@ -188,7 +188,7 @@ router.post('/withdraw', auth, async (req, res) => {
       // We might need an admin room, or just broadcast to everyone for now (admins filter by view)
       // Ideally, admins should join an 'admin' room.
       // Assuming 'admin' room exists from chat implementation
-      transaction.populate('userId', 'email fullName').then(populated => {
+      transaction.populate('userId', 'email fullName profilePicture').then(populated => {
         createAdminNotification(req.app.get('io'), {
           title: 'Withdrawal Request',
           message: `${populated.userId.fullName || populated.userId.email} requested ${amount} ${currency}`,

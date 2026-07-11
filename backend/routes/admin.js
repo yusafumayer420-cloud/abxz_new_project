@@ -6,6 +6,7 @@ const SupportTicket = require('../models/SupportTicket');
 const ChatMessage = require('../models/Chat');
 const WalletTransaction = require('../models/WalletTransaction');
 const SystemSettings = require('../models/SystemSettings');
+const mongoose = require('mongoose');
 const router = express.Router();
 
 // Get system settings
@@ -24,7 +25,7 @@ router.get('/settings', protect, adminAuth, async (req, res) => {
 // Update system settings
 router.put('/settings', protect, adminAuth, async (req, res) => {
   try {
-    const { marketCap, volume24h, btcDominance } = req.body;
+    const { marketCap, volume24h, btcDominance, tradingEnabled } = req.body;
     let settings = await SystemSettings.findOne();
     
     if (!settings) {
@@ -34,6 +35,7 @@ router.put('/settings', protect, adminAuth, async (req, res) => {
     if (marketCap !== undefined) settings.marketCap = marketCap;
     if (volume24h !== undefined) settings.volume24h = volume24h;
     if (btcDominance !== undefined) settings.btcDominance = btcDominance;
+    if (tradingEnabled !== undefined) settings.tradingEnabled = tradingEnabled;
     settings.updatedAt = Date.now();
     
     await settings.save();
@@ -55,6 +57,21 @@ router.get('/users', protect, adminAuth, async (req, res) => {
         { fullName: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } }
       ];
+      
+      // Allow matching partial/full _id
+      if (mongoose.Types.ObjectId.isValid(search)) {
+        query.$or.push({ _id: search });
+      } else if (search.match(/^[0-9a-fA-F]{1,24}$/)) {
+        query.$or.push({
+          $expr: {
+            $regexMatch: {
+              input: { $toString: "$_id" },
+              regex: search,
+              options: "i"
+            }
+          }
+        });
+      }
     }
 
     if (status) {
@@ -156,15 +173,44 @@ router.put('/users/:id', protect, adminAuth, async (req, res) => {
 // Get all trades
 router.get('/trades', protect, adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 50, status, userId, type } = req.query;
+    const { page = 1, limit = 50, status, userId, type, search } = req.query;
     
     const query = {};
     if (status) query.status = status;
     if (userId) query.userId = userId;
     if (type) query.type = type;
     
+    if (search) {
+      const matchingUsers = await User.find({
+        $or: [
+          { email: { $regex: search, $options: 'i' } },
+          { fullName: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      const userIds = matchingUsers.map(u => u._id);
+      
+      query.$or = [
+        { pair: { $regex: search, $options: 'i' } },
+        { userId: { $in: userIds } }
+      ];
+      
+      if (mongoose.Types.ObjectId.isValid(search)) {
+        query.$or.push({ _id: search });
+      } else if (search.match(/^[0-9a-fA-F]{1,24}$/)) {
+        query.$or.push({
+          $expr: {
+            $regexMatch: {
+              input: { $toString: "$_id" },
+              regex: search,
+              options: "i"
+            }
+          }
+        });
+      }
+    }
+    
     const trades = await Trade.find(query)
-      .populate('userId', 'email fullName')
+      .populate('userId', 'email fullName profilePicture')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -191,7 +237,8 @@ router.get('/transactions', protect, adminAuth, async (req, res) => {
       type,
       status,
       userId,
-      sortBy = 'newest'
+      sortBy = 'newest',
+      search
     } = req.query;
     const page = Math.max(1, parseInt(rawPage, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(rawLimit, 10) || 50));
@@ -201,13 +248,45 @@ router.get('/transactions', protect, adminAuth, async (req, res) => {
     if (status) query.status = status;
     if (userId) query.userId = userId;
 
+    if (search) {
+      const matchingUsers = await User.find({
+        $or: [
+          { email: { $regex: search, $options: 'i' } },
+          { fullName: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      const userIds = matchingUsers.map(u => u._id);
+      
+      query.$or = [
+        { txHash: { $regex: search, $options: 'i' } },
+        { currency: { $regex: search, $options: 'i' } },
+        { fromAddress: { $regex: search, $options: 'i' } },
+        { toAddress: { $regex: search, $options: 'i' } },
+        { userId: { $in: userIds } }
+      ];
+      
+      if (mongoose.Types.ObjectId.isValid(search)) {
+        query.$or.push({ _id: search });
+      } else if (search.match(/^[0-9a-fA-F]{1,24}$/)) {
+        query.$or.push({
+          $expr: {
+            $regexMatch: {
+              input: { $toString: "$_id" },
+              regex: search,
+              options: "i"
+            }
+          }
+        });
+      }
+    }
+
     let sort = { createdAt: -1 };
     if (sortBy === 'oldest') sort = { createdAt: 1 };
     if (sortBy === 'amount_high') sort = { amount: -1, createdAt: -1 };
     if (sortBy === 'amount_low') sort = { amount: 1, createdAt: -1 };
     
     const transactions = await WalletTransaction.find(query)
-      .populate('userId', 'email fullName')
+      .populate('userId', 'email fullName profilePicture')
       .sort(sort)
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -293,7 +372,7 @@ router.put('/transactions/:id', protect, adminAuth, async (req, res) => {
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-      const populatedTransaction = await transaction.populate('userId', 'email fullName');
+      const populatedTransaction = await transaction.populate('userId', 'email fullName profilePicture');
       io.to('admin').emit('transaction_updated', populatedTransaction);
       io.to(`user_${transaction.userId}`).emit('transaction_updated', {
         ...transaction.toObject(),
@@ -354,7 +433,7 @@ router.post('/deposit', protect, adminAuth, async (req, res) => {
     // Emit socket events
     const io = req.app.get('io');
     if (io) {
-      const populated = await WalletTransaction.findById(transaction._id).populate('userId', 'email fullName');
+      const populated = await WalletTransaction.findById(transaction._id).populate('userId', 'email fullName profilePicture');
       io.to('admin').emit('new_transaction', populated);
       io.to(`user_${userId}`).emit('transaction_updated', {
         ...transaction.toObject(),

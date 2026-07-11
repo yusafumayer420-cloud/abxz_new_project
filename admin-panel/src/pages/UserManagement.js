@@ -80,6 +80,10 @@ const UserManagement = () => {
     fetchUsers();
   }, [fetchUsers]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters, activeTab]);
+
   const handleMenuClick = (event, user) => {
     setAnchorEl(event.currentTarget);
     setSelectedUser(user);
@@ -201,18 +205,23 @@ const UserManagement = () => {
     <Card className="admin-card">
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-            <Typography variant="body2" color="text.secondary">
+          <Box sx={{ flex: 1, minWidth: 0, mr: 2 }}>
+            <Typography variant="body2" color="text.secondary" noWrap>
               {title}
             </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 'bold', my: 1 }}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 'bold', 
+                my: 1,
+                wordBreak: 'break-word',
+                fontSize: String(value).length > 12 ? '1.5rem' : '2.125rem'
+              }}
+            >
               {value}
             </Typography>
-            <Typography variant="caption" sx={{ color: change >= 0 ? '#00D395' : '#FF6B6B' }}>
-              {change >= 0 ? '+' : ''}{change}% from last month
-            </Typography>
           </Box>
-          <Box sx={{ color, fontSize: 40 }}>{icon}</Box>
+          <Box sx={{ color, fontSize: 40, flexShrink: 0, display: 'flex' }}>{icon}</Box>
         </Box>
       </CardContent>
     </Card>
@@ -231,25 +240,12 @@ const UserManagement = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<Refresh />}
-            onClick={fetchUsers}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
+
           <Button
             variant="contained"
             startIcon={<PersonAdd />}
           >
             Add User
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<Download />}
-          >
-            Export
           </Button>
         </Box>
       </Box>
@@ -262,7 +258,6 @@ const UserManagement = () => {
             value={totalPlatformUsers}
             icon={<People />}
             color="#4361EE"
-            change={12.5}
           />
         </Grid>
 
@@ -272,7 +267,6 @@ const UserManagement = () => {
             value={users.filter(u => u.kycStatus === 'verified').length}
             icon={<Security />}
             color="#7209B7"
-            change={5.2}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -280,8 +274,7 @@ const UserManagement = () => {
             title="Total Balance"
             value={formatCurrency(users.reduce((sum, u) => sum + getUserBalance(u), 0))}
             icon={<AccountBalanceWallet />}
-            color="#FF6B6B"
-            change={-3.1}
+            color="#f43f5e"
           />
         </Grid>
       </Grid>
@@ -409,7 +402,7 @@ const UserManagement = () => {
                     <TableRow key={user._id} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ bgcolor: '#00D395' }} src={user.profilePicture}>
+                          <Avatar sx={{ bgcolor: '#8b5cf6' }} src={user.profilePicture}>
                             {getInitials(user.fullName)}
                           </Avatar>
                           <Box>
@@ -466,7 +459,7 @@ const UserManagement = () => {
                         <Typography variant="body2">
                           {user.tradingStats?.totalTrades || 0}
                         </Typography>
-                        <Typography variant="caption" color={(user.tradingStats?.profitLoss || 0) >= 0 ? '#00D395' : '#FF6B6B'}>
+                        <Typography variant="caption" color={(user.tradingStats?.profitLoss || 0) >= 0 ? '#8b5cf6' : '#f43f5e'}>
                           {formatCurrency(user.tradingStats?.profitLoss || 0)}
                         </Typography>
                       </TableCell>
@@ -540,7 +533,7 @@ const UserManagement = () => {
           <Block sx={{ mr: 2 }} />
           {selectedUser?.isBanned ? 'Unblock User' : 'Block User'}
         </MenuItem>
-        <MenuItem onClick={handleDeleteUser} sx={{ color: '#FF6B6B' }}>
+        <MenuItem onClick={handleDeleteUser} sx={{ color: '#f43f5e' }}>
           <Delete sx={{ mr: 2 }} />
           Delete User
         </MenuItem>
@@ -562,7 +555,7 @@ const UserManagement = () => {
               <Grid container spacing={3} sx={{ mt: 1 }}>
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
-                    <Avatar sx={{ bgcolor: '#00D395', width: 80, height: 80, fontSize: 32 }} src={selectedUser.profilePicture}>
+                    <Avatar sx={{ bgcolor: '#8b5cf6', width: 80, height: 80, fontSize: 32 }} src={selectedUser.profilePicture}>
                       {getInitials(selectedUser.fullName)}
                     </Avatar>
                     <Box>
@@ -614,7 +607,7 @@ const UserManagement = () => {
                       </Typography>
                       <Typography variant="body2">
                         <strong>Profit/Loss:</strong> 
-                        <span style={{ color: (selectedUser.tradingStats?.profitLoss || 0) >= 0 ? '#00D395' : '#FF6B6B', marginLeft: 8 }}>
+                        <span style={{ color: (selectedUser.tradingStats?.profitLoss || 0) >= 0 ? '#8b5cf6' : '#f43f5e', marginLeft: 8 }}>
                           {formatCurrency(selectedUser.tradingStats?.profitLoss || 0)}
                         </span>
                       </Typography>
@@ -692,8 +685,8 @@ const UserManagement = () => {
               }
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <SwapVert sx={{ fontSize: 16, color: editData.deliveryTradeEnabled ? '#00D395' : '#FF6B6B' }} />
-                  <Typography variant="body2" sx={{ color: editData.deliveryTradeEnabled ? '#00D395' : '#FF6B6B', fontWeight: 'bold' }}>
+                  <SwapVert sx={{ fontSize: 16, color: editData.deliveryTradeEnabled ? '#8b5cf6' : '#f43f5e' }} />
+                  <Typography variant="body2" sx={{ color: editData.deliveryTradeEnabled ? '#8b5cf6' : '#f43f5e', fontWeight: 'bold' }}>
                     Delivery Trade Control: {editData.deliveryTradeEnabled ? 'Force Win' : 'Force Loss'}
                   </Typography>
                 </Box>

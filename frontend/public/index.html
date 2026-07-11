@@ -2,28 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0A0E17" />
     <meta name="description" content="Crypto Trading Platform - Trade Bitcoin, Ethereum, and other cryptocurrencies" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <title>CrokTrade | Modern Cryptocurrency Trading Platform</title>
-    <meta name="title" content="CrokTrade | Modern Cryptocurrency Trading Platform">
+    <title>Cryptosimia | Modern Cryptocurrency Trading Platform</title>
+    <meta name="title" content="Cryptosimia | Modern Cryptocurrency Trading Platform">
     <meta name="description" content="Secure, fast, and reliable cryptocurrency trading platform.">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://croktrade.com/">
-    <meta property="og:title" content="CrokTrade | Modern Cryptocurrency Trading Platform">
+    <meta property="og:url" content="https://cryptosimia.com/">
+    <meta property="og:title" content="Cryptosimia | Modern Cryptocurrency Trading Platform">
     <meta property="og:description" content="Secure, fast, and reliable cryptocurrency trading platform.">
     <meta property="og:image" content="%PUBLIC_URL%/og-image.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://croktrade.com/">
-    <meta property="twitter:title" content="CrokTrade | Modern Cryptocurrency Trading Platform">
+    <meta property="twitter:url" content="https://cryptosimia.com/">
+    <meta property="twitter:title" content="Cryptosimia | Modern Cryptocurrency Trading Platform">
     <meta property="twitter:description" content="Trade Bitcoin, Ethereum, and other cryptocurrencies with professional tools.">
     <meta property="twitter:image" content="%PUBLIC_URL%/og-image.jpg">
 
@@ -96,6 +96,54 @@
           pageLanguage: 'en',
           autoDisplay: false
         }, 'google_translate_element');
+      }
+
+      /**
+       * Switch Google Translate language instantly without page reload.
+       * Uses the hidden Google Translate <select> dropdown to trigger
+       * an in-place DOM translation, which is significantly faster
+       * than a full page reload.
+       */
+      function switchGoogleTranslateLanguage(langCode) {
+        // Normalize language codes
+        if (langCode === 'zh') langCode = 'zh-CN';
+
+        // If switching back to English, restore original page
+        if (langCode === 'en') {
+          // Try the restore function first (fastest)
+          var restoreBtn = document.querySelector('.goog-te-banner-frame');
+          if (restoreBtn) {
+            var iframeDoc = restoreBtn.contentDocument || restoreBtn.contentWindow.document;
+            var restore = iframeDoc.querySelector('button#restore');
+            if (restore) { restore.click(); return true; }
+          }
+          // Fallback: use the hidden select
+          var sel = document.querySelector('.goog-te-combo');
+          if (sel) {
+            sel.value = '';
+            sel.dispatchEvent(new Event('change'));
+            return true;
+          }
+          // Last resort: cookie-based with reload
+          document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + window.location.hostname;
+          window.location.reload();
+          return false;
+        }
+
+        // For non-English languages, use the hidden <select>
+        var select = document.querySelector('.goog-te-combo');
+        if (select) {
+          select.value = langCode;
+          select.dispatchEvent(new Event('change'));
+          return true;
+        }
+
+        // Fallback if Google Translate widget hasn't loaded yet
+        document.cookie = "googtrans=/en/" + langCode + "; path=/";
+        document.cookie = "googtrans=/en/" + langCode + "; path=/; domain=" + window.location.hostname;
+        window.location.reload();
+        return false;
       }
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>

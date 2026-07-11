@@ -76,10 +76,19 @@ const fadeIn = {
 /* ============================
    SPARKLINE DATA GENERATOR
    ============================ */
-const generateSparkData = (base, volatility = 0.02, points = 20) => {
+const generateSparkData = (seedString, base, volatility = 0.02, points = 20) => {
   const data = [base];
+  let seed = 12345;
+  if (typeof seedString === 'string') {
+    seed = seedString.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+  } else if (typeof seedString === 'number') {
+    seed = seedString;
+  }
+  
   for (let i = 1; i < points; i++) {
-    const change = data[i - 1] * (1 + (Math.random() - 0.48) * volatility);
+    seed = (seed * 9301 + 49297) % 233280;
+    const rnd = seed / 233280;
+    const change = data[i - 1] * (1 + (rnd - 0.48) * volatility);
     data.push(change);
   }
   return data;
@@ -180,7 +189,6 @@ const HomePage = ({ marketData }) => {
   const quickActions = [
     { icon: <AccountBalanceWallet />, label: 'Deposit', color: '#00E5FF', path: '/funds', state: { activeTab: 0 } },
     { icon: <SwapVert />, label: 'Withdraw', color: '#4F7CFF', path: '/funds', state: { activeTab: 1 } },
-    { icon: <Storefront />, label: 'Buy Crypto', color: '#00C853', path: '/funds' },
     { icon: <SyncAlt />, label: 'Exchange', color: '#FFC107', path: '/exchange' },
     { icon: <CurrencyExchange />, label: 'Trade', color: '#7C3AED', path: '/trading' },
     { icon: <Article />, label: 'News', color: '#FF5252', path: '/news' },
@@ -257,21 +265,21 @@ const HomePage = ({ marketData }) => {
               1. HERO SECTION
               ============================ */}
           <motion.div variants={fadeUp}>
-            <Box sx={{ mb: 3, mt: 1, position: 'relative' }}>
+            <Box sx={{ mb: 4, mt: 2, position: 'relative' }}>
 
               {/* Floating Crypto Logos */}
-              <Box sx={{ position: 'absolute', top: -20, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: -1, opacity: 0.7, display: 'block' }}>
+              <Box sx={{ position: 'absolute', top: -20, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: -1, opacity: 0.85, display: 'block' }}>
                 {[
-                  { symbol: 'btc', size: 48, top: '-5%', right: '-5%', delay: 0, duration: 4, glow: 'rgba(247, 147, 26, 0.4)' },
-                  { symbol: 'eth', size: 36, top: '45%', right: '15%', delay: 1, duration: 5, glow: 'rgba(98, 126, 234, 0.4)' },
-                  { symbol: 'bnb', size: 32, top: '15%', right: '35%', delay: 2, duration: 4.5, glow: 'rgba(243, 186, 47, 0.4)' },
-                  { symbol: 'sol', size: 40, top: '75%', right: '-2%', delay: 0.5, duration: 5.5, glow: 'rgba(20, 241, 149, 0.4)' },
+                  { symbol: 'btc', size: 56, top: '-5%', right: '-3%', delay: 0, duration: 4, glow: 'rgba(247, 147, 26, 0.5)' },
+                  { symbol: 'eth', size: 42, top: '45%', right: '14%', delay: 1, duration: 5, glow: 'rgba(98, 126, 234, 0.5)' },
+                  { symbol: 'bnb', size: 34, top: '15%', right: '34%', delay: 2, duration: 4.5, glow: 'rgba(243, 186, 47, 0.5)' },
+                  { symbol: 'sol', size: 46, top: '72%', right: '-1%', delay: 0.5, duration: 5.5, glow: 'rgba(20, 241, 149, 0.5)' },
                 ].map((coin, index) => (
                   <motion.div
                     key={index}
                     animate={{
-                      y: [0, -20, 0],
-                      rotate: [0, 10, -10, 0],
+                      y: [0, -18, 0],
+                      rotate: [0, 8, -8, 0],
                     }}
                     transition={{
                       duration: coin.duration,
@@ -285,7 +293,7 @@ const HomePage = ({ marketData }) => {
                       right: coin.right,
                       width: coin.size,
                       height: coin.size,
-                      filter: `drop-shadow(0 8px 16px ${coin.glow})`
+                      filter: `drop-shadow(0 10px 20px ${coin.glow})`
                     }}
                   >
                     <img
@@ -297,88 +305,129 @@ const HomePage = ({ marketData }) => {
                 ))}
               </Box>
 
+              {/* Eyebrow label */}
+              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, mb: 1.5, px: 1.5, py: 0.5, borderRadius: 99, background: 'rgba(0, 229, 255, 0.07)', border: '1px solid rgba(0, 229, 255, 0.15)' }}>
+                <FiberManualRecord sx={{ fontSize: 7, color: '#00E5FF' }} />
+                <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: '#00E5FF', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  Live Markets — 10+ Pairs
+                </Typography>
+              </Box>
+
               <Typography
-                variant="h4"
+                variant="h3"
                 sx={{
-                  fontWeight: 800,
-                  lineHeight: 1.2,
-                  mb: 1,
-                  letterSpacing: '-0.02em',
+                  fontWeight: 900,
+                  lineHeight: 1.15,
+                  mb: 1.5,
+                  letterSpacing: '-0.03em',
+                  fontSize: { xs: '2rem', sm: '2.4rem' },
                 }}
               >
-                Trade Digital Assets{' '}
+                Trade Crypto{' '}
                 <Box component="span" sx={{
-                  background: 'linear-gradient(135deg, #00E5FF, #4F7CFF)',
+                  background: 'linear-gradient(135deg, #00E5FF 0%, #4F7CFF 60%, #a78bfa 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
                 }}>
-                  With Confidence
+                  Without Limits.
                 </Box>
               </Typography>
+
               <Typography
-                variant="body2"
-                sx={{ color: '#94A3B8', mb: 2.5, lineHeight: 1.6, maxWidth: '90%' }}
+                variant="body1"
+                sx={{
+                  color: '#8FA3BF',
+                  mb: 3,
+                  lineHeight: 1.75,
+                  maxWidth: '85%',
+                  fontSize: '0.92rem',
+                  fontWeight: 400,
+                }}
               >
-                Secure, fast, and intelligent cryptocurrency trading powered by advanced technology.
+                Experience seamless trading, instant execution, low fees, and advanced analytics built for beginners and professional traders alike.
               </Typography>
 
-              <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => navigate('/trading')}
-                  sx={{
-                    px: 3,
-                    py: 1.2,
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    borderRadius: 3,
-                  }}
-                  className="btn-glow"
-                >
-                  Start Trading
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate('/learn-more')}
-                  sx={{
-                    px: 3,
-                    py: 1.2,
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    borderRadius: 3,
-                    borderColor: 'rgba(148, 163, 184, 0.2)',
-                    color: '#94A3B8',
-                    '&:hover': {
-                      borderColor: '#00E5FF',
-                      color: '#00E5FF',
-                      background: 'rgba(0, 229, 255, 0.05)',
-                    },
-                  }}
-                >
-                  Learn More
-                </Button>
+              <Box sx={{ display: 'flex', gap: 1.5, mb: 2.5, flexWrap: 'wrap' }}>
+                <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    variant="contained"
+                    onClick={() => navigate('/trading')}
+                    endIcon={<ArrowForward sx={{ fontSize: '16px !important' }} />}
+                    sx={{
+                      px: 3.5,
+                      py: 1.35,
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #00E5FF 0%, #4F7CFF 100%)',
+                      color: '#05081A',
+                      letterSpacing: '0.01em',
+                      boxShadow: '0 4px 24px rgba(0, 229, 255, 0.3)',
+                      textTransform: 'none',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #33EEFF 0%, #6B96FF 100%)',
+                        boxShadow: '0 6px 32px rgba(0, 229, 255, 0.45)',
+                      },
+                    }}
+                  >
+                    Get Started
+                  </Button>
+                </motion.div>
+
+                <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => navigate('/markets')}
+                    sx={{
+                      px: 3.5,
+                      py: 1.35,
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      borderColor: 'rgba(148, 163, 184, 0.25)',
+                      color: '#CBD5E1',
+                      backdropFilter: 'blur(8px)',
+                      background: 'rgba(255,255,255,0.03)',
+                      letterSpacing: '0.01em',
+                      '&:hover': {
+                        borderColor: 'rgba(0, 229, 255, 0.5)',
+                        color: '#00E5FF',
+                        background: 'rgba(0, 229, 255, 0.06)',
+                        boxShadow: '0 0 16px rgba(0, 229, 255, 0.1)',
+                      },
+                    }}
+                  >
+                    Learn More
+                  </Button>
+                </motion.div>
               </Box>
 
-              {/* Trust badges inline */}
+              {/* Trust badges */}
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {trustBadges.slice(0, 3).map((badge, i) => (
-                  <Chip
+                  <Box
                     key={i}
-                    icon={badge.icon}
-                    label={badge.label}
-                    size="small"
                     sx={{
-                      height: 26,
-                      fontSize: '0.62rem',
-                      fontWeight: 500,
-                      background: 'rgba(17, 24, 39, 0.6)',
-                      border: '1px solid rgba(148, 163, 184, 0.1)',
-                      color: '#94A3B8',
-                      '& .MuiChip-icon': { color: '#00E5FF', fontSize: 12 },
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.6,
+                      px: 1.25,
+                      py: 0.55,
+                      borderRadius: '8px',
+                      background: 'rgba(17, 24, 39, 0.55)',
+                      border: '1px solid rgba(148, 163, 184, 0.08)',
+                      backdropFilter: 'blur(6px)',
                     }}
-                  />
+                  >
+                    <Box sx={{ color: '#00E5FF', display: 'flex', alignItems: 'center', '& svg': { fontSize: 13 } }}>
+                      {badge.icon}
+                    </Box>
+                    <Typography sx={{ fontSize: '0.65rem', fontWeight: 600, color: '#8FA3BF', letterSpacing: '0.02em' }}>
+                      {badge.label}
+                    </Typography>
+                  </Box>
                 ))}
               </Box>
             </Box>
@@ -425,7 +474,7 @@ const HomePage = ({ marketData }) => {
                     ${Math.floor(balance).toLocaleString('en-US')}
                   </Typography>
                   <Box sx={{ mt: 1 }}>
-                    <Sparkline data={generateSparkData(balance || 100)} color="#00E5FF" width={120} height={24} />
+                    <Sparkline data={generateSparkData('portfolio', balance || 100)} color="#00E5FF" width={120} height={24} />
                   </Box>
                 </CardContent>
               </Card>
@@ -499,9 +548,9 @@ const HomePage = ({ marketData }) => {
               ============================ */}
           <motion.div variants={fadeUp}>
             <SectionTitle title="Quick Actions" />
-            <Grid container spacing={1.25} columns={10} sx={{ mb: 3 }}>
+            <Grid container spacing={1.25} columns={12} sx={{ mb: 3 }}>
               {quickActions.map((action, index) => (
-                <Grid item xs={2} key={index}>
+                <Grid item xs={3} key={index}>
                   <motion.div whileTap={{ scale: 0.92 }} whileHover={{ y: -3 }}>
                     <Box
                       onClick={() => action.onClick ? action.onClick() : navigate(action.path, { state: action.state })}
@@ -682,7 +731,7 @@ const HomePage = ({ marketData }) => {
                       {/* Sparkline */}
                       <Box sx={{ mx: 1.5, flexShrink: 0 }}>
                         <Sparkline
-                          data={generateSparkData(coin.price, 0.03, 16)}
+                          data={generateSparkData(coin.symbol, coin.price, 0.03, 16)}
                           color={coin.change24h >= 0 ? '#00C853' : '#FF5252'}
                           width={56}
                           height={22}

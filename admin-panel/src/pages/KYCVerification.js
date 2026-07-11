@@ -229,20 +229,7 @@ const KYCVerification = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<Refresh />}
-            onClick={fetchKYCRequests}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Download />}
-          >
-            Export Reports
-          </Button>
+
         </Box>
       </Box>
 
@@ -254,16 +241,14 @@ const KYCVerification = () => {
             value={kycRequests.filter(r => r.kycStatus === 'pending').length.toString()}
             icon={<HourglassEmpty />}
             color="#FFC107"
-            change="+5"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
-            title="Verified Today"
-            value="0"
+            title="Verified Users"
+            value={kycRequests.filter(r => r.kycStatus === 'verified').length.toString()}
             icon={<VerifiedUser />}
-            color="#00D395"
-            change="+12"
+            color="#8b5cf6"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -271,8 +256,7 @@ const KYCVerification = () => {
             title="Rejected"
             value={kycRequests.filter(r => r.kycStatus === 'rejected').length.toString()}
             icon={<GppBad />}
-            color="#FF6B6B"
-            change="+2"
+            color="#f43f5e"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -281,7 +265,6 @@ const KYCVerification = () => {
             value={totalPlatformUsers.toString()}
             icon={<Security />}
             color="#4361EE"
-            change="+45"
           />
         </Grid>
       </Grid>
@@ -409,7 +392,7 @@ const KYCVerification = () => {
                     <TableRow key={request._id} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ bgcolor: '#4361EE' }}>
+                          <Avatar sx={{ bgcolor: '#4361EE' }} src={request.profilePicture || undefined}>
                             {(request.fullName || request.userName || 'U').charAt(0)}
                           </Avatar>
                           <Box>
@@ -502,7 +485,7 @@ const KYCVerification = () => {
           View Documents
         </MenuItem>
         <MenuItem onClick={handleApprove}>
-          <CheckCircle sx={{ mr: 2, color: '#00D395' }} />
+          <CheckCircle sx={{ mr: 2, color: '#8b5cf6' }} />
           Approve KYC
         </MenuItem>
         <MenuItem onClick={handleRequestReview}>
@@ -510,7 +493,7 @@ const KYCVerification = () => {
           Request Review
         </MenuItem>
         <MenuItem onClick={handleReject}>
-          <Cancel sx={{ mr: 2, color: '#FF6B6B' }} />
+          <Cancel sx={{ mr: 2, color: '#f43f5e' }} />
           Reject KYC
         </MenuItem>
       </Menu>
@@ -531,7 +514,7 @@ const KYCVerification = () => {
               <Grid container spacing={3}>
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3, p: 2, bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 2 }}>
-                    <Avatar sx={{ bgcolor: '#00D395', width: 60, height: 60, fontSize: 24 }}>
+                    <Avatar sx={{ bgcolor: '#8b5cf6', width: 60, height: 60, fontSize: 24 }} src={selectedRequest.profilePicture || undefined}>
                       {(selectedRequest.fullName || selectedRequest.userName || 'U').charAt(0)}
                     </Avatar>
                     <Box>

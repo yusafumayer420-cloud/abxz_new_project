@@ -5,6 +5,7 @@ const { createAdminNotification } = require('../utils/notificationHelper');
 const User = require('../models/User');
 const PendingRegistration = require('../models/PendingRegistration');
 const LoginLog = require('../models/LoginLog');
+const WalletTransaction = require('../models/WalletTransaction');
 const sendEmail = require('../utils/emailService');
 const router = express.Router();
 
@@ -54,14 +55,14 @@ router.post('/register', async (req, res) => {
         message: `Your verification OTP is ${otp}. It will expire in 10 minutes.`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #00D395; text-align: center;">Welcome to CrokTrade</h2>
+            <h2 style="color: #00D395; text-align: center;">Welcome to Cryptosimia</h2>
             <p>Thank you for signing up! Please use the OTP below to verify your email address:</p>
             <div style="background: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #333; border-radius: 5px; margin: 20px 0;">
               ${otp}
             </div>
             <p>This OTP will expire in <strong>10 minutes</strong>. If you did not request this, please ignore this email.</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="font-size: 12px; color: #888; text-align: center;">&copy; 2026 CrokTrade. All rights reserved.</p>
+            <p style="font-size: 12px; color: #888; text-align: center;">&copy; 2026 Cryptosimia. All rights reserved.</p>
           </div>
         `
       });
@@ -119,14 +120,14 @@ router.post('/login', async (req, res) => {
           message: `Your verification OTP is ${otp}. It will expire in 10 minutes.`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-              <h2 style="color: #00D395; text-align: center;">CrokTrade Verification</h2>
+              <h2 style="color: #00D395; text-align: center;">Cryptosimia Verification</h2>
               <p>Your account is not yet verified. Please use the OTP below to verify your email address:</p>
               <div style="background: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #333; border-radius: 5px; margin: 20px 0;">
                 ${otp}
               </div>
               <p>This OTP will expire in <strong>10 minutes</strong>.</p>
               <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="font-size: 12px; color: #888; text-align: center;">&copy; 2026 CrokTrade. All rights reserved.</p>
+              <p style="font-size: 12px; color: #888; text-align: center;">&copy; 2026 Cryptosimia. All rights reserved.</p>
             </div>
           `
         });
@@ -191,8 +192,8 @@ router.post('/verify-otp', async (req, res) => {
         return res.status(400).json({ message: 'User already exists. Please login instead.' });
       }
 
-      // Generate a unique referral code (e.g. CROK-XXXXXX)
-      const referralCode = `CROK-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+      // Generate a unique referral code (e.g. CSIM-XXXXXX)
+      const referralCode = `CSIM-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
       // Create the actual user account now
       const user = await User.create({
@@ -208,6 +209,27 @@ router.post('/verify-otp', async (req, res) => {
 
       // Clean up pending registration
       await PendingRegistration.deleteOne({ email });
+
+      // Handle Referral Reward
+      if (pending.referredBy) {
+        const referrer = await User.findById(pending.referredBy);
+        if (referrer) {
+          referrer.wallet.usdt = (referrer.wallet.usdt || 0) + 5;
+          await referrer.save();
+
+          await WalletTransaction.create({
+            userId: referrer._id,
+            type: 'deposit',
+            currency: 'USDT',
+            amount: 5,
+            status: 'completed',
+            metadata: {
+              notes: `Referral Reward for ${user.fullName}`,
+              referredUser: user.email
+            }
+          });
+        }
+      }
 
       // Create Admin Notification
       createAdminNotification(req.app.get('io'), {
@@ -305,14 +327,14 @@ router.post('/resend-otp', async (req, res) => {
         message: `Your new verification OTP is ${otp}. It will expire in 10 minutes.`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #00D395; text-align: center;">CrokTrade Verification</h2>
+            <h2 style="color: #00D395; text-align: center;">Cryptosimia Verification</h2>
             <p>Your new verification OTP is:</p>
             <div style="background: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #333; border-radius: 5px; margin: 20px 0;">
               ${otp}
             </div>
             <p>This OTP will expire in <strong>10 minutes</strong>.</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="font-size: 12px; color: #888; text-align: center;">&copy; 2026 CrokTrade. All rights reserved.</p>
+            <p style="font-size: 12px; color: #888; text-align: center;">&copy; 2026 Cryptosimia. All rights reserved.</p>
           </div>
         `
       });
@@ -340,14 +362,14 @@ router.post('/resend-otp', async (req, res) => {
       message: `Your new verification OTP is ${otp}. It will expire in 10 minutes.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h2 style="color: #00D395; text-align: center;">CrokTrade Verification</h2>
+          <h2 style="color: #00D395; text-align: center;">Cryptosimia Verification</h2>
           <p>Your new verification OTP is:</p>
           <div style="background: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #333; border-radius: 5px; margin: 20px 0;">
             ${otp}
           </div>
           <p>This OTP will expire in <strong>10 minutes</strong>.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 12px; color: #888; text-align: center;">&copy; 2026 CrokTrade. All rights reserved.</p>
+          <p style="font-size: 12px; color: #888; text-align: center;">&copy; 2026 Cryptosimia. All rights reserved.</p>
         </div>
       `
     });
@@ -375,7 +397,7 @@ router.post('/forgot-password', async (req, res) => {
     await user.save();
 
     const frontendUrl = process.env.FRONTEND_URL || req.get('origin');
-    const resetUrl = `https://www.croktrade.com/reset-password/${resetToken}`;
+    const resetUrl = `https://www.cryptosimia.com/reset-password/${resetToken}`;
 
     const message = `You are receiving this email because you (or someone else) have requested the reset of the password for your account.\n\n
       Please click on the following link, or paste this into your browser to complete the process within 1 hour of receiving it:\n\n

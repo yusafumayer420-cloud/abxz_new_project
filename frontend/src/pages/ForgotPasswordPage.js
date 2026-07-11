@@ -45,7 +45,7 @@ const ForgotPasswordPage = () => {
       >
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-            Reset <span style={{ color: '#00D395' }}>Password</span>
+            Reset <span style={{ color: '#00E5FF' }}>Password</span>
           </Typography>
           <Typography variant="body1" color="text.secondary">
             {submitted 
@@ -61,7 +61,7 @@ const ForgotPasswordPage = () => {
                 variant="outlined"
                 startIcon={<ArrowBack />}
                 onClick={() => navigate('/login')}
-                sx={{ mt: 2, borderColor: '#00D395', color: '#00D395' }}
+                sx={{ mt: 2, borderColor: '#00E5FF', color: '#00E5FF' }}
               >
                 Back to Login
               </Button>
@@ -96,11 +96,16 @@ const ForgotPasswordPage = () => {
                   size="large"
                   disabled={loading}
                   sx={{
-                    bgcolor: '#00D395',
+                    background: 'linear-gradient(135deg, #00E5FF 0%, #00BCD4 100%)',
+                    color: '#050816',
                     fontWeight: 'bold',
                     py: 1.5,
                     mb: 2,
-                    '&:hover': { bgcolor: '#00b884' }
+                    boxShadow: '0 4px 16px rgba(0, 229, 255, 0.25)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #33EAFF 0%, #00E5FF 100%)',
+                      boxShadow: '0 6px 24px rgba(0, 229, 255, 0.35)',
+                    }
                   }}
                 >
                   {loading ? 'Sending...' : 'Send Reset Link'}
@@ -112,7 +117,7 @@ const ForgotPasswordPage = () => {
                   component="button"
                   variant="body2"
                   onClick={() => navigate('/login')}
-                  sx={{ color: '#00D395', fontWeight: 'bold', textDecoration: 'none' }}
+                  sx={{ color: '#00E5FF', fontWeight: 'bold', textDecoration: 'none' }}
                 >
                   Back to Login
                 </Link>

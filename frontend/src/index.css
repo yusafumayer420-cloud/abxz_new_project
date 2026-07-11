@@ -7,6 +7,7 @@
   --color-success: #00C853;
   --color-warning: #FFC107;
   --color-error: #FF5252;
+  --color-accent: #00D395;
   --color-bg: #050816;
   --color-surface: #0B1220;
   --color-card: #111827;
@@ -238,18 +239,99 @@ body {
 }
 
 /* ============================
-   PREMIUM BACKGROUND
+   SCROLL-DRIVEN PREMIUM BACKGROUND
    ============================ */
+
+/* CSS variable defaults (overridden per-frame by JS scroll listener) */
 .premium-gradient {
-  background:
-    radial-gradient(ellipse at 10% 0%, rgba(0, 229, 255, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 90% 5%, rgba(79, 124, 255, 0.08) 0%, transparent 45%),
-    radial-gradient(ellipse at 80% 100%, rgba(124, 58, 237, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 5% 90%, rgba(0, 200, 83, 0.04) 0%, transparent 40%),
-    var(--color-bg) !important;
-  background-attachment: fixed !important;
+  --g-o1c: 0,229,255;
+  --g-o1x: 18%;
+  --g-o1y: 20%;
+  --g-o1r: 420px;
+  --g-o2c: 79,124,255;
+  --g-o2x: 82%;
+  --g-o2y: 30%;
+  --g-o2r: 380px;
+  --g-o3c: 124,58,237;
+  --g-o3x: 50%;
+  --g-o3y: 85%;
+  --g-o3r: 300px;
+  --g-tl: 0,229,255;
+  --g-tr: 79,124,255;
+  --g-cl: 124,58,237;
+  --g-cr: 56,100,255;
+  --g-bc: 0,200,83;
+
+  position: relative;
   min-height: 100vh;
+  background: var(--color-bg) !important;
+  isolation: isolate;
 }
+
+/* Layer 1: corner glows, colours driven by JS vars */
+.premium-gradient::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background:
+    radial-gradient(ellipse 62% 50% at 7% 4%,
+      rgba(var(--g-tl), 0.22) 0%, rgba(var(--g-tl), 0.06) 50%, transparent 100%),
+    radial-gradient(ellipse 65% 52% at 93% 3%,
+      rgba(var(--g-tr), 0.22) 0%, rgba(var(--g-tr), 0.06) 50%, transparent 100%),
+    radial-gradient(ellipse 50% 60% at 14% 50%,
+      rgba(var(--g-cl), 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 54% 55% at 86% 55%,
+      rgba(var(--g-cr), 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 75% 42% at 50% 100%,
+      rgba(var(--g-bc), 0.10) 0%, rgba(var(--g-tl), 0.06) 50%, transparent 100%),
+    radial-gradient(ellipse 46% 36% at 4% 95%,
+      rgba(var(--g-cl), 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 46% 36% at 96% 90%,
+      rgba(var(--g-cr), 0.10) 0%, transparent 60%),
+    linear-gradient(180deg,
+      rgba(var(--g-tl), 0.035) 0%, transparent 35%,
+      rgba(var(--g-tr), 0.028) 70%, rgba(var(--g-cl), 0.032) 100%);
+
+  background-attachment: fixed;
+  transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Layer 2: three large drifting orbs */
+.premium-gradient::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background:
+    radial-gradient(circle var(--g-o1r) at var(--g-o1x) var(--g-o1y),
+      rgba(var(--g-o1c), 0.12) 0%, rgba(var(--g-o1c), 0.04) 55%, transparent 100%),
+    radial-gradient(circle var(--g-o2r) at var(--g-o2x) var(--g-o2y),
+      rgba(var(--g-o2c), 0.12) 0%, rgba(var(--g-o2c), 0.04) 55%, transparent 100%),
+    radial-gradient(circle var(--g-o3r) at var(--g-o3x) var(--g-o3y),
+      rgba(var(--g-o3c), 0.10) 0%, rgba(var(--g-o3c), 0.03) 55%, transparent 100%);
+
+  background-attachment: fixed;
+  transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: orbPulse 10s ease-in-out infinite alternate;
+}
+
+@keyframes orbPulse {
+  0%   { opacity: 0.75; }
+  50%  { opacity: 0.90; }
+  100% { opacity: 0.80; }
+}
+
+/* Page content above gradient layers */
+.premium-gradient > * {
+  position: relative;
+  z-index: auto;
+}
+
 
 /* ============================
    AUTOFILL FIX

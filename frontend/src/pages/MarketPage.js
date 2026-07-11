@@ -588,7 +588,7 @@ const MarketPage = ({ marketData }) => {
                       />
                     </Box>
                     <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.1rem' }}>
-                      ${pair.price.toLocaleString()}
+                      ${typeof pair.price === 'number' ? pair.price.toLocaleString() : (pair.price || 0)}
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#8b93a6', fontSize: '0.65rem' }}>
                       Vol: ${(pair.volume / 1000000).toFixed(1)}M

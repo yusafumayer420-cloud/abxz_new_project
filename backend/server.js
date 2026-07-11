@@ -39,10 +39,10 @@ const rawAdminUrl = process.env.ADMIN_URL;
 
 // Start with hardcoded fallback origins (you can keep or remove)
 let allowedOrigins = [
-  'https://croktrade.com',
-  'https://www.croktrade.com',
-  'https://admin.croktrade.com',
-  'https://www.admin.croktrade.com'
+  'https://cryptosimia.com',
+  'https://www.cryptosimia.com',
+  'https://admin.cryptosimia.com',
+  'https://www.admin.cryptosimia.com'
 ];
 
 // Helper to add an origin and optionally its www variant

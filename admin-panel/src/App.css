@@ -1,10 +1,10 @@
 .admin-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0A0E17 0%, #131A2E 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
 .admin-sidebar {
-  background: linear-gradient(180deg, #131A2E 0%, #0F172A 100%);
+  background: linear-gradient(180deg, #1e293b 0%, #0F172A 100%);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -48,12 +48,12 @@
 }
 
 .positive-change {
-  color: #00D395;
+  color: #8b5cf6;
   font-weight: 600;
 }
 
 .negative-change {
-  color: #FF6B6B;
+  color: #f43f5e;
   font-weight: 600;
 }
 
@@ -73,19 +73,19 @@
 
 .status-completed {
   background: rgba(0, 211, 149, 0.1);
-  color: #00D395;
+  color: #8b5cf6;
   border: 1px solid rgba(0, 211, 149, 0.3);
 }
 
 .status-failed {
   background: rgba(255, 107, 107, 0.1);
-  color: #FF6B6B;
+  color: #f43f5e;
   border: 1px solid rgba(255, 107, 107, 0.3);
 }
 
 .kyc-verified {
   background: rgba(0, 211, 149, 0.1);
-  color: #00D395;
+  color: #8b5cf6;
 }
 
 .kyc-pending {
@@ -95,7 +95,7 @@
 
 .kyc-rejected {
   background: rgba(255, 107, 107, 0.1);
-  color: #FF6B6B;
+  color: #f43f5e;
 }
 
 .action-button {
@@ -117,7 +117,7 @@
 
 .loading-spinner {
   border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top: 3px solid #00D395;
+  border-top: 3px solid #8b5cf6;
   border-radius: 50%;
   width: 40px;
   height: 40px;

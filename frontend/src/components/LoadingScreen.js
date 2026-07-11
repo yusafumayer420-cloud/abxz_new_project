@@ -22,12 +22,25 @@ const LoadingScreen = ({ message = 'Loading...' }) => {
         <CircularProgress 
           size={60} 
           thickness={4}
-          sx={{ color: '#00D395', mb: 3 }}
+          sx={{ color: '#00E5FF', mb: 3 }}
         />
       </motion.div>
-      <Typography variant="h6" sx={{ mt: 2, fontWeight: 'bold' }}>
-        Crok<span style={{ color: '#00D395' }}>Trade</span>
-      </Typography>
+      <Box
+        component="img"
+        src="/logo.png"
+        alt="Cryptosimia Logo"
+        sx={{
+          height: 80,
+          width: 80,
+          objectFit: 'cover',
+          display: 'block',
+          mt: 2,
+          borderRadius: '50%',
+          mixBlendMode: 'normal',
+          border: '2px solid rgba(0, 120, 255, 0.4)',
+          boxShadow: '0 0 16px rgba(0, 120, 255, 0.5)',
+        }}
+      />
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
         {message}
       </Typography>

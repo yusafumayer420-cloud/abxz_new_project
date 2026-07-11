@@ -571,7 +571,7 @@ const SupportManagement = () => {
             {change && (
               <Typography
                 variant="caption"
-                sx={{ color: change >= 0 ? "#00D395" : "#FF6B6B" }}
+                sx={{ color: change >= 0 ? "#8b5cf6" : "#f43f5e" }}
               >
                 {change >= 0 ? "+" : ""}
                 {change} from yesterday
@@ -622,7 +622,7 @@ const SupportManagement = () => {
             Support Management
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Manage customer support tickets and inquiries
+            Manage customer live chats and support inquiries
           </Typography>
         </Box>
         <Box sx={{ display: "flex", gap: 1 }}>
@@ -644,7 +644,7 @@ const SupportManagement = () => {
             title="Active Chats"
             value={stats.openTickets}
             icon={<SupportAgent />}
-            color="#FF6B6B"
+            color="#f43f5e"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -660,7 +660,7 @@ const SupportManagement = () => {
             title="Resolved Chats"
             value={stats.resolvedTickets}
             icon={<CheckCircle />}
-            color="#00D395"
+            color="#8b5cf6"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -837,11 +837,9 @@ const SupportManagement = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Chat ID</TableCell>
                     <TableCell>User</TableCell>
                     <TableCell>Last Message</TableCell>
                     <TableCell>Status</TableCell>
-                    <TableCell>Assigned To</TableCell>
                     <TableCell>Last Updated</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
@@ -849,14 +847,6 @@ const SupportManagement = () => {
                 <TableBody>
                   {filteredTickets.map((ticket) => (
                     <TableRow key={ticket._id || ticket.id} hover>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                          {ticket.id}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {getTimeAgo(ticket.createdAt)}
-                        </Typography>
-                      </TableCell>
                       <TableCell>
                         <Box
                           sx={{ display: "flex", alignItems: "center", gap: 1 }}
@@ -891,56 +881,10 @@ const SupportManagement = () => {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={ticket.category}
-                          size="small"
-                          color={getCategoryColor(ticket.category)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={ticket.priority}
-                          size="small"
-                          color={getPriorityColor(ticket.priority)}
-                          icon={getPriorityIcon(ticket.priority)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
                           label={ticket.status.replace("_", " ")}
                           size="small"
                           color={getStatusColor(ticket.status)}
                         />
-                      </TableCell>
-                      <TableCell>
-                        {ticket.assignedTo ? (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                            }}
-                          >
-                            <Avatar
-                              sx={{
-                                width: 24,
-                                height: 24,
-                                fontSize: 12,
-                                bgcolor: "#00D395",
-                              }}
-                            >
-                              {((typeof ticket.assignedTo === 'object' ? (ticket.assignedTo?.fullName || ticket.assignedTo?.name || '') : ticket.assignedTo) || 'A').charAt(0)}
-                            </Avatar>
-                            <Typography variant="body2">
-                              {typeof ticket.assignedTo === 'object' ? (ticket.assignedTo?.fullName || ticket.assignedTo?.name || 'Assigned') : (ticket.assignedTo || 'Assigned')}
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Chip
-                            label="Unassigned"
-                            size="small"
-                            variant="outlined"
-                          />
-                        )}
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
@@ -990,14 +934,14 @@ const SupportManagement = () => {
         {selectedTicket?.status !== "resolved" &&
           selectedTicket?.status !== "closed" && (
             <MenuItem onClick={handleResolveTicket}>
-              <CheckCircle sx={{ mr: 2, color: "#00D395" }} />
+              <CheckCircle sx={{ mr: 2, color: "#8b5cf6" }} />
               Mark as Resolved
             </MenuItem>
           )}
         {selectedTicket?.status !== "closed" && (
           <MenuItem onClick={handleCloseTicket}>
             <Close sx={{ mr: 2 }} />
-            Close Ticket
+            Close Chat
           </MenuItem>
         )}
       </Menu>
@@ -1011,7 +955,7 @@ const SupportManagement = () => {
       >
         {selectedTicket && (
           <>
-            <DialogTitle>Ticket Details - {selectedTicket.id}</DialogTitle>
+            <DialogTitle>Chat Details - {selectedTicket.id}</DialogTitle>
             <DialogContent>
               <Grid container spacing={3} sx={{ mt: 1 }}>
                 <Grid item xs={12}>
@@ -1025,7 +969,7 @@ const SupportManagement = () => {
                   >
                     <Avatar
                       sx={{
-                        bgcolor: "#00D395",
+                        bgcolor: "#8b5cf6",
                         width: 60,
                         height: 60,
                         fontSize: 24,
@@ -1065,7 +1009,7 @@ const SupportManagement = () => {
                     color="text.secondary"
                     gutterBottom
                   >
-                    Ticket Information
+                    Chat Information
                   </Typography>
                   <Paper sx={{ p: 2 }}>
                     <Box sx={{ "& > *": { mb: 1 } }}>
@@ -1178,7 +1122,7 @@ const SupportManagement = () => {
                 }}
               >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <Avatar sx={{ bgcolor: "#00D395" }}>
+                  <Avatar sx={{ bgcolor: "#8b5cf6" }}>
                     {(selectedTicket.userName || 'U').charAt(0)}
                   </Avatar>
                   <Box>
@@ -1223,7 +1167,7 @@ const SupportManagement = () => {
                               src={msg.type !== 'admin' ? (msg.userId?.profilePicture || undefined) : undefined}
                               sx={{
                                 bgcolor:
-                                  msg.type === "admin" ? "#00D395" : "#4361EE",
+                                  msg.type === "admin" ? "#8b5cf6" : "#4361EE",
                                 width: 32,
                                 height: 32,
                               }}

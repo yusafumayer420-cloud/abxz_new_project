@@ -58,7 +58,7 @@ const ResetPasswordPage = () => {
       >
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-            Set New <span style={{ color: '#00D395' }}>Password</span>
+            Set New <span style={{ color: '#00E5FF' }}>Password</span>
           </Typography>
           <Typography variant="body1" color="text.secondary">
             Please enter your new password below.
@@ -122,10 +122,15 @@ const ResetPasswordPage = () => {
                 size="large"
                 disabled={loading}
                 sx={{
-                  bgcolor: '#00D395',
+                  background: 'linear-gradient(135deg, #00E5FF 0%, #00BCD4 100%)',
+                  color: '#050816',
                   fontWeight: 'bold',
                   py: 1.5,
-                  '&:hover': { bgcolor: '#00b884' }
+                  boxShadow: '0 4px 16px rgba(0, 229, 255, 0.25)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #33EAFF 0%, #00E5FF 100%)',
+                    boxShadow: '0 6px 24px rgba(0, 229, 255, 0.35)',
+                  }
                 }}
               >
                 {loading ? 'Updating...' : 'Update Password'}

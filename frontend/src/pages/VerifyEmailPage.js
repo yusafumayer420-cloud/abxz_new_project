@@ -94,7 +94,7 @@ const VerifyEmailPage = () => {
           <Button 
             startIcon={<ArrowBack />} 
             onClick={() => navigate('/login')}
-            sx={{ color: '#00D395' }}
+            sx={{ color: '#00E5FF' }}
           >
             Back to login
           </Button>
@@ -115,7 +115,7 @@ const VerifyEmailPage = () => {
                 mb: 2
               }}
             >
-              <VerifiedUser sx={{ fontSize: { xs: 24, sm: 30 }, color: '#00D395' }} />
+              <VerifiedUser sx={{ fontSize: { xs: 24, sm: 30 }, color: '#00E5FF' }} />
             </Box>
             <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
               Verify Your Email
@@ -159,11 +159,16 @@ const VerifyEmailPage = () => {
                 size="large"
                 disabled={loading}
                 sx={{
-                  bgcolor: '#00D395',
+                  background: 'linear-gradient(135deg, #00E5FF 0%, #00BCD4 100%)',
+                  color: '#050816',
                   fontWeight: 'bold',
                   py: 1.5,
                   mb: 3,
-                  '&:hover': { bgcolor: '#00b884' }
+                  boxShadow: '0 4px 16px rgba(0, 229, 255, 0.25)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #33EAFF 0%, #00E5FF 100%)',
+                    boxShadow: '0 6px 24px rgba(0, 229, 255, 0.35)',
+                  }
                 }}
               >
                 {loading ? <CircularProgress size={24} color="inherit" /> : 'Verify Account'}
@@ -179,7 +184,7 @@ const VerifyEmailPage = () => {
                 disabled={!canResend || resending}
                 startIcon={resending ? <CircularProgress size={16} color="inherit" /> : <Refresh />}
                 sx={{ 
-                  color: canResend ? '#00D395' : 'text.disabled',
+                  color: canResend ? '#00E5FF' : 'text.disabled',
                   textTransform: 'none',
                   fontWeight: 'bold'
                 }}

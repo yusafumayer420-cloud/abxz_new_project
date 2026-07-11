@@ -92,19 +92,32 @@ const Sidebar = ({ open, onClose }) => {
       open={open}
       onClose={onClose}
       sx={{
-        '& .MuiDrawer-paper': {
+                '& .MuiDrawer-paper': {
           width: 280,
-          background: 'linear-gradient(135deg, #0A0E17 0%, #131A2E 100%)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+          background: 'linear-gradient(160deg, #070B14 0%, #0B1220 60%, #0d1428 100%)',
+          borderRight: '1px solid rgba(0, 229, 255, 0.08)',
           color: 'white',
+          boxShadow: '4px 0 32px rgba(0,0,0,0.5)',
         },
       }}
     >
       <Box sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-            Crok<span style={{ color: '#00D395' }}>Trade</span>
-          </Typography>
+            <Box
+              component="img"
+              src="/logo.png"
+              alt="Cryptosimia Logo"
+              sx={{
+                height: 48,
+                width: 48,
+                objectFit: 'cover',
+                display: 'block',
+                borderRadius: '50%',
+                mixBlendMode: 'normal',
+                border: '2px solid rgba(0, 120, 255, 0.4)',
+                boxShadow: '0 0 12px rgba(0, 120, 255, 0.4)',
+              }}
+            />
           <IconButton onClick={onClose} sx={{ color: 'white' }}>
             <MenuOpen />
           </IconButton>
@@ -123,14 +136,14 @@ const Sidebar = ({ open, onClose }) => {
                 sx={{
                   mb: 1,
                   borderRadius: 2,
-                  bgcolor: isActive(item.path) ? 'rgba(0, 211, 149, 0.1)' : 'transparent',
-                  border: isActive(item.path) ? '1px solid rgba(0, 211, 149, 0.3)' : 'none',
+                  bgcolor: isActive(item.path) ? 'rgba(0, 229, 255, 0.1)' : 'transparent',
+                  border: isActive(item.path) ? '1px solid rgba(0, 229, 255, 0.3)' : 'none',
                   '&:hover': {
-                    bgcolor: 'rgba(255, 255, 255, 0.05)',
+                    bgcolor: 'rgba(0, 229, 255, 0.05)',
                   },
                 }}
               >
-                <ListItemIcon sx={{ color: isActive(item.path) ? '#00D395' : 'white', minWidth: 40 }}>
+                <ListItemIcon sx={{ color: isActive(item.path) ? '#00E5FF' : 'rgba(255,255,255,0.75)', minWidth: 40 }}>
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText 
@@ -138,7 +151,7 @@ const Sidebar = ({ open, onClose }) => {
                   primaryTypographyProps={{
                     sx: { 
                       fontWeight: isActive(item.path) ? 'bold' : 'normal',
-                      color: isActive(item.path) ? '#00D395' : 'white'
+                      color: isActive(item.path) ? '#00E5FF' : 'rgba(255,255,255,0.85)'
                     }
                   }}
                 />
@@ -152,13 +165,17 @@ const Sidebar = ({ open, onClose }) => {
           <ListItem 
             button 
             onClick={() => handleToggleSubmenu('trading')}
-            sx={{ borderRadius: 2, mb: 1 }}
+            sx={{ 
+              borderRadius: 2, 
+              mb: 1,
+              '&:hover': { bgcolor: 'rgba(0, 229, 255, 0.05)' }
+            }}
           >
-            <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+            <ListItemIcon sx={{ color: 'rgba(255,255,255,0.75)', minWidth: 40 }}>
               <TrendingUp />
             </ListItemIcon>
-            <ListItemText primary="Trading" />
-            {openSubmenu.trading ? <ExpandLess /> : <ExpandMore />}
+            <ListItemText primary="Trading" primaryTypographyProps={{ sx: { color: 'rgba(255,255,255,0.85)' } }} />
+            {openSubmenu.trading ? <ExpandLess sx={{ color: '#00E5FF' }} /> : <ExpandMore sx={{ color: 'rgba(255,255,255,0.5)' }} />}
           </ListItem>
 
           <Collapse in={openSubmenu.trading} timeout="auto" unmountOnExit>
@@ -172,10 +189,11 @@ const Sidebar = ({ open, onClose }) => {
                     pl: 4, 
                     mb: 0.5,
                     borderRadius: 2,
-                    bgcolor: isActive(item.path) ? 'rgba(0, 211, 149, 0.1)' : 'transparent',
+                    bgcolor: isActive(item.path) ? 'rgba(0, 229, 255, 0.1)' : 'transparent',
+                    '&:hover': { bgcolor: 'rgba(0, 229, 255, 0.05)' }
                   }}
                 >
-                  <ListItemIcon sx={{ color: isActive(item.path) ? '#00D395' : 'white', minWidth: 36 }}>
+                  <ListItemIcon sx={{ color: isActive(item.path) ? '#00E5FF' : 'rgba(255,255,255,0.6)', minWidth: 36 }}>
                     {item.icon}
                   </ListItemIcon>
                   <ListItemText 
@@ -183,7 +201,7 @@ const Sidebar = ({ open, onClose }) => {
                     primaryTypographyProps={{
                       sx: { 
                         fontSize: '0.875rem',
-                        color: isActive(item.path) ? '#00D395' : 'rgba(255,255,255,0.8)'
+                        color: isActive(item.path) ? '#00E5FF' : 'rgba(255,255,255,0.7)'
                       }
                     }}
                   />
@@ -208,16 +226,16 @@ const Sidebar = ({ open, onClose }) => {
                   mb: 1,
                   borderRadius: 2,
                   '&:hover': {
-                    bgcolor: 'rgba(255, 255, 255, 0.05)',
+                    bgcolor: 'rgba(0, 229, 255, 0.05)',
                   },
                 }}
               >
-                <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+                <ListItemIcon sx={{ color: 'rgba(255,255,255,0.65)', minWidth: 40 }}>
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText 
                   primary={item.text}
-                  primaryTypographyProps={{ sx: { color: 'rgba(255,255,255,0.8)' } }}
+                  primaryTypographyProps={{ sx: { color: 'rgba(255,255,255,0.75)' } }}
                 />
               </ListItem>
             </motion.div>

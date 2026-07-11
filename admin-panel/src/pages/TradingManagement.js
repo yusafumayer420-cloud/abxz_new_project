@@ -86,22 +86,69 @@ const TradingManagement = () => {
     makerFee: 0.05,
   });
 
+  const fetchSettings = useCallback(async () => {
+    try {
+      const response = await api.get('/api/admin/settings');
+      setMarketSettings(prev => ({ ...prev, tradingEnabled: response.data.tradingEnabled ?? true }));
+    } catch (error) {
+      console.error('Failed to fetch system settings:', error);
+    }
+  }, []);
+
   const [chartData, setChartData] = useState([]);
 
   const pairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT'];
 
+  const processTradeData = useCallback((trade) => {
+    let pnl = 0;
+    let pnlPercentage = 0;
+    let duration = '-';
+
+    if (trade.tradeMode === 'delivery') {
+      if (trade.status === 'completed') {
+        if (trade.outcome === 'win') {
+          pnl = trade.profitAmount || 0;
+          pnlPercentage = trade.profitPercent || 0;
+        } else if (trade.outcome === 'loss') {
+          pnl = -(trade.total || 0);
+          pnlPercentage = -100;
+        }
+      }
+      if (trade.deliverySeconds) {
+        duration = `${trade.deliverySeconds}s`;
+      }
+    } else {
+      pnl = trade.pnl || 0;
+      pnlPercentage = trade.pnlPercentage || 0;
+      duration = trade.duration || (trade.tradeMode ? trade.tradeMode.toUpperCase() : '-');
+    }
+
+    return {
+      ...trade,
+      pnl,
+      pnlPercentage,
+      duration,
+    };
+  }, []);
+
   const fetchTrades = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get('/api/admin/trades', { params: filters });
-      setTrades(response.data.trades || []);
-      setFilteredTrades(response.data.trades || []);
+      const response = await api.get('/api/admin/trades', { 
+        params: {
+          ...filters,
+          search: searchTerm
+        } 
+      });
+      const processed = (response.data.trades || []).map(processTradeData);
+      setTrades(processed);
+      setFilteredTrades(processed);
     } catch (error) {
       toast.error('Failed to fetch trades');
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, searchTerm, processTradeData]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -156,15 +203,6 @@ const TradingManagement = () => {
 
   const filterTrades = useCallback(() => {
     let filtered = [...trades];
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(trade =>
-        (trade.userId?.fullName || '').toLowerCase().includes(term) ||
-        (trade.userId?.email || '').toLowerCase().includes(term) ||
-        trade._id.toLowerCase().includes(term) ||
-        trade.pair.toLowerCase().includes(term)
-      );
-    }
     if (filters.pair) filtered = filtered.filter(trade => trade.pair === filters.pair);
     if (filters.type) filtered = filtered.filter(trade => trade.type === filters.type);
     if (filters.status) filtered = filtered.filter(trade => trade.status === filters.status);
@@ -181,7 +219,7 @@ const TradingManagement = () => {
       return 0;
     });
     setFilteredTrades(filtered);
-  }, [trades, searchTerm, filters, activeTab]);
+  }, [trades, filters, activeTab]);
 
 
 
@@ -199,15 +237,14 @@ const TradingManagement = () => {
 
     newSocket.on('new_trade', (trade) => {
       toast.success(`New ${trade.type} trade placed`);
-      setTrades(prev => [trade, ...prev]);
+      setTrades(prev => [processTradeData(trade), ...prev]);
       fetchStats();
     });
 
     newSocket.on('trade_updated', (updatedTrade) => {
-      setTrades(prev => prev.map(t => t._id === updatedTrade._id ? updatedTrade : t));
-      if (selectedTrade?._id === updatedTrade._id) {
-        setSelectedTrade(updatedTrade);
-      }
+      const processed = processTradeData(updatedTrade);
+      setTrades(prev => prev.map(t => t._id === processed._id ? processed : t));
+      setSelectedTrade(prev => (prev?._id === processed._id ? processed : prev));
       fetchStats();
     });
 
@@ -216,12 +253,13 @@ const TradingManagement = () => {
     return () => {
       newSocket.disconnect();
     };
-  }, []);
+  }, [fetchStats, processTradeData]);
 
   useEffect(() => {
     fetchTrades();
     fetchStats();
-  }, [fetchTrades, fetchStats]);
+    fetchSettings();
+  }, [fetchTrades, fetchStats, fetchSettings]);
 
   useEffect(() => {
     filterTrades();
@@ -310,9 +348,16 @@ const TradingManagement = () => {
     return trades.reduce((sum, trade) => sum + (trade.amount * trade.entryPrice * 0.001), 0);
   };
 
-  const handleSettingChange = (key, value) => {
-    setMarketSettings(prev => ({ ...prev, [key]: value }));
-    toast.success(`Setting ${key} updated to ${value}`);
+  const handleSettingChange = async (key, value) => {
+    try {
+      if (key === 'tradingEnabled') {
+        await api.put('/api/admin/settings', { tradingEnabled: value });
+      }
+      setMarketSettings(prev => ({ ...prev, [key]: value }));
+      toast.success(`Global Trading Outcome set to ${value ? 'WIN' : 'LOSS'}`);
+    } catch (error) {
+      toast.error('Failed to update settings');
+    }
   };
 
   const StatsCard = ({ title, value, icon, color, change }) => (
@@ -327,7 +372,7 @@ const TradingManagement = () => {
               {value}
             </Typography>
             {change && (
-              <Typography variant="caption" sx={{ color: change >= 0 ? '#00D395' : '#FF6B6B' }}>
+              <Typography variant="caption" sx={{ color: change >= 0 ? '#8b5cf6' : '#f43f5e' }}>
                 {change >= 0 ? '+' : ''}{change}% from yesterday
               </Typography>
             )}
@@ -353,25 +398,11 @@ const TradingManagement = () => {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="outlined"
-            startIcon={<Refresh />}
-            onClick={fetchTrades}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Download />}
-          >
-            Export Data
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={marketSettings.tradingEnabled ? <Pause /> : <PlayArrow />}
+            startIcon={marketSettings.tradingEnabled ? <TrendingUp /> : <TrendingDown />}
             onClick={() => handleSettingChange('tradingEnabled', !marketSettings.tradingEnabled)}
             color={marketSettings.tradingEnabled ? 'success' : 'error'}
           >
-            {marketSettings.tradingEnabled ? 'Pause Trading' : 'Resume Trading'}
+            {marketSettings.tradingEnabled ? 'Global Force Win' : 'Global Force Loss'}
           </Button>
         </Box>
       </Box>
@@ -384,7 +415,6 @@ const TradingManagement = () => {
             value={trades.length.toLocaleString()}
             icon={<Timeline />}
             color="#4361EE"
-            change="+4.5%"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -392,8 +422,7 @@ const TradingManagement = () => {
             title="Total Volume"
             value={`$${trades.reduce((sum, t) => sum + (t.total || 0), 0).toLocaleString()}`}
             icon={<AccountBalance />}
-            color="#00D395"
-            change="+12.3%"
+            color="#8b5cf6"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -402,7 +431,6 @@ const TradingManagement = () => {
             value={trades.filter(t => t.status === 'active').length.toString()}
             icon={<PlayArrow />}
             color="#7209B7"
-            change="+2.1%"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -410,8 +438,7 @@ const TradingManagement = () => {
             title="Total Fees"
             value={`$${trades.reduce((sum, t) => sum + (t.fee || 0), 0).toLocaleString()}`}
             icon={<BarChart />}
-            color="#FF6B6B"
-            change="+8.7%"
+            color="#f43f5e"
           />
         </Grid>
       </Grid>
@@ -430,7 +457,7 @@ const TradingManagement = () => {
                 <YAxis stroke="rgba(255,255,255,0.5)" />
                 <Tooltip 
                   contentStyle={{ 
-                    background: '#131A2E', 
+                    background: '#1e293b', 
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
                   }}
@@ -439,10 +466,10 @@ const TradingManagement = () => {
                 <Line 
                   type="monotone" 
                   dataKey="volume" 
-                  stroke="#00D395" 
+                  stroke="#8b5cf6" 
                   strokeWidth={2}
-                  dot={{ fill: '#00D395', r: 4 }}
-                  activeDot={{ r: 6, fill: '#00D395' }}
+                  dot={{ fill: '#8b5cf6', r: 4 }}
+                  activeDot={{ r: 6, fill: '#8b5cf6' }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -565,9 +592,7 @@ const TradingManagement = () => {
                     <TableCell>User</TableCell>
                     <TableCell>Pair</TableCell>
                     <TableCell>Type</TableCell>
-                    <TableCell>Entry Price</TableCell>
                     <TableCell>Amount</TableCell>
-                    <TableCell>Leverage</TableCell>
                     <TableCell>Profit/Loss</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Duration</TableCell>
@@ -584,10 +609,13 @@ const TradingManagement = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ bgcolor: '#00D395', width: 32, height: 32 }}>
+                          <Avatar sx={{ bgcolor: '#8b5cf6', width: 32, height: 32 }} src={trade.userId?.profilePicture || undefined}>
                             {(trade.userId?.fullName || trade.userName || 'U').charAt(0)}
                           </Avatar>
-                          <Typography variant="body2">{trade.userId?.fullName || trade.userName || 'Unknown'}</Typography>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{trade.userId?.fullName || trade.userName || 'Unknown'}</Typography>
+                            <Typography variant="caption" color="text.secondary">{trade.userId?.email || ''}</Typography>
+                          </Box>
                         </Box>
                       </TableCell>
                       <TableCell>
@@ -607,21 +635,15 @@ const TradingManagement = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2">${(trade.entryPrice || 0).toLocaleString()}</Typography>
-                      </TableCell>
-                      <TableCell>
                         <Typography variant="body2">
                           {trade.amount}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip label={`${trade.leverage}x`} size="small" />
-                      </TableCell>
-                      <TableCell>
                         <Typography
                           variant="body2"
                           sx={{
-                            color: (trade.pnl || 0) >= 0 ? '#00D395' : '#FF6B6B',
+                            color: (trade.pnl || 0) >= 0 ? '#8b5cf6' : '#f43f5e',
                             fontWeight: 'bold',
                           }}
                         >
@@ -697,7 +719,7 @@ const TradingManagement = () => {
               <Grid container spacing={3} sx={{ mt: 1 }}>
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
-                    <Avatar sx={{ bgcolor: '#00D395', width: 60, height: 60, fontSize: 24 }}>
+                    <Avatar sx={{ bgcolor: '#8b5cf6', width: 60, height: 60, fontSize: 24 }}>
                       {(selectedTrade.userId?.fullName || selectedTrade.userName || 'U').charAt(0)}
                     </Avatar>
                     <Box>
@@ -758,7 +780,7 @@ const TradingManagement = () => {
                       <Typography variant="body2">
                         <strong>P&L:</strong> 
                         <span style={{ 
-                          color: selectedTrade.pnl >= 0 ? '#00D395' : '#FF6B6B',
+                          color: selectedTrade.pnl >= 0 ? '#8b5cf6' : '#f43f5e',
                           marginLeft: 8,
                           fontWeight: 'bold'
                         }}>
@@ -768,7 +790,7 @@ const TradingManagement = () => {
                       <Typography variant="body2">
                         <strong>P&L Percentage:</strong> 
                         <span style={{ 
-                          color: selectedTrade.pnlPercentage >= 0 ? '#00D395' : '#FF6B6B',
+                          color: selectedTrade.pnlPercentage >= 0 ? '#8b5cf6' : '#f43f5e',
                           marginLeft: 8
                         }}>
                           {selectedTrade.pnlPercentage?.toFixed(2)}%

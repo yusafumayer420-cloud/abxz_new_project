@@ -113,10 +113,16 @@ const FundsPage = () => {
 
   const currencies = [
     { symbol: 'USDT', name: 'Tether', balance: user?.wallet?.usdt || 0, icon: '💵' },
+    { symbol: 'USDC', name: 'USD Coin', balance: user?.wallet?.usdc || 0, icon: '💲' },
+    { symbol: 'BTC', name: 'Bitcoin', balance: user?.wallet?.btc || 0, icon: '₿' },
+    { symbol: 'ETH', name: 'Ethereum', balance: user?.wallet?.eth || 0, icon: 'Ξ' },
   ];
 
   const networks = {
     'USDT': ['ERC20', 'BEP20', 'TRC20'],
+    'USDC': ['ERC20', 'BEP20', 'TRC20', 'Polygon'],
+    'BTC': ['Bitcoin'],
+    'ETH': ['ERC20', 'BEP20'],
   };
 
   const handleVoucherChange = (e) => {
@@ -385,6 +391,7 @@ const FundsPage = () => {
                     <Card 
                       onClick={() => {
                         setDepositCurrency(crypto.symbol);
+                        setDepositChain(networks[crypto.symbol]?.[0] || 'ERC20');
                         setDepositStep(2);
                       }}
                       sx={{ 
@@ -516,8 +523,8 @@ const FundsPage = () => {
                 </Box>
 
                 <Typography variant="body2" sx={{ mb: 1 }}>Chain name</Typography>
-                <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                  {['ERC20', 'TRC20'].map((chain) => (
+                <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+                  {(networks[depositCurrency] || ['ERC20']).map((chain) => (
                     <Button
                       key={chain}
                       variant={depositChain === chain ? "contained" : "outlined"}
@@ -912,7 +919,7 @@ const FundsPage = () => {
             sx={{ 
               py: 1.5, 
               borderRadius: '50px', 
-              background: 'linear-gradient(135deg, #00D395 0%, #00B17D 100%)',
+              background: 'linear-gradient(135deg, #00E5FF 0%, #00BCD4 100%)',
               fontWeight: 'bold',
               textTransform: 'none',
               mb: 2

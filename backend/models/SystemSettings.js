@@ -13,6 +13,10 @@ const SystemSettingsSchema = new mongoose.Schema({
     type: String,
     
   },
+  tradingEnabled: {
+    type: Boolean,
+    default: true
+  },
   updatedAt: {
     type: Date,
     default: Date.now

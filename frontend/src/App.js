@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -37,9 +37,6 @@ import ExchangeHistoryPage from './pages/ExchangeHistoryPage';
 import PortfolioPage from './pages/PortfolioPage';
 import LearnMorePage from './pages/LearnMorePage';
 
-// Context
-// import { AuthProvider } from './context/AuthContext'; // already imported above
-
 // Theme
 import darkTheme from './theme';
 
@@ -57,40 +54,128 @@ const GlobalTradeResult = () => {
   );
 };
 
+// ─── Gradient colour scenes ───────────────────────────────────────────────────
+// Each scene defines 3 orb colours/positions + 5 glow corner colours.
+// Values are interpolated linearly based on scroll progress.
+const SCENES = [
+  // 0 % — Cyan / Electric Blue (default)
+  { o1c:'0,229,255',  o1x:18, o1y:20, o1r:420,
+    o2c:'79,124,255', o2x:82, o2y:30, o2r:380,
+    o3c:'124,58,237', o3x:50, o3y:85, o3r:300,
+    tl:'0,229,255',   tr:'79,124,255',
+    cl:'124,58,237',  cr:'56,100,255',  bc:'0,200,83' },
+  // 25 % — Indigo / Deep Sapphire
+  { o1c:'56,100,255',  o1x:15, o1y:25, o1r:460,
+    o2c:'99,60,255',   o2x:80, o2y:20, o2r:400,
+    o3c:'59,130,246',  o3x:45, o3y:80, o3r:340,
+    tl:'56,100,255',  tr:'99,60,255',
+    cl:'79,124,255',  cr:'59,130,246', bc:'0,229,255' },
+  // 50 % — Purple / Violet Nebula
+  { o1c:'139,92,246',  o1x:12, o1y:35, o1r:450,
+    o2c:'168,85,247',  o2x:85, o2y:40, o2r:420,
+    o3c:'124,58,237',  o3x:55, o3y:90, o3r:320,
+    tl:'124,58,237',  tr:'168,85,247',
+    cl:'139,92,246',  cr:'99,60,255',  bc:'79,124,255' },
+  // 75 % — Rose / Warm Violet
+  { o1c:'236,72,153',  o1x:20, o1y:15, o1r:430,
+    o2c:'168,85,247',  o2x:78, o2y:35, o2r:390,
+    o3c:'99,60,255',   o3x:48, o3y:88, o3r:310,
+    tl:'236,72,153',  tr:'168,85,247',
+    cl:'99,60,255',   cr:'124,58,237', bc:'236,72,153' },
+  // 100 % — Teal / Emerald Ocean
+  { o1c:'0,229,255',  o1x:10, o1y:10, o1r:440,
+    o2c:'0,200,83',   o2x:88, o2y:28, o2r:360,
+    o3c:'56,100,255', o3x:50, o3y:92, o3r:300,
+    tl:'0,200,83',    tr:'0,229,255',
+    cl:'56,100,255',  cr:'0,200,83',   bc:'0,229,255' },
+];
+
+// Interpolate a numeric CSS variable value between two scenes
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// Interpolate an RGB triplet string  "r,g,b"
+const lerpRGB = (ca, cb, t) => {
+  const [r1, g1, b1] = ca.split(',').map(Number);
+  const [r2, g2, b2] = cb.split(',').map(Number);
+  return `${Math.round(lerp(r1, r2, t))},${Math.round(lerp(g1, g2, t))},${Math.round(lerp(b1, b2, t))}`;
+};
+
+function useScrollGradient(ref, enabled) {
+  useEffect(() => {
+    if (!enabled || !ref.current) return;
+
+    const el = ref.current;
+    const segments = SCENES.length - 1;
+
+    const apply = (progress) => {
+      const scaled = Math.min(progress, 1) * segments;
+      const idx = Math.min(Math.floor(scaled), segments - 1);
+      const t   = scaled - idx;
+      const A   = SCENES[idx];
+      const B   = SCENES[idx + 1];
+
+      const rgb = (k) => lerpRGB(A[k], B[k], t);
+      const num = (k) => lerp(A[k], B[k], t);
+
+      el.style.setProperty('--g-o1c', rgb('o1c'));
+      el.style.setProperty('--g-o1x', `${num('o1x').toFixed(1)}%`);
+      el.style.setProperty('--g-o1y', `${num('o1y').toFixed(1)}%`);
+      el.style.setProperty('--g-o1r', `${num('o1r').toFixed(0)}px`);
+      el.style.setProperty('--g-o2c', rgb('o2c'));
+      el.style.setProperty('--g-o2x', `${num('o2x').toFixed(1)}%`);
+      el.style.setProperty('--g-o2y', `${num('o2y').toFixed(1)}%`);
+      el.style.setProperty('--g-o2r', `${num('o2r').toFixed(0)}px`);
+      el.style.setProperty('--g-o3c', rgb('o3c'));
+      el.style.setProperty('--g-o3x', `${num('o3x').toFixed(1)}%`);
+      el.style.setProperty('--g-o3y', `${num('o3y').toFixed(1)}%`);
+      el.style.setProperty('--g-o3r', `${num('o3r').toFixed(0)}px`);
+      el.style.setProperty('--g-tl',  rgb('tl'));
+      el.style.setProperty('--g-tr',  rgb('tr'));
+      el.style.setProperty('--g-cl',  rgb('cl'));
+      el.style.setProperty('--g-cr',  rgb('cr'));
+      el.style.setProperty('--g-bc',  rgb('bc'));
+    };
+
+    const onScroll = () => {
+      const maxScroll = Math.max(
+        document.body.scrollHeight - window.innerHeight, 1
+      );
+      apply(window.scrollY / maxScroll);
+    };
+
+    // Seed with current scroll position (handles navigation between pages)
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [enabled, ref]);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function App() {
   const [marketData, setMarketData] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate initial loading
     setLoading(false);
 
-    const handlePriceUpdate = (data) => {
-      setMarketData(data);
-    };
-
+    const handlePriceUpdate = (data) => setMarketData(data);
     socket.on('priceUpdate', handlePriceUpdate);
-
-    return () => {
-      socket.off('priceUpdate', handlePriceUpdate);
-    };
-
+    return () => socket.off('priceUpdate', handlePriceUpdate);
   }, []);
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
+  if (loading) return <LoadingScreen />;
 
   return (
     <ThemeProvider theme={darkTheme}>
       <AuthProvider>
         <CssBaseline />
         <Router>
-          <AppContent 
-            marketData={marketData} 
-            sidebarOpen={sidebarOpen} 
-            setSidebarOpen={setSidebarOpen} 
+          <AppContent
+            marketData={marketData}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
           />
         </Router>
       </AuthProvider>
@@ -99,17 +184,46 @@ function App() {
 }
 
 function AppContent({ marketData, sidebarOpen, setSidebarOpen }) {
-  const location = useLocation();
+  const location  = useLocation();
   const { showTradeResult } = React.useContext(AuthContext);
   const isHomePage = location.pathname === '/';
+  const gradientRef = useRef(null);
+
+  // Attach scroll-driven gradient (disabled on homepage)
+  useScrollGradient(gradientRef, !isHomePage);
+
+  // Seed default CSS vars on mount / page change
+  useEffect(() => {
+    if (!gradientRef.current) return;
+    const el = gradientRef.current;
+    const A = SCENES[0];
+    el.style.setProperty('--g-o1c', A.o1c);
+    el.style.setProperty('--g-o1x', `${A.o1x}%`);
+    el.style.setProperty('--g-o1y', `${A.o1y}%`);
+    el.style.setProperty('--g-o1r', `${A.o1r}px`);
+    el.style.setProperty('--g-o2c', A.o2c);
+    el.style.setProperty('--g-o2x', `${A.o2x}%`);
+    el.style.setProperty('--g-o2y', `${A.o2y}%`);
+    el.style.setProperty('--g-o2r', `${A.o2r}px`);
+    el.style.setProperty('--g-o3c', A.o3c);
+    el.style.setProperty('--g-o3x', `${A.o3x}%`);
+    el.style.setProperty('--g-o3y', `${A.o3y}%`);
+    el.style.setProperty('--g-o3r', `${A.o3r}px`);
+    el.style.setProperty('--g-tl',  A.tl);
+    el.style.setProperty('--g-tr',  A.tr);
+    el.style.setProperty('--g-cl',  A.cl);
+    el.style.setProperty('--g-cr',  A.cr);
+    el.style.setProperty('--g-bc',  A.bc);
+  }, [location.pathname]);
 
   return (
-    <div 
-      className={`App ${!isHomePage ? 'premium-gradient' : ''}`} 
-      style={{ background: 'transparent', minHeight: '100vh' }}
+    <div
+      ref={gradientRef}
+      className={`App ${!isHomePage ? 'premium-gradient' : ''}`}
+      style={{ minHeight: '100vh' }}
     >
-      <Toaster 
-        position="top-right" 
+      <Toaster
+        position="top-right"
         toastOptions={{
           style: {
             background: '#131A2E',
@@ -118,15 +232,15 @@ function AppContent({ marketData, sidebarOpen, setSidebarOpen }) {
           },
         }}
       />
-      
+
       <Routes>
         {/* Public Routes */}
-        <Route path="/login" element={<AuthPage />} />
-        <Route path="/register" element={<AuthPage isRegister />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/login"                element={<AuthPage />} />
+        <Route path="/register"             element={<AuthPage isRegister />} />
+        <Route path="/forgot-password"      element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        
+        <Route path="/verify-email"         element={<VerifyEmailPage />} />
+
         {/* Protected Routes with Layout */}
         <Route element={
           <ProtectedRoute>
@@ -139,44 +253,34 @@ function AppContent({ marketData, sidebarOpen, setSidebarOpen }) {
             </>
           </ProtectedRoute>
         }>
-          <Route path="/" element={<HomePage marketData={marketData} />} />
-          <Route path="/markets" element={<MarketPage marketData={marketData} />} />
-          <Route path="/trading/:pair?" element={<TradingPage socket={socket} />} />
-          <Route path="/funds" element={<FundsPage />} />
-          <Route path="/history" element={<TransactionHistoryPage />} />
-          <Route path="/exchange" element={<ExchangePage />} />
-          <Route path="/exchange/history" element={<ExchangeHistoryPage />} />
-          <Route path="/portfolio" element={<PortfolioPage />} />
-          <Route path="/notifications" element={<NotificationPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/support" element={<SupportPage />} />
-
-          <Route path="/news" element={<NewsPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/faq" element={<FAQPage />} />
-          <Route path="/learn-more" element={<LearnMorePage />} />
+          <Route path="/"                  element={<HomePage marketData={marketData} />} />
+          <Route path="/markets"           element={<MarketPage marketData={marketData} />} />
+          <Route path="/trading/:pair?"    element={<TradingPage socket={socket} />} />
+          <Route path="/funds"             element={<FundsPage />} />
+          <Route path="/history"           element={<TransactionHistoryPage />} />
+          <Route path="/exchange"          element={<ExchangePage />} />
+          <Route path="/exchange/history"  element={<ExchangeHistoryPage />} />
+          <Route path="/portfolio"         element={<PortfolioPage />} />
+          <Route path="/notifications"     element={<NotificationPage />} />
+          <Route path="/profile"           element={<ProfilePage />} />
+          <Route path="/support"           element={<SupportPage />} />
+          <Route path="/news"              element={<NewsPage />} />
+          <Route path="/about"             element={<AboutPage />} />
+          <Route path="/faq"               element={<FAQPage />} />
+          <Route path="/learn-more"        element={<LearnMorePage />} />
         </Route>
 
         {/* Admin Routes */}
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            <AdminPage />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/admin/*" element={
-          <ProtectedRoute>
-            <AdminPage />
-          </ProtectedRoute>
-        } />
-        
-        {/* Redirect to home if route not found */}
+        <Route path="/admin"   element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+        <Route path="/admin/*" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
       <GlobalTradeResult />
     </div>
   );
 }
-
 
 export default App;

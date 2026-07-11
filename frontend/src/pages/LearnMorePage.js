@@ -14,13 +14,13 @@ const LearnMorePage = () => {
       <motion.div initial="hidden" animate="visible" variants={fadeUp}>
         <Box sx={{ textAlign: 'center', mb: 6 }}>
           <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, background: 'linear-gradient(135deg, #00E5FF, #4F7CFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Learn More About CrokTrade
+            Learn More About Cryptosimia
           </Typography>
           <Typography variant="h5" sx={{ fontWeight: 600, color: '#94a3b8', mb: 3 }}>
             Trade Smarter. Trade Faster. Trade with Confidence.
           </Typography>
           <Typography variant="body1" sx={{ color: '#cbd5e1', lineHeight: 1.8, maxWidth: '800px', mx: 'auto' }}>
-            CrokTrade is a next-generation cryptocurrency trading platform designed to provide traders with secure, reliable, and real-time access to global digital asset markets. Whether you're a beginner exploring crypto for the first time or an experienced trader managing a diverse portfolio, CrokTrade delivers the tools you need to succeed.
+            Cryptosimia is a next-generation cryptocurrency trading platform designed to provide traders with secure, reliable, and real-time access to global digital asset markets. Whether you're a beginner exploring crypto for the first time or an experienced trader managing a diverse portfolio, Cryptosimia delivers the tools you need to succeed.
           </Typography>
         </Box>
       </motion.div>
@@ -29,7 +29,7 @@ const LearnMorePage = () => {
 
       <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
         <Typography variant="h4" sx={{ fontWeight: 700, mb: 4, textAlign: 'center' }}>
-          Why Choose CrokTrade?
+          Why Choose Cryptosimia?
         </Typography>
 
         <Grid container spacing={4} sx={{ mb: 6 }}>
@@ -122,10 +122,10 @@ const LearnMorePage = () => {
         <Box sx={{ textAlign: 'center', background: 'linear-gradient(135deg, rgba(79, 124, 255, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)', p: 6, borderRadius: 4, border: '1px solid rgba(79, 124, 255, 0.2)' }}>
           <Typography variant="h4" sx={{ fontWeight: 800, mb: 2 }}>Start Your Trading Journey Today</Typography>
           <Typography variant="body1" sx={{ color: '#cbd5e1', mb: 4, maxWidth: '700px', mx: 'auto' }}>
-            Join thousands of traders who trust CrokTrade for their cryptocurrency trading needs. Create your account, explore the markets, and take control of your financial future with a platform built for performance, security, and growth.
+            Join thousands of traders who trust Cryptosimia for their cryptocurrency trading needs. Create your account, explore the markets, and take control of your financial future with a platform built for performance, security, and growth.
           </Typography>
           <Typography variant="h6" sx={{ fontWeight: 700, color: '#00E5FF' }}>
-            Trade Smarter. Grow Faster. Welcome to CrokTrade.
+            Trade Smarter. Grow Faster. Welcome to Cryptosimia.
           </Typography>
         </Box>
       </motion.div>

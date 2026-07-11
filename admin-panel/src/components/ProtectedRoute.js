@@ -14,10 +14,10 @@ const ProtectedRoute = ({ children }) => {
           justifyContent: 'center',
           alignItems: 'center',
           height: '100vh',
-          background: 'linear-gradient(135deg, #0A0E17 0%, #131A2E 100%)',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
         }}
       >
-        <CircularProgress sx={{ color: '#00D395' }} />
+        <CircularProgress sx={{ color: '#8b5cf6' }} />
       </Box>
     );
   }

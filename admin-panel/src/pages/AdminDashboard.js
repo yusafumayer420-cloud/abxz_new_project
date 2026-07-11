@@ -114,8 +114,8 @@ const AdminDashboard = () => {
       title: 'Total Volume',
       value: `$${(stats.totalVolume || 0).toLocaleString()}`,
       change: `Today: ${stats.todayTrades || 0}`,
-      icon: <AccountBalanceWallet sx={{ fontSize: 40, color: '#00D395' }} />,
-      color: '#00D395',
+      icon: <AccountBalanceWallet sx={{ fontSize: 40, color: '#8b5cf6' }} />,
+      color: '#8b5cf6',
       progress: 60,
     },
     {
@@ -130,8 +130,8 @@ const AdminDashboard = () => {
       title: 'KYC Verified',
       value: stats.verifiedUsers?.toLocaleString() || '0',
       change: `${((stats.verifiedUsers / stats.totalUsers) * 100 || 0).toFixed(1)}% Ratio`,
-      icon: <Security sx={{ fontSize: 40, color: '#FF6B6B' }} />,
-      color: '#FF6B6B',
+      icon: <Security sx={{ fontSize: 40, color: '#f43f5e' }} />,
+      color: '#f43f5e',
       progress: stats.totalUsers ? (stats.verifiedUsers / stats.totalUsers) * 100 : 0,
     },
   ];
@@ -171,38 +171,11 @@ const AdminDashboard = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            startIcon={<Refresh />}
-            onClick={fetchStats}
-            variant="outlined"
-          >
-            Refresh
-          </Button>
-          <Button
-            startIcon={<Download />}
-            variant="contained"
-          >
-            Export
-          </Button>
-          <Button
-            endIcon={<MoreVert />}
-            onClick={handleMenuClick}
-            variant="outlined"
-          >
-            {timeRange === '7d' ? 'Last 7 Days' : timeRange === '30d' ? 'Last 30 Days' : 'Last 90 Days'}
-          </Button>
+
         </Box>
       </Box>
 
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
-        <MenuItem onClick={() => handleTimeRangeChange('7d')}>Last 7 Days</MenuItem>
-        <MenuItem onClick={() => handleTimeRangeChange('30d')}>Last 30 Days</MenuItem>
-        <MenuItem onClick={() => handleTimeRangeChange('90d')}>Last 90 Days</MenuItem>
-      </Menu>
+
 
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -225,17 +198,13 @@ const AdminDashboard = () => {
                       </Typography>
                       <Typography 
                         variant="body2" 
+                        color="text.secondary"
                         sx={{ 
-                          color: stat.change.startsWith('+') ? '#00D395' : '#FF6B6B',
                           display: 'flex',
                           alignItems: 'center',
                         }}
                       >
-                        {stat.change.startsWith('+') ? 
-                          <ArrowUpward sx={{ fontSize: 14, mr: 0.5 }} /> : 
-                          <ArrowDownward sx={{ fontSize: 14, mr: 0.5 }} />
-                        }
-                        {stat.change} from last month
+                        {stat.change}
                       </Typography>
                     </Box>
                     {stat.icon}
@@ -283,7 +252,7 @@ const AdminDashboard = () => {
                     <YAxis stroke="rgba(255,255,255,0.5)" />
                     <Tooltip 
                       contentStyle={{ 
-                        background: '#131A2E', 
+                        background: '#1e293b', 
                         border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: 8,
                       }}
@@ -373,7 +342,7 @@ const AdminDashboard = () => {
                       <TableRow key={activity.id} hover>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Avatar sx={{ bgcolor: '#00D395', width: 32, height: 32 }}>
+                            <Avatar sx={{ bgcolor: '#8b5cf6', width: 32, height: 32 }}>
                               {activity.user.charAt(0)}
                             </Avatar>
                             <Box>
@@ -456,12 +425,14 @@ const AdminDashboard = () => {
                           </Typography>
                         </Box>
                       </Box>
-                      <Chip
-                        label={stat.change}
-                        size="small"
-                        color={stat.change.startsWith('+') ? 'success' : 'error'}
-                        sx={{ fontWeight: 'bold' }}
-                      />
+                      {stat.change && (
+                        <Chip
+                          label={stat.change}
+                          size="small"
+                          color={stat.change.startsWith('+') ? 'success' : 'error'}
+                          sx={{ fontWeight: 'bold' }}
+                        />
+                      )}
                     </Box>
                   </motion.div>
                 ))}

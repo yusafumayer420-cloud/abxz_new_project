@@ -180,12 +180,15 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
       position="fixed" 
       elevation={0}
       sx={{ 
-        background: 'rgba(19, 26, 46, 0.95)',
+        background: 'rgba(10, 15, 29, 0.95)',
         backdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         zIndex: (theme) => theme.zIndex.drawer + 1,
-        transition: 'margin-left 0.3s ease',
-        ml: sidebarOpen ? '280px' : 0,
+        transition: 'width 0.3s ease, margin-left 0.3s ease',
+        ...(sidebarOpen && {
+          width: 'calc(100% - 280px)',
+          ml: '280px',
+        }),
       }}
     >
       <Toolbar>
@@ -211,7 +214,7 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
               <Link 
                 color="inherit" 
                 onClick={() => navigate('/dashboard')}
-                sx={{ cursor: 'pointer', '&:hover': { color: '#00D395' } }}
+                sx={{ cursor: 'pointer', '&:hover': { color: '#8b5cf6' } }}
               >
                 Admin
               </Link>
@@ -222,8 +225,8 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
                   onClick={() => navigate(crumb.path)}
                   sx={{ 
                     cursor: 'pointer', 
-                    '&:hover': { color: '#00D395' },
-                    color: index === getBreadcrumbs().length - 1 ? '#00D395' : 'inherit',
+                    '&:hover': { color: '#8b5cf6' },
+                    color: index === getBreadcrumbs().length - 1 ? '#8b5cf6' : 'inherit',
                     fontWeight: index === getBreadcrumbs().length - 1 ? 'bold' : 'normal',
                   }}
                 >
@@ -267,15 +270,6 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
             </IconButton>
           </motion.div>
 
-          {/* Theme Toggle */}
-          <IconButton color="inherit" onClick={handleToggleTheme}>
-            {darkMode ? <LightMode /> : <DarkMode />}
-          </IconButton>
-
-          {/* Help */}
-          <IconButton color="inherit">
-            <Help />
-          </IconButton>
 
           {/* Notifications */}
           <IconButton 
@@ -293,7 +287,7 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
             <IconButton onClick={handleProfileMenu} sx={{ p: 0, ml: 1 }}>
               <Avatar
                 sx={{
-                  bgcolor: '#00D395',
+                  bgcolor: '#8b5cf6',
                   width: 36,
                   height: 36,
                   border: '2px solid rgba(255, 255, 255, 0.1)',
@@ -310,7 +304,7 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
             size="small"
             sx={{
               bgcolor: 'rgba(0, 211, 149, 0.1)',
-              color: '#00D395',
+              color: '#8b5cf6',
               border: '1px solid rgba(0, 211, 149, 0.3)',
               fontWeight: 'bold',
             }}
@@ -328,7 +322,7 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
             mt: 1.5,
             width: 360,
             maxHeight: 400,
-            background: 'linear-gradient(135deg, #131A2E 0%, #0F172A 100%)',
+            background: 'linear-gradient(135deg, #1e293b 0%, #0F172A 100%)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
           }
         }}
@@ -394,7 +388,7 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
           sx: {
             mt: 1.5,
             minWidth: 200,
-            background: 'linear-gradient(135deg, #131A2E 0%, #0F172A 100%)',
+            background: 'linear-gradient(135deg, #1e293b 0%, #0F172A 100%)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
           }
         }}
@@ -404,7 +398,7 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
             {admin?.name || 'Admin User'}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {admin?.email || 'admin@croktrade.com'}
+            {admin?.email || 'admin@cryptosimia.com'}
           </Typography>
         </Box>
 

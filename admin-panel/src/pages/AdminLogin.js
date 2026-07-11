@@ -63,7 +63,7 @@ const AdminLogin = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0A0E17 0%, #131A2E 100%)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -124,7 +124,7 @@ const AdminLogin = () => {
                     sx={{
                       width: 80,
                       height: 80,
-                      background: 'linear-gradient(135deg, #00D395 0%, #00B884 100%)',
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
@@ -137,10 +137,8 @@ const AdminLogin = () => {
                   </Box>
                 </motion.div>
                 
-                <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
-                  Crok<span style={{ color: '#00D395' }}>Trade</span>
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#00D395', mb: 1 }}>
+                <Box component="img" src="/logo.png" alt="Cryptosimia Logo" sx={{ height: 60, mb: 1 }} />
+                <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#8b5cf6', mb: 1 }}>
                   Admin Portal
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -233,7 +231,7 @@ const AdminLogin = () => {
                   <Link
                     href="#"
                     sx={{
-                      color: '#00D395',
+                      color: '#8b5cf6',
                       textDecoration: 'none',
                       fontSize: '0.875rem',
                       '&:hover': { textDecoration: 'underline' },
@@ -252,14 +250,14 @@ const AdminLogin = () => {
                     disabled={loading}
                     startIcon={<Login />}
                     sx={{
-                      background: 'linear-gradient(135deg, #00D395 0%, #00B884 100%)',
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                       fontWeight: 'bold',
                       py: 1.5,
                       fontSize: '1rem',
                       borderRadius: 3,
                       boxShadow: '0 4px 20px rgba(0, 211, 149, 0.3)',
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #00B884 0%, #00A071 100%)',
+                        background: 'linear-gradient(135deg, #7c3aed 0%, #00A071 100%)',
                         boxShadow: '0 6px 25px rgba(0, 211, 149, 0.4)',
                       },
                       '&:disabled': {
@@ -275,7 +273,7 @@ const AdminLogin = () => {
               {/* Footer */}
               <Box sx={{ mt: 4, textAlign: 'center' }}>
                 <Typography variant="caption" color="text.secondary">
-                  © {new Date().getFullYear()} CrokTrade Admin Portal. All rights reserved.
+                  © {new Date().getFullYear()} Cryptosimia Admin Portal. All rights reserved.
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
                   v2.1.0 • Last updated: Today
