@@ -378,7 +378,7 @@ const HomePage = ({ marketData }) => {
                 <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
                   <Button
                     variant="outlined"
-                    onClick={() => navigate('/markets')}
+                    onClick={() => navigate('/learn-more')}
                     sx={{
                       px: 3.5,
                       py: 1.35,
