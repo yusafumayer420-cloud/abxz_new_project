@@ -155,9 +155,29 @@ router.get('/pairs', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Binance Klines (OHLCV) Proxy — used by TradingChart for historical candles
+// Coinbase Candles (OHLCV) Proxy — used by TradingChart for historical candles
 // GET /api/market/klines?symbol=BTCUSDT&interval=1m&limit=500
 // ---------------------------------------------------------------------------
+
+// Map Binance-style intervals → Coinbase granularity (seconds)
+// Coinbase supported: 60, 300, 900, 3600, 21600, 86400
+const COINBASE_GRANULARITY_MAP = {
+  '1m':  60,
+  '5m':  300,
+  '15m': 900,
+  '1h':  3600,
+  '4h':  21600,  // Coinbase doesn't support 4h; use 6h (21600) as closest
+  '6h':  21600,
+  '1d':  86400,
+};
+
+// Convert BTCUSDT → BTC-USD for Coinbase product IDs
+function toCoinbaseSymbol(symbol) {
+  // Strip trailing USDT/USD and rebuild as BASE-USD
+  const base = symbol.replace(/USDT$/, '').replace(/USD$/, '');
+  return `${base}-USD`;
+}
+
 router.get('/klines', async (req, res) => {
   try {
     const { symbol = 'BTCUSDT', interval = '1m', limit = 500 } = req.query;
@@ -167,6 +187,12 @@ router.get('/klines', async (req, res) => {
     const safeInterval = String(interval).replace(/[^0-9a-zA-Z]/g, '');
     const safeLimit    = Math.min(Math.max(parseInt(limit, 10) || 500, 1), 1000);
 
+    // Map to Coinbase granularity in seconds (default to 60 if unrecognised)
+    const granularity = COINBASE_GRANULARITY_MAP[safeInterval] || 60;
+
+    // Convert symbol format: BTCUSDT → BTC-USD
+    const coinbaseSymbol = toCoinbaseSymbol(safeSymbol);
+
     // Check cache first
     const cacheKey = `${safeSymbol}_${safeInterval}_${safeLimit}`;
     const cachedEntry = klineCache.get(cacheKey);
@@ -174,26 +200,39 @@ router.get('/klines', async (req, res) => {
       return res.json(cachedEntry.data);
     }
 
-    const response = await axios.get('https://api.binance.com/api/v3/klines', {
-      params: {
-        symbol:   safeSymbol,
-        interval: safeInterval,
-        limit:    safeLimit
-      },
-      timeout: 10000,
-      headers: { 'User-Agent': 'Cryptosimia/1.0' }
-    });
+    // Coinbase Exchange candles endpoint
+    // Response: [[time(unix), low, high, open, close, volume], ...] — newest first
+    const response = await axios.get(
+      `https://api.exchange.coinbase.com/products/${coinbaseSymbol}/candles`,
+      {
+        params: { granularity, limit: safeLimit },
+        timeout: 10000,
+        headers: {
+          'User-Agent': 'Cryptosimia/1.0',
+          'Accept':     'application/json',
+        },
+      }
+    );
 
-    // Transform Binance klines format into lightweight-charts format:
-    // [openTime, open, high, low, close, volume, ...]
-    const candles = response.data.map(k => ({
-      time:   Math.floor(k[0] / 1000), // Unix seconds
-      open:   parseFloat(k[1]),
-      high:   parseFloat(k[2]),
-      low:    parseFloat(k[3]),
-      close:  parseFloat(k[4]),
-      volume: parseFloat(k[5])
-    }));
+    const rawList = response.data;
+    if (!Array.isArray(rawList) || rawList.length === 0) {
+      throw new Error('Unexpected response from Coinbase candles API');
+    }
+
+    // Transform Coinbase candle format into lightweight-charts format:
+    // Each entry: [time(unix sec), low, high, open, close, volume]
+    // Coinbase returns newest-first → reverse to get oldest-first for the chart
+    const candles = rawList
+      .slice()
+      .reverse()
+      .map(k => ({
+        time:   k[0],            // already Unix seconds
+        open:   parseFloat(k[3]),
+        high:   parseFloat(k[2]),
+        low:    parseFloat(k[1]),
+        close:  parseFloat(k[4]),
+        volume: parseFloat(k[5]),
+      }));
 
     // Save to cache
     klineCache.set(cacheKey, { timestamp: Date.now(), data: candles });
@@ -201,7 +240,7 @@ router.get('/klines', async (req, res) => {
     res.json(candles);
   } catch (error) {
     console.error('Klines proxy error:', error.message);
-    res.status(502).json({ message: 'Failed to fetch klines from Binance', error: error.message });
+    res.status(502).json({ message: 'Failed to fetch klines from Coinbase', error: error.message });
   }
 });
 

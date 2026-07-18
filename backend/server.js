@@ -42,7 +42,8 @@ let allowedOrigins = [
   'https://cryptosimia.com',
   'https://www.cryptosimia.com',
   'https://admin.cryptosimia.com',
-  'https://www.admin.cryptosimia.com'
+  'https://www.admin.cryptosimia.com',
+  'https://api.cryptosimia.com'
 ];
 
 // Helper to add an origin and optionally its www variant
