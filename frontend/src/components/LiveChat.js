@@ -40,7 +40,9 @@ import {
   FilterList,
   AttachFile,
   HeadsetMic,
+  ContentCopy,
 } from '@mui/icons-material';
+import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
 import io from 'socket.io-client';
@@ -99,6 +101,13 @@ const LiveChat = () => {
 
     chatSocket.on('connect', () => {
       console.log('Chat socket connected');
+    });
+
+    chatSocket.on('connect_error', (err) => {
+      console.error('Chat socket connect_error:', err.message);
+      if (err.message.includes('Authentication')) {
+        toast.error('Chat auth failed. Please try logging out and back in.');
+      }
     });
 
     chatSocket.on('chat_history', (history) => {
@@ -264,6 +273,27 @@ const LiveChat = () => {
     }
     socket.emit('typing', { isTyping: false, ticketId: selectedTicket?._id });
     setIsTyping(false);
+  };
+  
+  const handleSuggestionClick = (question) => {
+    if (!user) {
+      toast.error('Please login to use live chat');
+      return;
+    }
+    if (!socket) {
+      toast.error('Not connected to chat server. Please wait or refresh.');
+      return;
+    }
+    if (!socket.connected) {
+      toast.error('Chat disconnected. Please refresh the page to reconnect.');
+      return;
+    }
+    
+    socket.emit('send_message', {
+      message: question,
+      ticketId: selectedTicket?._id,
+      attachments: []
+    });
   };
   
   const handleFileChange = (e) => {
@@ -532,9 +562,36 @@ const LiveChat = () => {
                                       ))}
                                     </Box>
                                   )}
-                                  <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                                  <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere', whiteSpace: 'pre-line' }}>
                                     {message.message}
                                   </Typography>
+                                  {message.message && message.message.includes('Wallet Address:') && (
+                                    <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <Typography variant="caption" sx={{ color: '#00E5FF', fontWeight: 600 }}>
+                                        Copy Wallet Address
+                                      </Typography>
+                                      <Tooltip title="Copy Address">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => {
+                                            const lines = message.message.split('\n');
+                                            const addrIdx = lines.findIndex(l => l.includes('Wallet Address:'));
+                                            if (addrIdx !== -1 && lines[addrIdx + 1]) {
+                                              const addr = lines[addrIdx + 1].trim();
+                                              navigator.clipboard.writeText(addr);
+                                              toast.success('Wallet address copied to clipboard!');
+                                            } else {
+                                              navigator.clipboard.writeText(message.message);
+                                              toast.success('Copied!');
+                                            }
+                                          }}
+                                          sx={{ color: '#00E5FF', bgcolor: 'rgba(0, 229, 255, 0.1)', '&:hover': { bgcolor: 'rgba(0, 229, 255, 0.25)' } }}
+                                        >
+                                          <ContentCopy fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Box>
+                                  )}
                                 </Box>
                               </Box>
                             </motion.div>
@@ -581,6 +638,11 @@ const LiveChat = () => {
 
                       {/* Input Area */}
                       <Box sx={{ p: 2, borderTop: '1px solid rgba(0, 229, 255, 0.1)', bgcolor: 'rgba(13,17,23,0.95)' }}>
+                        <Box sx={{ display: 'flex', gap: 1, mb: 1.5, overflowX: 'auto', pb: 0.5, '&::-webkit-scrollbar': { height: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0, 229, 255, 0.3)', borderRadius: 2 } }}>
+                          <Chip label="What is the deposit address of USDT?" onClick={() => handleSuggestionClick('What is the deposit address of USDT?')} size="small" sx={{ bgcolor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', '&:hover': { bgcolor: 'rgba(0, 229, 255, 0.2)' }, cursor: 'pointer', flexShrink: 0 }} />
+                          <Chip label="What is the deposit address of BTC?" onClick={() => handleSuggestionClick('What is the deposit address of BTC?')} size="small" sx={{ bgcolor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', '&:hover': { bgcolor: 'rgba(0, 229, 255, 0.2)' }, cursor: 'pointer', flexShrink: 0 }} />
+                          <Chip label="What is the deposit address of ETH?" onClick={() => handleSuggestionClick('What is the deposit address of ETH?')} size="small" sx={{ bgcolor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', '&:hover': { bgcolor: 'rgba(0, 229, 255, 0.2)' }, cursor: 'pointer', flexShrink: 0 }} />
+                        </Box>
                         {selectedFile && (
                           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
                             <Typography variant="caption" sx={{ flexGrow: 1 }} noWrap>

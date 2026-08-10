@@ -32,11 +32,10 @@ import {
   Refresh,
   Download,
   BarChart,
-  PieChart,
   Timeline,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../api';
 import { toast } from 'react-hot-toast';
 
@@ -54,7 +53,6 @@ const AdminDashboard = () => {
   });
 
   const [signupData, setSignupData] = useState([]);
-  const [pieData, setPieData] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -73,13 +71,6 @@ const AdminDashboard = () => {
           day: s._id,
           users: s.count
         })));
-      }
-
-      // Update Pie Data from real asset distribution
-      if (data.assetDistribution) {
-        setPieData([
-          { name: 'USDT', value: data.assetDistribution.usdt || 0, color: '#26A17B' },
-        ]);
       }
 
       // Use real recent activities
@@ -232,7 +223,7 @@ const AdminDashboard = () => {
       {/* Charts Section */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {/* Volume Chart */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12}>
           <Card className="admin-card">
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -271,52 +262,12 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-
-        {/* Pie Chart */}
-        <Grid item xs={12} md={4}>
-          <Card className="admin-card">
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
-                Asset Distribution
-              </Typography>
-              <Box sx={{ height: 300, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <ResponsiveContainer width="100%" height="80%">
-                  <RechartsPieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1, mt: 2 }}>
-                  {pieData.map((item, index) => (
-                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-                      <Box sx={{ width: 12, height: 12, bgcolor: item.color, borderRadius: '50%', mr: 1 }} />
-                      <Typography variant="caption">{item.name}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
       </Grid>
 
-      {/* Recent Activities & Quick Stats */}
+      {/* Recent Activities */}
       <Grid container spacing={3}>
         {/* Recent Activities */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12}>
           <Card className="admin-card">
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -382,73 +333,6 @@ const AdminDashboard = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Quick Stats */}
-        <Grid item xs={12} md={4}>
-          <Card className="admin-card">
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
-                Quick Stats
-              </Typography>
-              <Box sx={{ '& > *': { mb: 2 } }}>
-                {[
-                  { label: 'Total Users', value: stats.totalUsers || '0', change: '', icon: '👥' },
-                  { label: 'Avg. Trade Size', value: `$${(stats.quickStats?.avgTradeSize || 0).toLocaleString()}`, change: '', icon: '💰' },
-                  { label: 'Support Tickets', value: stats.quickStats?.openSupportTickets || '0', change: '', icon: '💬' },
-                ].map((stat, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Box
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        bgcolor: 'rgba(255, 255, 255, 0.03)',
-                        border: '1px solid rgba(255, 255, 255, 0.05)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Box sx={{ fontSize: 24 }}>{stat.icon}</Box>
-                        <Box>
-                          <Typography variant="body2">{stat.label}</Typography>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                            {stat.value}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      {stat.change && (
-                        <Chip
-                          label={stat.change}
-                          size="small"
-                          color={stat.change.startsWith('+') ? 'success' : 'error'}
-                          sx={{ fontWeight: 'bold' }}
-                        />
-                      )}
-                    </Box>
-                  </motion.div>
-                ))}
-              </Box>
-
-              <Box sx={{ mt: 3, p: 2, borderRadius: 2, bgcolor: 'rgba(0, 211, 149, 0.05)', border: '1px solid rgba(0, 211, 149, 0.1)' }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                  System Status
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="caption" color="text.secondary">
-                    All systems operational
-                  </Typography>
-                  <Chip label="Normal" size="small" color="success" />
-                </Box>
-              </Box>
             </CardContent>
           </Card>
         </Grid>

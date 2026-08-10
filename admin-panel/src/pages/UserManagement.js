@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box, Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Chip, Button, TextField, InputAdornment, IconButton,
   Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Avatar,
   Badge, Tooltip, Tabs, Tab, Alert, LinearProgress, FormControlLabel, Switch
 } from '@mui/material';
+import { io } from 'socket.io-client';
 import {
   People, SwapVert, Search, FilterList, MoreVert, PersonAdd, Edit, Delete, Block,
   CheckCircle, Cancel, Visibility, Download, Refresh, Email, Phone, AccountBalanceWallet,
@@ -16,6 +17,8 @@ import { toast } from 'react-hot-toast';
 import api from '../api';
 
 const UserManagement = () => {
+  const socketRef = useRef(null);
+  const [userStatuses, setUserStatuses] = useState({});
   const [users, setUsers] = useState([]);
   const [totalUsersCount, setTotalUsersCount] = useState(0);
   const [totalPlatformUsers, setTotalPlatformUsers] = useState(0);
@@ -28,12 +31,39 @@ const UserManagement = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [viewDialog, setViewDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
+
+
+  // Initialize socket connection and listen for user status updates
+  useEffect(() => {
+    // Create socket instance
+    socketRef.current = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000');
+    // Request current user status list
+    socketRef.current.on('connect', () => {
+      socketRef.current.emit('get_user_status');
+    });
+    const handleStatus = (list) => {
+      const map = {};
+      list.forEach(item => {
+        map[item.userId] = { ip: item.ip, online: item.online };
+      });
+      setUserStatuses(map);
+    };
+    socketRef.current.on('user_status', handleStatus);
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off('user_status', handleStatus);
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
+
   const [activeTab, setActiveTab] = useState(0);
   const [editData, setEditData] = useState({
     fullName: '',
     phone: '',
     kycStatus: '',
     deliveryTradeEnabled: true,
+    canViewDepositAddress: false,
     wallet: {
       usdt: 0
     }
@@ -92,6 +122,7 @@ const UserManagement = () => {
       phone: user.phone || '',
       kycStatus: user.kycStatus || 'unverified',
       deliveryTradeEnabled: user.deliveryTradeEnabled !== undefined ? user.deliveryTradeEnabled : true,
+      canViewDepositAddress: user.canViewDepositAddress === true,
       wallet: {
         usdt: user.wallet?.usdt || 0,
       }
@@ -199,6 +230,13 @@ const UserManagement = () => {
 
   const getUserBalance = (user) => {
     return user.wallet?.usdt || 0;
+  };
+
+  const formatIpAddress = (ip) => {
+    if (!ip) return '-';
+    if (ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1') return 'Localhost';
+    if (ip.startsWith('::ffff:')) return ip.replace('::ffff:', '');
+    return ip;
   };
 
   const StatsCard = ({ title, value, icon, color, change }) => (
@@ -388,6 +426,7 @@ const UserManagement = () => {
                   <TableRow>
                     <TableCell>User</TableCell>
                     <TableCell>Contact</TableCell>
+                    <TableCell>IP</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>KYC</TableCell>
                     <TableCell>Delivery Trade</TableCell>
@@ -427,11 +466,12 @@ const UserManagement = () => {
                           </Typography>
                         </Box>
                       </TableCell>
+                      <TableCell>{formatIpAddress(userStatuses[user._id]?.ip || user.lastIpAddress)}</TableCell>
                       <TableCell>
                         <Chip
-                          label={getStatusLabel(user)}
+                          label={userStatuses[user._id]?.online ? 'Online' : 'Offline'}
                           size="small"
-                          color={getStatusColor(user)}
+                          color={userStatuses[user._id]?.online ? 'success' : 'default'}
                         />
                       </TableCell>
                       <TableCell>
@@ -569,6 +609,8 @@ const UserManagement = () => {
                         <Chip label={getStatusLabel(selectedUser)} color={getStatusColor(selectedUser)} />
                         <Chip label={selectedUser.kycStatus} color={getKYCColor(selectedUser.kycStatus)} />
                         <Chip label={selectedUser.role} color="primary" />
+                        <Chip label={userStatuses[selectedUser._id]?.online ? 'Online' : 'Offline'} color={userStatuses[selectedUser._id]?.online ? 'success' : 'default'} />
+                        <Box sx={{ mt: 1 }}>{formatIpAddress(userStatuses[selectedUser._id]?.ip || selectedUser.lastIpAddress)}</Box>
                       </Box>
                     </Box>
                   </Box>
@@ -688,6 +730,24 @@ const UserManagement = () => {
                   <SwapVert sx={{ fontSize: 16, color: editData.deliveryTradeEnabled ? '#8b5cf6' : '#f43f5e' }} />
                   <Typography variant="body2" sx={{ color: editData.deliveryTradeEnabled ? '#8b5cf6' : '#f43f5e', fontWeight: 'bold' }}>
                     Delivery Trade Control: {editData.deliveryTradeEnabled ? 'Force Win' : 'Force Loss'}
+                  </Typography>
+                </Box>
+              }
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={editData.canViewDepositAddress}
+                  onChange={(e) => setEditData({ ...editData, canViewDepositAddress: e.target.checked })}
+                  color="primary"
+                />
+              }
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <AccountBalanceWallet sx={{ fontSize: 16, color: editData.canViewDepositAddress ? '#00D395' : '#8b93a6' }} />
+                  <Typography variant="body2" sx={{ color: editData.canViewDepositAddress ? '#00D395' : '#8b93a6', fontWeight: 'bold' }}>
+                    Deposit Address Visibility: {editData.canViewDepositAddress ? 'Allowed' : 'Hidden'}
                   </Typography>
                 </Box>
               }

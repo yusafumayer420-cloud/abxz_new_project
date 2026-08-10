@@ -166,6 +166,19 @@ const AdminHeader = ({ onMenuClick, sidebarOpen }) => {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  useEffect(() => {
+    const unread = notifications.filter(n => !n.read);
+    const counts = {
+      total: unread.length,
+      kyc: unread.filter(n => n.type === 'kyc').length,
+      transactions: unread.filter(n => ['withdrawal', 'deposit'].includes(n.type)).length,
+      users: unread.filter(n => n.type === 'user').length,
+      support: unread.filter(n => n.type === 'support').length,
+      trading: unread.filter(n => ['trade', 'trading'].includes(n.type)).length,
+    };
+    window.dispatchEvent(new CustomEvent('unreadNotificationsChange', { detail: counts }));
+  }, [notifications]);
+
   const handleRefresh = () => {
     window.location.reload();
   };

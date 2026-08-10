@@ -215,7 +215,26 @@ const HomePage = ({ marketData }) => {
 
   /* ---- Data ---- */
   useEffect(() => {
-    setBalance(user?.wallet?.usdt || 0);
+    if (!user || !user.wallet) {
+      setBalance(0);
+      return;
+    }
+    
+    let total = user.wallet.usdt || 0;
+    
+    if (marketData && marketData.length > 0) {
+      Object.keys(user.wallet).forEach(key => {
+        if (key !== 'usdt' && typeof user.wallet[key] === 'number') {
+          const coinSymbol = key.toUpperCase();
+          const marketCoin = marketData.find(m => m.symbol && m.symbol.split('/')[0] === coinSymbol);
+          if (marketCoin && marketCoin.price) {
+            total += user.wallet[key] * marketCoin.price;
+          }
+        }
+      });
+    }
+    
+    setBalance(total);
   }, [user, marketData]);
 
   useEffect(() => {
@@ -240,7 +259,8 @@ const HomePage = ({ marketData }) => {
   /* ---- Market filtering ---- */
   const sortedMarket = useMemo(() => {
     if (!marketData || marketData.length === 0) return [];
-    const sorted = [...marketData];
+    const validData = marketData.filter(m => m && parseFloat(m.price || 0) > 0 && !m.symbol?.includes('MATIC') && !m.symbol?.includes('TRX'));
+    const sorted = [...validData];
     if (marketTab === 0) return sorted.sort((a, b) => b.change24h - a.change24h).slice(0, 10);
     if (marketTab === 1) return sorted.sort((a, b) => a.change24h - b.change24h).slice(0, 10);
     return sorted.sort((a, b) => (b.volume || 0) - (a.volume || 0)).slice(0, 10);

@@ -29,6 +29,7 @@ const TradeResultModal = ({ open, onClose, trade, currentPrice }) => {
       disableEscapeKeyDown
       fullWidth
       maxWidth="xs"
+      sx={{ zIndex: 99999 }}
       PaperProps={{
         sx: {
           bgcolor: 'rgba(23, 27, 38, 0.95)',
@@ -43,11 +44,22 @@ const TradeResultModal = ({ open, onClose, trade, currentPrice }) => {
     >
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ position: 'relative', p: 3 }}>
-
+          <IconButton
+            onClick={onClose}
+            sx={{
+              position: 'absolute',
+              right: 12,
+              top: 12,
+              color: 'rgba(255, 255, 255, 0.6)',
+              '&:hover': { color: '#fff' },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
 
           {/* Title */}
           <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 4 }}>
-            {trade.pair} Delivery
+            {trade.pair || 'Crypto'} Delivery
           </Typography>
 
           {/* Details */}
@@ -55,16 +67,10 @@ const TradeResultModal = ({ open, onClose, trade, currentPrice }) => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <Typography color="text.secondary">Purchase price</Typography>
               <Typography sx={{ fontWeight: 'bold' }}>
-                {trade.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                {Number(trade.price).toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </Typography>
             </Box>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography color="text.secondary">Current price</Typography>
-              <Typography sx={{ fontWeight: 'bold', color: '#00D395' }}>
-                {currentPrice ? currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2 }) : trade.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </Typography>
-            </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <Typography color="text.secondary">Direction</Typography>
@@ -91,7 +97,7 @@ const TradeResultModal = ({ open, onClose, trade, currentPrice }) => {
           {/* Result Message */}
           <Box sx={{ textAlign: 'center', mb: 3 }}>
             <Typography variant="h5" sx={{ fontWeight: 'bold', color: isWin ? '#00D395' : '#FF6B6B' }}>
-              {isWin ? `+${trade.profitAmount?.toFixed(2)} USDT` : `-${trade.total?.toFixed(2)} USDT`}
+              {isWin ? `+${Number(trade.profitAmount || 0).toFixed(2)} USDT` : `-${Number(trade.total || 0).toFixed(2)} USDT`}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {isWin ? 'Trade outcome: Win' : 'Trade outcome: Loss'}

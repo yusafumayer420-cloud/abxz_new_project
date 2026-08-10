@@ -96,6 +96,15 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user?._id]);
 
+  const triggerTradeResult = (trade, price) => {
+    if (!trade) return;
+    setTradeResult(trade);
+    setResultPrice(price || priceRef.current || trade.price);
+    setShowTradeResult(true);
+    localStorage.setItem('pendingTradeResult', JSON.stringify(trade));
+    localStorage.setItem('pendingResultPrice', String(price || priceRef.current || trade.price));
+  };
+
   useEffect(() => {
     // Global real-time listeners
 
@@ -128,23 +137,13 @@ export const AuthProvider = ({ children }) => {
       refreshUser();
 
       // Handle Delivery Trade Result Popups Globally
-      const updatedUserId = String(updated.userId?._id || updated.userId);
+      const updatedUserId = String(updated.userId?._id || updated.userId || '');
       const currentUserId = String(userRef.current?._id || '');
 
-      console.log(`Checking trade IDs: updated=${updatedUserId}, current=${currentUserId}`);
-
-      if (updated.tradeMode === 'delivery' && updatedUserId === currentUserId) {
-        console.log('Matched delivery trade! Showing popup.');
-        
-        // Show toasts globally removed as per user request
-
-
-        // Set popup data & persist
-        setTradeResult(updated);
-        setResultPrice(priceRef.current);
-        setShowTradeResult(true);
-        localStorage.setItem('pendingTradeResult', JSON.stringify(updated));
-        localStorage.setItem('pendingResultPrice', String(priceRef.current));
+      if (updated.tradeMode === 'delivery' && (updated.status === 'completed' || updated.status === 'cancelled')) {
+        if (!currentUserId || updatedUserId === currentUserId) {
+          triggerTradeResult(updated);
+        }
       }
     };
 
@@ -186,12 +185,6 @@ export const AuthProvider = ({ children }) => {
       socket.off('transaction_updated', handleTransactionUpdate);
       socket.off('priceUpdate', handlePriceUpdate);
       socket.off('trade_updated', handleTradeUpdate);
-
-
-      // Only emit leave_user if user exists
-      if (user) {
-        socket.emit('leave_user', user._id);
-      }
     };
   }, []);
 
@@ -313,6 +306,7 @@ export const AuthProvider = ({ children }) => {
       showTradeResult,
       tradeResult,
       resultPrice,
+      triggerTradeResult,
       closeTradeResult: () => {
         setShowTradeResult(false);
         localStorage.removeItem('pendingTradeResult');

@@ -99,7 +99,7 @@ const MarketPage = ({ marketData }) => {
     { pair: 'DOT/USDT', price: 6.45, change24h: -0.61, volume: 210974267, marketCap: 8300000000 },
     { pair: 'LTC/USDT', price: 55.66, change24h: -2.24, volume: 9162235, marketCap: 4100000000 },
     { pair: 'BNB/USDT', price: 585.42, change24h: 0.45, volume: 1487543210, marketCap: 90000000000 },
-    { pair: 'MATIC/USDT', price: 0.78, change24h: 1.23, volume: 425678432, marketCap: 7200000000 },
+    { pair: 'EGLD/USDT', price: 44.21, change24h: 1.23, volume: 425678432, marketCap: 4900000000 },
     { pair: 'AVAX/USDT', price: 36.85, change24h: -0.89, volume: 325678432, marketCap: 13600000000 },
     { pair: 'LINK/USDT', price: 14.32, change24h: 2.15, volume: 456783210, marketCap: 8400000000 },
     { pair: 'UNI/USDT', price: 7.82, change24h: 1.45, volume: 187654321, marketCap: 5900000000 },
@@ -133,7 +133,7 @@ const MarketPage = ({ marketData }) => {
     { pair: 'TAO/USDT', price: 412.34, change24h: -2.67, volume: 112345678, marketCap: 3000000000 },
     { pair: 'WIF/USDT', price: 2.87, change24h: 8.91, volume: 345678901, marketCap: 2900000000 },
     { pair: 'TON/USDT', price: 6.75, change24h: 1.25, volume: 215436789, marketCap: 23500000000 },
-    { pair: 'TRX/USDT', price: 0.1245, change24h: -0.32, volume: 312546879, marketCap: 10900000000 },
+    { pair: 'XLM/USDT', price: 0.1112, change24h: -0.32, volume: 312546879, marketCap: 3100000000 },
     { pair: 'BCH/USDT', price: 456.78, change24h: 2.15, volume: 425136879, marketCap: 8900000000 },
     { pair: 'LDO/USDT', price: 2.15, change24h: -1.45, volume: 95412368, marketCap: 1900000000 },
     { pair: 'STX/USDT', price: 1.85, change24h: 4.56, volume: 125436789, marketCap: 2600000000 },
@@ -175,6 +175,13 @@ const MarketPage = ({ marketData }) => {
       default:
         data = marketData.length > 0 ? marketData : mockCryptoData;
     }
+
+    // Filter out zero price coins and MATIC/TRX
+    data = data.filter(item => {
+      const price = parseFloat(item.price || 0);
+      const symbol = item.symbol || item.pair || '';
+      return price > 0 && !symbol.includes('MATIC') && !symbol.includes('TRX');
+    });
 
     // Map symbol to pair for UI consistency and add stable sparkline data
     data = data.map(item => {

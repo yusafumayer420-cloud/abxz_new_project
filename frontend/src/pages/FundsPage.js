@@ -83,6 +83,8 @@ const FundsPage = () => {
   const [depositChain, setDepositChain] = useState('ERC20');
   const [depositVoucher, setDepositVoucher] = useState(null);
   const [voucherPreview, setVoucherPreview] = useState(null);
+  const [configuredDepositAddress, setConfiguredDepositAddress] = useState('');
+  const [depositAddressLoading, setDepositAddressLoading] = useState(false);
   const [showKycDialog, setShowKycDialog] = useState(false);
   const [selectedTx, setSelectedTx] = useState(null);
 
@@ -119,8 +121,8 @@ const FundsPage = () => {
   ];
 
   const networks = {
-    'USDT': ['ERC20', 'BEP20', 'TRC20'],
-    'USDC': ['ERC20', 'BEP20', 'TRC20', 'Polygon'],
+    'USDT': ['ERC20', 'BEP20', 'BNB'],
+    'USDC': ['ERC20', 'BEP20', 'Polygon'],
     'BTC': ['Bitcoin'],
     'ETH': ['ERC20', 'BEP20'],
   };
@@ -224,6 +226,29 @@ const FundsPage = () => {
       fetchTransactions();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (depositStep !== 2 || !user?.canViewDepositAddress) {
+      setConfiguredDepositAddress('');
+      return;
+    }
+
+    const fetchDepositAddress = async () => {
+      setDepositAddressLoading(true);
+      try {
+        const response = await axios.get('/api/wallet/deposit-address', {
+          params: { currency: depositCurrency, network: depositChain }
+        });
+        setConfiguredDepositAddress(response.data.walletAddress || '');
+      } catch {
+        setConfiguredDepositAddress('');
+      } finally {
+        setDepositAddressLoading(false);
+      }
+    };
+
+    fetchDepositAddress();
+  }, [depositStep, depositCurrency, depositChain, user?.canViewDepositAddress]);
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -543,6 +568,36 @@ const FundsPage = () => {
                   ))}
                 </Box>
 
+                {user?.canViewDepositAddress && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>Deposit address</Typography>
+                    {depositAddressLoading ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                        <CircularProgress size={24} />
+                      </Box>
+                    ) : configuredDepositAddress ? (
+                      <TextField
+                        fullWidth
+                        value={configuredDepositAddress}
+                        InputProps={{
+                          readOnly: true,
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton onClick={() => copyToClipboard(configuredDepositAddress)}>
+                                <ContentCopy />
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    ) : (
+                      <Alert severity="warning" sx={{ mb: 0 }}>
+                        No deposit address configured for {depositCurrency} ({depositChain}). Please contact support.
+                      </Alert>
+                    )}
+                  </Box>
+                )}
+
                 <Typography variant="body2" sx={{ mb: 1 }}>Payment voucher (upload a screenshot of payment details)</Typography>
                 <Box 
                   component="label"
@@ -577,8 +632,13 @@ const FundsPage = () => {
                     • If you have completed the deposit, please click the "I have deposited" button on the page and submit the receipt, otherwise the deposit cannot be posted.<br/>
                     • USDT deposit only supports the simple send method, and the deposit using other methods (send all) cannot be posted temporarily. Please understand.<br/>
                     • After you recharge to the above address, you need to confirm the entire network node before it can be credited.<br/>
-                    • Please make sure that your computer and browser are safe to prevent information from being tampered with or leaked.<br/>
-                    • <strong>Deposit address provides by the customer support service.</strong>
+                    • Please make sure that your computer and browser are safe to prevent information from being tampered with or leaked.
+                    {!user?.canViewDepositAddress && (
+                      <>
+                        <br/>
+                        • <strong>Deposit address provides by the customer support service.</strong>
+                      </>
+                    )}
                   </Typography>
                 </Box>
 

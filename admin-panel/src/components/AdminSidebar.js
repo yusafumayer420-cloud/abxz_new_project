@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Drawer,
   List,
@@ -13,6 +13,7 @@ import {
   Collapse,
   Chip,
   Tooltip,
+  Badge,
 } from '@mui/material';
 import {
   Dashboard,
@@ -41,6 +42,27 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
   const location = useLocation();
   const { admin, logout } = useAdminAuth();
   const [openSubmenu, setOpenSubmenu] = useState({});
+  const [unreadCounts, setUnreadCounts] = useState({
+    total: 0, kyc: 0, transactions: 0, users: 0, support: 0, trading: 0
+  });
+
+  useEffect(() => {
+    const handleUnreadChange = (e) => setUnreadCounts(e.detail);
+    window.addEventListener('unreadNotificationsChange', handleUnreadChange);
+    return () => window.removeEventListener('unreadNotificationsChange', handleUnreadChange);
+  }, []);
+
+  const getBadgeCount = (text) => {
+    switch (text) {
+      case 'Notifications': return unreadCounts.total;
+      case 'KYC Verification': return unreadCounts.kyc;
+      case 'Transactions': return unreadCounts.transactions;
+      case 'User Management': return unreadCounts.users;
+      case 'Support Center': return unreadCounts.support;
+      case 'Trading Management': return unreadCounts.trading;
+      default: return 0;
+    }
+  };
 
   const mainMenuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
@@ -48,9 +70,9 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
     { text: 'KYC Verification', icon: <Security />, path: '/kyc' },
     { text: 'Trading Management', icon: <TrendingUp />, path: '/trading' },
     { text: 'Transactions', icon: <AccountBalanceWallet />, path: '/transactions' },
+    { text: 'Deposit Addresses', icon: <Receipt />, path: '/deposit-addresses' },
     { text: 'Notifications', icon: <Notifications />, path: '/notifications' },
     { text: 'Support Center', icon: <SupportAgent />, path: '/support' },
-
     { text: 'System Settings', icon: <Settings />, path: '/settings' },
   ];
 
@@ -144,7 +166,13 @@ const AdminSidebar = ({ open, onClose, isMobile }) => {
                   color: isActive(item.path) ? '#8b5cf6' : 'white', 
                   minWidth: 40,
                 }}>
-                  {item.icon}
+                  {getBadgeCount(item.text) > 0 ? (
+                    <Badge badgeContent={getBadgeCount(item.text)} color="error">
+                      {item.icon}
+                    </Badge>
+                  ) : (
+                    item.icon
+                  )}
                 </ListItemIcon>
                 <ListItemText 
                   primary={

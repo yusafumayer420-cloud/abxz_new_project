@@ -103,6 +103,10 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  canViewDepositAddress: {
+    type: Boolean,
+    default: false
+  },
   passwordChangedAt: {
     type: Date,
     default: Date.now
@@ -127,7 +131,8 @@ const UserSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  lastIpAddress: String
 }
 );
 

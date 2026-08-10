@@ -48,7 +48,7 @@ export const TRADING_PAIRS = [
 export const NETWORKS = {
   'BTC': ['BTC Network', 'BEP20'],
   'ETH': ['ERC20', 'BEP20'],
-  'USDT': ['ERC20', 'BEP20', 'TRC20'],
+  'USDT': ['ERC20', 'BEP20', 'BNB'],
   'SOL': ['SOL Network'],
 };
 

@@ -69,6 +69,8 @@ const TradingManagement = () => {
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [viewDialog, setViewDialog] = useState(false);
+  const [editDialog, setEditDialog] = useState(false);
+  const [editOutcome, setEditOutcome] = useState('win');
   const [activeTab, setActiveTab] = useState(0);
   const [filters, setFilters] = useState({
     pair: '',
@@ -310,8 +312,26 @@ const TradingManagement = () => {
   };
 
   const handleEditTrade = () => {
-    toast(`Edit trade ${selectedTrade?._id}`);
+    if (selectedTrade) {
+      setEditOutcome(selectedTrade.outcome || 'win');
+      setEditDialog(true);
+    }
     handleMenuClose();
+  };
+
+  const handleSaveEditTrade = async () => {
+    if (!selectedTrade) return;
+    setProcessingId(selectedTrade._id);
+    try {
+      await api.put(`/api/trading/order/${selectedTrade._id}/outcome`, { outcome: editOutcome });
+      toast.success(`Trade updated successfully`);
+      fetchTrades();
+      setEditDialog(false);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to edit trade');
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -835,6 +855,42 @@ const TradingManagement = () => {
             </DialogActions>
           </>
         )}
+      </Dialog>
+
+      {/* Edit Trade Dialog */}
+      <Dialog
+        open={editDialog}
+        onClose={() => setEditDialog(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Edit Trade Outcome</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>Outcome</InputLabel>
+              <Select
+                value={editOutcome}
+                label="Outcome"
+                onChange={(e) => setEditOutcome(e.target.value)}
+              >
+                <MenuItem value="win">Win</MenuItem>
+                <MenuItem value="loss">Loss</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialog(false)}>Cancel</Button>
+          <Button 
+            onClick={handleSaveEditTrade} 
+            variant="contained" 
+            color="primary"
+            disabled={processingId === selectedTrade?._id}
+          >
+            {processingId === selectedTrade?._id ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

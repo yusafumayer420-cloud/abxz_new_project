@@ -150,6 +150,9 @@ router.post('/login', async (req, res) => {
       status: 'success'
     });
     
+    user.lastIpAddress = req.ip || req.connection?.remoteAddress || '';
+    await user.save();
+    
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -164,7 +167,8 @@ router.post('/login', async (req, res) => {
         fullName: user.fullName,
         wallet: user.wallet,
         role: user.role,
-        kycStatus: user.kycStatus
+        kycStatus: user.kycStatus,
+        canViewDepositAddress: user.canViewDepositAddress === true
       }
     });
   } catch (error) {
@@ -204,32 +208,15 @@ router.post('/verify-otp', async (req, res) => {
         wallet: { usdt: 0, btc: 0, eth: 0, sol: 0 },
         isVerified: true,
         referralCode,
-        referredBy: pending.referredBy
+        referredBy: pending.referredBy,
+        lastIpAddress: req.ip || req.connection?.remoteAddress || ''
       });
 
       // Clean up pending registration
       await PendingRegistration.deleteOne({ email });
 
       // Handle Referral Reward
-      if (pending.referredBy) {
-        const referrer = await User.findById(pending.referredBy);
-        if (referrer) {
-          referrer.wallet.usdt = (referrer.wallet.usdt || 0) + 5;
-          await referrer.save();
-
-          await WalletTransaction.create({
-            userId: referrer._id,
-            type: 'deposit',
-            currency: 'USDT',
-            amount: 5,
-            status: 'completed',
-            metadata: {
-              notes: `Referral Reward for ${user.fullName}`,
-              referredUser: user.email
-            }
-          });
-        }
-      }
+      // Referral reward functionality has been removed.
 
       // Create Admin Notification
       createAdminNotification(req.app.get('io'), {
@@ -253,7 +240,8 @@ router.post('/verify-otp', async (req, res) => {
           fullName: user.fullName,
           wallet: user.wallet,
           role: user.role,
-          kycStatus: user.kycStatus
+          kycStatus: user.kycStatus,
+        canViewDepositAddress: user.canViewDepositAddress === true
         },
         message: 'Email verified and account created successfully!'
       });
@@ -273,6 +261,7 @@ router.post('/verify-otp', async (req, res) => {
     user.isVerified = true;
     user.verificationOTP = undefined;
     user.verificationOTPExpires = undefined;
+    user.lastIpAddress = req.ip || req.connection?.remoteAddress || '';
     await user.save();
 
     // Create Admin Notification now that user is verified
@@ -297,7 +286,8 @@ router.post('/verify-otp', async (req, res) => {
         fullName: user.fullName,
         wallet: user.wallet,
         role: user.role,
-        kycStatus: user.kycStatus
+        kycStatus: user.kycStatus,
+        canViewDepositAddress: user.canViewDepositAddress === true
       },
       message: 'Email verified successfully'
     });

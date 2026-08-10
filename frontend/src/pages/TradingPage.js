@@ -193,6 +193,7 @@ const DeliveryOrderBook = ({ orderBook, price }) => {
 // DeliveryTab component
 // ---------------------------------------------------------------------------
 const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
+  const { triggerTradeResult } = useContext(AuthContext);
   const [selectedSlot, setSelectedSlot] = useState(DELIVERY_SLOTS[0]);
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -200,18 +201,31 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
   const [activeTrades, setActiveTrades] = useState([]);
   const [historyTrades, setHistoryTrades] = useState([]);
   const [selectedHistoryTrade, setSelectedHistoryHistoryTrade] = useState(null);
-
-
+  const previousActiveRef = useRef([]);
 
   const fetchDeliveryTrades = useCallback(async () => {
     try {
       const res = await axios.get('/api/trading/delivery-trades');
-      setActiveTrades(res.data.active || []);
-      setHistoryTrades(res.data.history || []);
+      const newActive = res.data.active || [];
+      const newHistory = res.data.history || [];
+
+      // If a trade that was active is now finished, show trade result
+      if (previousActiveRef.current.length > 0) {
+        for (const prevTrade of previousActiveRef.current) {
+          const finishedTrade = newHistory.find(h => String(h._id) === String(prevTrade._id));
+          if (finishedTrade && triggerTradeResult) {
+            triggerTradeResult(finishedTrade);
+          }
+        }
+      }
+
+      previousActiveRef.current = newActive;
+      setActiveTrades(newActive);
+      setHistoryTrades(newHistory);
     } catch (e) {
       console.error('Delivery trades fetch error', e);
     }
-  }, []);
+  }, [triggerTradeResult]);
 
   useEffect(() => {
     fetchDeliveryTrades();
@@ -221,15 +235,18 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
     if (!socket) return;
 
     const handleTradeUpdate = (updated) => {
-      if (updated.tradeMode === 'delivery' &&
-        (updated.userId === user?._id || updated.userId?._id === user?._id)) {
-        // Just refresh the trades; the popup & toast are now handled by AuthContext globally
+      const updatedUserId = String(updated.userId?._id || updated.userId || '');
+      const currentUserId = String(user?._id || '');
+
+      if (updated.tradeMode === 'delivery' && (!currentUserId || updatedUserId === currentUserId)) {
         fetchDeliveryTrades();
+        if ((updated.status === 'completed' || updated.status === 'cancelled') && triggerTradeResult) {
+          triggerTradeResult(updated);
+        }
       }
     };
 
     const handleBalanceUpdate = () => {
-      // parent will re-fetch via its own listener; here just refresh trades
       fetchDeliveryTrades();
     };
 
@@ -240,7 +257,7 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
       socket.off('trade_updated', handleTradeUpdate);
       socket.off('balance_updated', handleBalanceUpdate);
     };
-  }, [socket, user, fetchDeliveryTrades]);
+  }, [socket, user, fetchDeliveryTrades, triggerTradeResult]);
 
 
   const handleTrade = async (side) => {
@@ -523,7 +540,7 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
                 {historyTrades.map((trade) => (
                   <Paper
                     key={trade._id}
-                    onClick={() => setSelectedHistoryHistoryTrade(trade)}
+                    onClick={() => triggerTradeResult ? triggerTradeResult(trade) : setSelectedHistoryHistoryTrade(trade)}
                     sx={{
                       p: 2,
                       mb: 1.5,
@@ -589,13 +606,6 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
         )}
       </Box>
 
-      {/* Manual Detail Modal for History */}
-      <TradeResultModal
-        open={!!selectedHistoryTrade}
-        onClose={() => setSelectedHistoryHistoryTrade(null)}
-        trade={selectedHistoryTrade}
-        currentPrice={selectedHistoryTrade?.price}
-      />
     </Box>
   );
 };
@@ -610,7 +620,7 @@ const TradingPage = ({ socket }) => {
   const { pair } = useParams();
   const navigate = useNavigate();
 
-  const currentPair = (pair && pair !== 'delivery' && pair !== 'perpetual') ? pair.replace('-', '/') : 'BTC/USDT';
+  const currentPair = (pair && pair !== 'delivery' && pair !== 'perpetual') ? pair.replace(/[-_]/g, '/') : 'BTC/USDT';
 
   const [activeTab, setActiveTab] = useState(pair === 'delivery' ? 1 : 0);
 

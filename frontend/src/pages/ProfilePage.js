@@ -240,6 +240,11 @@ const ProfilePage = () => {
                 <ContentCopy sx={{ fontSize: 16 }} />
               </IconButton>
             </Box>
+            {user?.createdAt && (
+              <Typography variant="caption" sx={{ color: '#8b93a6', display: 'block', mt: 0.2 }}>
+                Joined: {new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+              </Typography>
+            )}
           </Box>
         </Box>
 
@@ -483,7 +488,7 @@ const ProfilePage = () => {
                   <ListItemIcon><Box sx={{ width: 40, height: 40, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', background: log.status === 'success' ? 'rgba(0,200,83,0.1)' : 'rgba(255,82,82,0.1)' }}>{log.status === 'success' ? <CheckCircle sx={{ color: '#00C853', fontSize: 20 }} /> : <Error sx={{ color: '#FF5252', fontSize: 20 }} />}</Box></ListItemIcon>
                   <ListItemText
                     primary={<Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#fff' }}>{log.action.replace('_', ' ').toUpperCase()}</Typography>}
-                    secondary={<Typography variant="caption" sx={{ color: '#8b93a6' }}>{formatDevice(log.device)} • {log.ipAddress}</Typography>}
+                    secondary={<Typography variant="caption" sx={{ color: '#8b93a6' }}>{formatDevice(log.device)}</Typography>}
                   />
                   <Typography variant="caption" sx={{ color: '#8b93a6' }}>{formatDate(log.createdAt)}</Typography>
                 </ListItem>
@@ -617,7 +622,7 @@ const ProfilePage = () => {
           <SupervisorAccount sx={{ fontSize: 64, color: '#00E5FF', mb: 2 }} />
           <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1 }}>Invite Friends, Earn Crypto</Typography>
           <Typography variant="body2" sx={{ color: '#8b93a6', mb: 4 }}>
-            Share your unique referral link with your friends. When they sign up and verify their account, you will instantly receive <strong style={{ color: '#00E5FF' }}>5 USDT</strong>!
+            Share your unique referral link and invite friends to join our platform.
           </Typography>
 
           <Paper sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }}>

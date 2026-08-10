@@ -127,7 +127,7 @@ router.get('/users/:id', protect, adminAuth, async (req, res) => {
 // Update user
 router.put('/users/:id', protect, adminAuth, async (req, res) => {
   try {
-    const { fullName, phone, kycStatus, wallet, isActive, deliveryTradeEnabled } = req.body;
+    const { fullName, phone, kycStatus, wallet, isActive, deliveryTradeEnabled, canViewDepositAddress } = req.body;
     
     const updateFields = {};
     if (fullName !== undefined) updateFields.fullName = fullName;
@@ -135,6 +135,7 @@ router.put('/users/:id', protect, adminAuth, async (req, res) => {
     if (kycStatus !== undefined) updateFields.kycStatus = kycStatus;
     if (isActive !== undefined) updateFields.isActive = isActive;
     if (deliveryTradeEnabled !== undefined) updateFields.deliveryTradeEnabled = deliveryTradeEnabled;
+    if (canViewDepositAddress !== undefined) updateFields.canViewDepositAddress = canViewDepositAddress;
 
     if (wallet !== undefined) {
       if (wallet.usdt !== undefined) updateFields['wallet.usdt'] = wallet.usdt;
@@ -307,7 +308,7 @@ router.get('/transactions', protect, adminAuth, async (req, res) => {
 // Update transaction status
 router.put('/transactions/:id', protect, adminAuth, async (req, res) => {
   try {
-    const { status, walletAddress } = req.body;
+    const { status, walletAddress, amount } = req.body;
     
     const transaction = await WalletTransaction.findById(req.params.id);
     if (!transaction) {
@@ -315,6 +316,15 @@ router.put('/transactions/:id', protect, adminAuth, async (req, res) => {
     }
 
     const prevStatus = transaction.status;
+
+    // Allow admin to override amount for deposits with $0 amount
+    if (typeof amount !== 'undefined' && transaction.type === 'deposit') {
+      const parsedAmount = parseFloat(amount);
+      if (!isNaN(parsedAmount) && parsedAmount > 0) {
+        transaction.amount = parsedAmount;
+      }
+    }
+
     if (typeof status !== 'undefined') {
       transaction.status = status;
       if (status === 'completed') {

@@ -20,6 +20,7 @@ import SupportManagement from './pages/SupportManagement';
 import SystemSettings from './pages/SystemSettings';
 import AdminLogin from './pages/AdminLogin';
 import NotificationsPage from './pages/NotificationsPage';
+import DepositAddresses from './pages/DepositAddresses';
 
 // Context
 import { AdminAuthProvider } from './context/AdminAuthContext';
@@ -130,6 +131,7 @@ const App = () => {
                           <Route path="/support" element={<SupportManagement />} />
                           <Route path="/settings" element={<SystemSettings />} />
                           <Route path="/notifications" element={<NotificationsPage />} />
+                          <Route path="/deposit-addresses" element={<DepositAddresses />} />
                           <Route path="*" element={<Navigate to="/" replace />} />
                         </Routes>
                       </Box>

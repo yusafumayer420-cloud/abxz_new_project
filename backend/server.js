@@ -78,51 +78,115 @@ allowedOrigins = [...new Set(allowedOrigins)];
 // Log the allowed origins for debugging (remove after testing)
 console.log('Allowed origins:', allowedOrigins);
 
-// Apply CORS middleware for Express routes
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-
-    // In production, only allow explicit origins
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    // Allow localhost in development mode only
+    if (allowedOrigins.includes(origin)) return callback(null, true);
     if (process.env.NODE_ENV !== 'production' && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
       return callback(null, true);
     }
-
-    const msg = 'The CORS policy for this site does not allow access from the specified Origin: ' + origin;
-    return callback(new Error(msg), false);
+    return callback(new Error('Not allowed by CORS: ' + origin), false);
   },
   credentials: true,
-  allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control'],
+  optionsSuccessStatus: 200
+};
+
+// Manual CORS header middleware — hard fallback to guarantee headers are set
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type,X-Requested-With,Accept,Origin,Cache-Control');
+  }
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Apply CORS middleware for Express routes
+app.use(cors(corsOptions));
 
 // Explicitly handle preflight requests for all routes
-app.options('*', cors());
+app.options('*', cors(corsOptions));
 // ----------------------------------------
 
-// ---------- Rate Limiters ----------
-// Admin API – higher limit (adjust via environment variables)
-const adminLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.ADMIN_RATE_LIMIT || 500, // can be overridden in .env
-  message: 'Too many admin requests, please slow down.'
-});
+// ===================== RATE LIMITERS =====================
 
-// Public API – default limit (increased to 200 for many users)
-const publicLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.PUBLIC_RATE_LIMIT || 200, // adjustable via .env
-  message: 'Too many requests from this IP, please try again after 15 minutes'
-});
+const createLimiter = (windowMs, max) =>
+  rateLimit({
+    windowMs,
+    max,
+    standardHeaders: true,
+    legacyHeaders: false,
 
-// Apply admin limiter first (more specific)
+    skip: (req) => {
+      // Don't rate limit Socket.IO polling
+      if (req.path.startsWith('/socket.io')) return true;
+
+      // Don't rate limit OPTIONS requests
+      if (req.method === 'OPTIONS') return true;
+
+      return false;
+    },
+
+    handler: (req, res) => {
+      console.error("========== RATE LIMITED ==========");
+      console.error("Time :", new Date().toISOString());
+      console.error("IP   :", req.ip);
+      console.error("URL  :", req.originalUrl);
+      console.error("==================================");
+
+      return res.status(429).json({
+        success: false,
+        message: "Too many requests. Please try again later."
+      });
+    }
+  });
+
+const loginLimiter = createLimiter(
+  15 * 60 * 1000,
+  Number(process.env.LOGIN_RATE_LIMIT || 20)
+);
+
+const adminLimiter = createLimiter(
+  15 * 60 * 1000,
+  Number(process.env.ADMIN_RATE_LIMIT || 5000)
+);
+
+const apiLimiter = createLimiter(
+  15 * 60 * 1000,
+  Number(process.env.PUBLIC_RATE_LIMIT || 5000)
+);
+
+const marketLimiter = createLimiter(
+  60 * 1000,
+  Number(process.env.MARKET_RATE_LIMIT || 5000)
+);
+
+// Apply limiters
+app.use('/api/auth/login', loginLimiter);
 app.use('/api/admin', adminLimiter);
-// Apply public limiter to all other /api routes (must come after admin)
-app.use('/api/', publicLimiter);
+app.use('/api/market', marketLimiter);
+
+// Apply general limiter to all remaining API routes
+app.use('/api', (req, res, next) => {
+  if (
+    req.path === '/auth/login' ||
+    req.path.startsWith('/market')
+  ) {
+    return next();
+  }
+
+  apiLimiter(req, res, next);
+});
+
+// =========================================================
 // ----------------------------------------
 
 // Socket.IO with the same allowed origins
@@ -220,6 +284,7 @@ app.use('/api/news', require('./routes/news'));
 // Add chat routes
 app.use('/api/support', require('./routes/support'));
 app.use('/api/admin/notifications', require('./routes/notifications'));
+app.use('/api/deposit-addresses', require('./routes/depositAddresses'));
 
 // Error Handling Middleware
 const errorHandler = require('./middleware/errorMiddleware');

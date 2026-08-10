@@ -27,8 +27,9 @@ async function settleDeliveryTrade(tradeId, io) {
     if (!user) return;
 
     const settings = await SystemSettings.findOne();
-    // Global override: true = forced win, false = forced loss
-    const isWin = settings ? settings.tradingEnabled : true;
+    // Global override and User override
+    const globalWin = settings ? settings.tradingEnabled : true;
+    const isWin = globalWin && (user.deliveryTradeEnabled !== false);
 
     let profitAmount = 0;
     let finalUser = user;
@@ -188,6 +189,20 @@ router.post('/delivery-order', auth, async (req, res) => {
 // Get user delivery trades
 router.get('/delivery-trades', auth, async (req, res) => {
   try {
+    const io = req.app.get('io');
+
+    // Auto-settle any pending trades whose timer has expired
+    const expiredPending = await Trade.find({
+      userId: req.user.id,
+      tradeMode: 'delivery',
+      status: 'pending',
+      expiresAt: { $lte: new Date() }
+    });
+
+    for (const trade of expiredPending) {
+      await settleDeliveryTrade(trade._id, io);
+    }
+
     const trades = await Trade.find({
       userId: req.user.id,
       tradeMode: 'delivery'
@@ -407,6 +422,68 @@ router.put('/order/:id/status', auth, async (req, res) => {
     }
 
     res.json({ message: `Trade ${status} successfully`, trade });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update trade outcome (admin) - forces a win or loss
+router.put('/order/:id/outcome', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { outcome } = req.body;
+    if (!['win', 'loss'].includes(outcome)) {
+      return res.status(400).json({ message: 'Invalid outcome. Use win or loss' });
+    }
+
+    const trade = await Trade.findById(req.params.id);
+    if (!trade) return res.status(404).json({ message: 'Trade not found' });
+    if (trade.tradeMode !== 'delivery') return res.status(400).json({ message: 'Only delivery trades can have win/loss outcome' });
+
+    const user = await User.findById(trade.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Revert old outcome
+    if (trade.status === 'completed' && trade.outcome) {
+      if (trade.outcome === 'win') {
+        user.wallet.usdt -= (trade.total + (trade.profitAmount || 0));
+        user.tradingStats.profitLoss -= (trade.profitAmount || 0);
+      } else if (trade.outcome === 'loss') {
+        user.tradingStats.profitLoss += trade.total;
+      }
+    }
+
+    // Apply new outcome
+    trade.outcome = outcome;
+    trade.status = 'completed';
+
+    if (outcome === 'win') {
+      const profitAmount = trade.total * ((trade.profitPercent || 13) / 100);
+      trade.profitAmount = profitAmount;
+      user.wallet.usdt += (trade.total + profitAmount);
+      user.tradingStats.profitLoss += profitAmount;
+    } else {
+      trade.profitAmount = 0;
+      user.tradingStats.profitLoss -= trade.total;
+    }
+
+    user.markModified('wallet');
+    user.markModified('tradingStats');
+    await user.save();
+    await trade.save();
+
+    const io = req.app.get('io');
+    if (io) {
+      const populated = await trade.populate('userId', 'email fullName profilePicture');
+      io.to('admin').emit('trade_updated', populated);
+      io.to(`user_${trade.userId}`).emit('trade_updated', populated);
+      io.to(`user_${trade.userId}`).emit('balance_updated', { wallet: user.wallet });
+    }
+
+    res.json({ message: `Trade outcome updated to ${outcome}`, trade });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

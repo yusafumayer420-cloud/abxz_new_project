@@ -10,7 +10,7 @@ const ChatMessageSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    maxlength: 1000
+    maxlength: 10000
   },
   type: {
     type: String,

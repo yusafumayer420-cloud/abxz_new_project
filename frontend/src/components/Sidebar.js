@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   Drawer,
   List,
@@ -10,6 +10,7 @@ import {
   Typography,
   IconButton,
   Collapse,
+  Badge,
 } from '@mui/material';
 import {
   Home,
@@ -33,11 +34,14 @@ import {
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { AuthContext } from '../context/AuthContext';
 
 const Sidebar = ({ open, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [openSubmenu, setOpenSubmenu] = useState({});
+  const { notifications } = useContext(AuthContext);
+  const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
 
   const menuItems = [
     { text: 'Home', icon: <Home />, path: '/' },
@@ -231,7 +235,13 @@ const Sidebar = ({ open, onClose }) => {
                 }}
               >
                 <ListItemIcon sx={{ color: 'rgba(255,255,255,0.65)', minWidth: 40 }}>
-                  {item.icon}
+                  {item.text === 'Notifications' && unreadCount > 0 ? (
+                    <Badge badgeContent={unreadCount} color="error">
+                      {item.icon}
+                    </Badge>
+                  ) : (
+                    item.icon
+                  )}
                 </ListItemIcon>
                 <ListItemText 
                   primary={item.text}

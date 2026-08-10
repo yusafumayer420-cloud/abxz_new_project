@@ -5,6 +5,7 @@ import { TrendingUp } from '@mui/icons-material';
 
 const TopGainersMarquee = ({ data = [] }) => {
   const gainers = [...data]
+    .filter(item => parseFloat(item.price || 0) > 0 && !item.symbol?.includes('MATIC') && !item.symbol?.includes('TRX'))
     .sort((a, b) => b.change24h - a.change24h)
     .slice(0, 5)
     .map(item => ({

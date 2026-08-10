@@ -134,9 +134,6 @@ const SupportManagement = () => {
     if (filters.priority) filtered = filtered.filter((ticket) => ticket.priority === filters.priority);
     if (filters.category) filtered = filtered.filter((ticket) => ticket.category === filters.category);
     if (activeTab === 1) filtered = filtered.filter((t) => t.status === "open");
-    if (activeTab === 2) filtered = filtered.filter((t) => t.status === "in_progress");
-    if (activeTab === 3) filtered = filtered.filter((t) => t.status === "resolved");
-    if (activeTab === 4) filtered = filtered.filter((t) => t.status === "closed");
     filtered.sort((a, b) => {
       if (filters.sortBy === "newest") return new Date(b.updatedAt) - new Date(a.updatedAt);
       if (filters.sortBy === "oldest") return new Date(a.updatedAt) - new Date(b.updatedAt);
@@ -296,11 +293,13 @@ const SupportManagement = () => {
     handleMenuClose();
   };
 
-  const handleOpenChat = async () => {
-    if (!selectedTicket) return;
+  const handleOpenChat = async (ticket = null) => {
+    const targetTicket = (ticket && !ticket.nativeEvent) ? ticket : selectedTicket;
+    if (!targetTicket) return;
+    if (ticket && !ticket.nativeEvent) setSelectedTicket(ticket);
     setLoading(true);
     try {
-      const response = await api.get(`/api/support/tickets/${selectedTicket._id || selectedTicket.id}`);
+      const response = await api.get(`/api/support/tickets/${targetTicket._id || targetTicket.id}`);
       setChatMessages(response.data.messages || []);
       setChatDialog(true);
       
@@ -801,8 +800,6 @@ const SupportManagement = () => {
 
           <Tab label="All Chats" />
           <Tab label="Open" />
-          <Tab label="In Progress" />
-          <Tab label="Resolved" />
         </Tabs>
       </Paper>
 
@@ -846,7 +843,12 @@ const SupportManagement = () => {
                 </TableHead>
                 <TableBody>
                   {filteredTickets.map((ticket) => (
-                    <TableRow key={ticket._id || ticket.id} hover>
+                    <TableRow 
+                      key={ticket._id || ticket.id} 
+                      hover
+                      onClick={() => handleOpenChat(ticket)}
+                      sx={{ cursor: 'pointer' }}
+                    >
                       <TableCell>
                         <Box
                           sx={{ display: "flex", alignItems: "center", gap: 1 }}
@@ -874,7 +876,7 @@ const SupportManagement = () => {
                         <Typography
                           variant="caption"
                           color="text.secondary"
-                          sx={{ display: "block" }}
+                          sx={{ display: "block", whiteSpace: "pre-line" }}
                         >
                           {ticket.lastMessage}
                         </Typography>
@@ -897,7 +899,10 @@ const SupportManagement = () => {
                       <TableCell>
                         <IconButton
                           size="small"
-                          onClick={(e) => handleMenuClick(e, ticket)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMenuClick(e, ticket);
+                          }}
                         >
                           <MoreVert />
                         </IconButton>
@@ -929,19 +934,6 @@ const SupportManagement = () => {
           <MenuItem onClick={handleAssignToMe}>
             <Assignment sx={{ mr: 2 }} />
             Assign to Me
-          </MenuItem>
-        )}
-        {selectedTicket?.status !== "resolved" &&
-          selectedTicket?.status !== "closed" && (
-            <MenuItem onClick={handleResolveTicket}>
-              <CheckCircle sx={{ mr: 2, color: "#8b5cf6" }} />
-              Mark as Resolved
-            </MenuItem>
-          )}
-        {selectedTicket?.status !== "closed" && (
-          <MenuItem onClick={handleCloseTicket}>
-            <Close sx={{ mr: 2 }} />
-            Close Chat
           </MenuItem>
         )}
       </Menu>
@@ -1062,15 +1054,6 @@ const SupportManagement = () => {
                           Assign to Me
                         </Button>
                       )}
-                      <Button
-                        variant="outlined"
-                        color="success"
-                        startIcon={<CheckCircle />}
-                        onClick={handleResolveTicket}
-                        fullWidth
-                      >
-                        Mark as Resolved
-                      </Button>
                     </Box>
                   </Paper>
                 </Grid>
@@ -1223,7 +1206,7 @@ const SupportManagement = () => {
                                 </Box>
                               ) : (
                                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                                  <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere', fontStyle: msg.isDeleted ? 'italic' : 'normal', opacity: msg.isDeleted ? 0.7 : 1 }}>
+                                  <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere', whiteSpace: 'pre-line', fontStyle: msg.isDeleted ? 'italic' : 'normal', opacity: msg.isDeleted ? 0.7 : 1 }}>
                                     {msg.message}
                                     {msg.isEdited && !msg.isDeleted && (
                                       <Typography component="span" variant="caption" sx={{ opacity: 0.6, ml: 1 }}>(edited)</Typography>
@@ -1329,14 +1312,6 @@ const SupportManagement = () => {
                     <Typography variant="caption" color="text.secondary">
                       Press Enter to send, Shift+Enter for new line
                     </Typography>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={handleResolveTicket}
-                      startIcon={<CheckCircle />}
-                    >
-                      Resolve Ticket
-                    </Button>
                   </Box>
                 </Box>
               </Box>
@@ -1345,10 +1320,7 @@ const SupportManagement = () => {
             <DialogActions
               sx={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}
             >
-              <Button onClick={() => setChatDialog(false)}>Close Chat</Button>
-              <Button variant="contained" onClick={handleResolveTicket}>
-                Mark as Resolved
-              </Button>
+              <Button onClick={() => setChatDialog(false)}>Close</Button>
             </DialogActions>
           </>
         )}

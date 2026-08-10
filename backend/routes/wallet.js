@@ -7,6 +7,7 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { createAdminNotification } = require('../utils/notificationHelper');
 const { getLatestPrices } = require('../utils/priceFeed');
+const DepositAddress = require('../models/DepositAddress');
 const router = express.Router();
 
 // Cloudinary Configuration
@@ -73,6 +74,39 @@ router.post('/deposit/address', auth, async (req, res) => {
   }
 });
 
+// Get configured deposit address (only for users allowed by admin)
+router.get('/deposit-address', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user?.canViewDepositAddress) {
+      return res.status(403).json({ message: 'Deposit address access not enabled for your account' });
+    }
+
+    const { currency, network } = req.query;
+    if (!currency || !network) {
+      return res.status(400).json({ message: 'currency and network are required' });
+    }
+
+    const addr = await DepositAddress.findOne({
+      coin: currency.toUpperCase(),
+      network: { $regex: new RegExp(`^${network.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      isActive: true
+    });
+
+    if (!addr) {
+      return res.status(404).json({ message: 'No deposit address configured for this coin and network' });
+    }
+
+    res.json({
+      coin: addr.coin,
+      network: addr.network,
+      walletAddress: addr.walletAddress
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Submit deposit voucher
 router.post('/deposit', auth, upload.single('voucher'), async (req, res) => {
   try {
@@ -98,7 +132,7 @@ router.post('/deposit', auth, upload.single('voucher'), async (req, res) => {
     transaction.populate('userId', 'email fullName profilePicture').then(populated => {
       createAdminNotification(req.app.get('io'), {
         title: 'New Deposit Request',
-        message: `${populated.userId.fullName || populated.userId.email} deposited ${amount} ${currency}`,
+        message: `${populated.userId.fullName || populated.userId.email} submitted a ${currency} deposit voucher for review`,
         type: 'deposit',
         relatedId: transaction._id
       });
@@ -108,7 +142,7 @@ router.post('/deposit', auth, upload.single('voucher'), async (req, res) => {
         io.to('admin').emit('new_transaction', populated);
         io.to(`user_${req.user.id}`).emit('transaction_requested', {
           title: 'Deposit Requested',
-          message: `${amount} ${currency} deposit is pending review`,
+          message: `Your ${currency} deposit voucher has been submitted and is pending admin review`,
           type: 'info',
           transaction
         });

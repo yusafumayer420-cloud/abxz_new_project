@@ -104,6 +104,7 @@ const TransactionManagement = () => {
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [editedWalletAddress, setEditedWalletAddress] = useState("");
   const [savingWalletAddress, setSavingWalletAddress] = useState(false);
+  const [depositAmountOverride, setDepositAmountOverride] = useState('');
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -276,19 +277,32 @@ const TransactionManagement = () => {
   };
 
   const handleProcessTransaction = () => {
+    setDepositAmountOverride(selectedTransaction?.amount > 0 ? String(selectedTransaction.amount) : '');
     setProcessDialog(true);
     handleMenuClose();
   };
 
   const handleApproveWithdrawal = async () => {
     if (!selectedTransaction) return;
+    // For deposits, require a valid amount
+    if (selectedTransaction.type === 'deposit') {
+      const amt = parseFloat(depositAmountOverride);
+      if (!amt || amt <= 0) {
+        toast.error('Please enter a valid deposit amount');
+        return;
+      }
+    }
     setProcessingId(selectedTransaction._id);
     try {
-      await api.put(`/api/admin/transactions/${selectedTransaction._id}`, { status: 'completed' });
-      toast.success(`Withdrawal approved successfully`);
+      const payload = { status: 'completed' };
+      if (selectedTransaction.type === 'deposit' && depositAmountOverride) {
+        payload.amount = parseFloat(depositAmountOverride);
+      }
+      await api.put(`/api/admin/transactions/${selectedTransaction._id}`, payload);
+      toast.success(selectedTransaction.type === 'deposit' ? 'Deposit approved & credited successfully' : 'Withdrawal approved successfully');
       fetchTransactions();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to approve withdrawal');
+      toast.error(error.response?.data?.message || 'Failed to approve transaction');
     } finally {
       setProcessingId(null);
       handleMenuClose();
@@ -1225,14 +1239,13 @@ const TransactionManagement = () => {
               >
                 Close
               </Button>
-              {selectedTransaction.status === "pending" &&
-                selectedTransaction.type === "withdrawal" && (
+              {selectedTransaction.status === "pending" && (
                   <Button
                     onClick={handleProcessTransaction}
                     variant="contained"
-                    color="primary"
+                    color={selectedTransaction.type === 'deposit' ? 'success' : 'primary'}
                   >
-                    Process Withdrawal
+                    {selectedTransaction.type === 'deposit' ? '✅ Process Deposit' : '💸 Process Withdrawal'}
                   </Button>
                 )}
             </DialogActions>
@@ -1240,46 +1253,61 @@ const TransactionManagement = () => {
         )}
       </Dialog>
 
-      {/* Process Withdrawal Dialog */}
+      {/* Process Transaction Dialog */}
       <Dialog open={processDialog} onClose={() => setProcessDialog(false)} maxWidth="sm" fullWidth>
         {selectedTransaction && (
           <>
-            <DialogTitle>Process Withdrawal - #{selectedTransaction._id?.slice(-6).toUpperCase()}</DialogTitle>
+            <DialogTitle>
+              {selectedTransaction.type === 'deposit' ? '✅ Process Deposit' : '💸 Process Withdrawal'} — #{selectedTransaction._id?.slice(-6).toUpperCase()}
+            </DialogTitle>
             <DialogContent>
-              <Alert severity="info" sx={{ mb: 3 }}>
-                Confirm that funds have been sent to the user's wallet before approving.
+              <Alert severity={selectedTransaction.type === 'deposit' ? 'success' : 'info'} sx={{ mb: 3 }}>
+                {selectedTransaction.type === 'deposit'
+                  ? 'Enter the actual received amount and approve to credit the user\'s wallet.'
+                  : 'Confirm that funds have been sent to the user\'s wallet before approving.'}
               </Alert>
               <Paper sx={{ p: 2, mb: 3 }}>
                 <Typography variant="body2" gutterBottom>
                   <strong>Type:</strong> {selectedTransaction.type.toUpperCase()}
                 </Typography>
                 <Typography variant="body2" gutterBottom>
-                  <strong>User:</strong> {selectedTransaction.userId?.fullName || 'Unknown'}
+                  <strong>User:</strong> {selectedTransaction.userId?.fullName || 'Unknown'} ({selectedTransaction.userId?.email || 'N/A'})
                 </Typography>
                 <Typography variant="body2" gutterBottom>
-                  <strong>Amount:</strong> {selectedTransaction.amount} {selectedTransaction.currency}
+                  <strong>Network/Chain:</strong> {selectedTransaction.chain || selectedTransaction.network || 'N/A'}
                 </Typography>
                 {selectedTransaction.type === 'withdrawal' && (
                   <Typography variant="body2" gutterBottom>
                     <strong>To Address:</strong> {selectedTransaction.toAddress || 'N/A'}
                   </Typography>
                 )}
-                <Typography variant="body2" gutterBottom>
-                  <strong>Network/Chain:</strong> {selectedTransaction.chain || selectedTransaction.network || 'N/A'}
-                </Typography>
                 {selectedTransaction.voucher && (
                    <Box sx={{ mt: 2 }}>
-                     <Typography variant="body2" gutterBottom><strong>Voucher:</strong></Typography>
-                     <img src={selectedTransaction.voucher} alt="Voucher Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain' }} />
+                     <Typography variant="body2" gutterBottom><strong>Payment Voucher:</strong></Typography>
+                     <img src={selectedTransaction.voucher} alt="Voucher Preview" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: 4, cursor: 'pointer' }} onClick={() => window.open(selectedTransaction.voucher, '_blank')} />
                    </Box>
                 )}
               </Paper>
+
+              {/* Deposit amount override field */}
+              {selectedTransaction.type === 'deposit' && (
+                <TextField
+                  fullWidth
+                  label="Deposit Amount (USDT)"
+                  type="number"
+                  inputProps={{ min: 0, step: 0.01 }}
+                  value={depositAmountOverride}
+                  onChange={(e) => setDepositAmountOverride(e.target.value)}
+                  placeholder="Enter the amount received"
+                  sx={{ mb: 1 }}
+                />
+              )}
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setProcessDialog(false)}>Cancel</Button>
               <Button onClick={handleRejectTransaction} color="error" variant="outlined" disabled={processingId === selectedTransaction._id}>Reject</Button>
               <Button onClick={handleApproveWithdrawal} variant="contained" color="success" disabled={processingId === selectedTransaction._id}>
-                {selectedTransaction.type === 'deposit' ? 'Approve Deposit' : 'Approve & Process'}
+                {processingId === selectedTransaction._id ? 'Processing...' : (selectedTransaction.type === 'deposit' ? '✅ Approve & Credit' : '✅ Approve & Process')}
               </Button>
             </DialogActions>
           </>

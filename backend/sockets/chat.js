@@ -1,13 +1,130 @@
 const ChatMessage = require('../models/Chat');
 const SupportTicket = require('../models/SupportTicket');
 const User = require('../models/User');
+const DepositAddress = require('../models/DepositAddress');
 const { createAdminNotification } = require('../utils/notificationHelper');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Dynamically fetch FAQ reply from the database
+async function getFAQReply(userMessage) {
+  const lower = userMessage.toLowerCase().trim();
+  const words = lower.split(/[\s,._/()\-?!\'":;]+/);
+  const cleanLower = lower.replace(/[\s\-_?]/g, '');
+
+  const hasErc = cleanLower.includes('erc') || words.includes('erc20') || words.includes('erc');
+  const hasBnb = cleanLower.includes('bnb') || cleanLower.includes('bep') || words.includes('bep20') || words.includes('bep2') || words.includes('bnb');
+  const isUsdt = words.includes('usdt') || lower.includes('tether');
+
+  // Generic USDT request without network
+  if (isUsdt && !hasErc && !hasBnb) {
+    return 'USDT is available on multiple networks (BNB, ERC20). Which network would you like to use?';
+  }
+
+  // Fetch active deposit addresses from DB
+  const addresses = await DepositAddress.find({ isActive: true });
+
+  if (!addresses || addresses.length === 0) {
+    return null;
+  }
+
+  const formatReply = (entry) =>
+    `Deposit Address Details:\n\nCoin: ${entry.coin}\nNetwork: ${entry.network}\n\nWallet Address:\n${entry.walletAddress}\n\n⚠️ Always verify you are sending on the ${entry.network} network. Sending on the wrong network may result in permanent loss of funds.`;
+
+  // 1. Direct match for USDT ERC vs BNB
+  if (isUsdt) {
+    if (hasErc) {
+      const ercEntry = addresses.find(a => a.coin.toUpperCase() === 'USDT' && a.network.toLowerCase().includes('erc'));
+      if (ercEntry) return formatReply(ercEntry);
+    }
+    if (hasBnb) {
+      const bnbEntry = addresses.find(a => a.coin.toUpperCase() === 'USDT' && (a.network.toLowerCase().includes('bnb') || a.network.toLowerCase().includes('bep')));
+      if (bnbEntry) return formatReply(bnbEntry);
+    }
+  }
+
+  // 1b. Network-only follow-up (e.g. user says "bnb", "bep20", or "erc20" after being asked which network)
+  // If no specific coin mentioned, assume they are replying with a network choice for USDT
+  const commonCoins = ['btc', 'eth', 'usdt', 'sol', 'bnb', 'xrp', 'bitcoin', 'ethereum'];
+  const requestedCoin = commonCoins.find(c => words.includes(c));
+
+  if (!requestedCoin && (hasBnb || hasErc)) {
+    if (hasBnb) {
+      const bnbEntry = addresses.find(a => a.coin.toUpperCase() === 'USDT' && (a.network.toLowerCase().includes('bnb') || a.network.toLowerCase().includes('bep')));
+      if (bnbEntry) return formatReply(bnbEntry);
+    }
+    if (hasErc) {
+      const ercEntry = addresses.find(a => a.coin.toUpperCase() === 'USDT' && a.network.toLowerCase().includes('erc'));
+      if (ercEntry) return formatReply(ercEntry);
+    }
+    // Fallback to any address matching the network
+    if (hasBnb) {
+      const any = addresses.find(a => a.network.toLowerCase().includes('bnb') || a.network.toLowerCase().includes('bep'));
+      if (any) return formatReply(any);
+    }
+    if (hasErc) {
+      const any = addresses.find(a => a.network.toLowerCase().includes('erc'));
+      if (any) return formatReply(any);
+    }
+  }
+
+  // 2. Direct match for other coins (BTC, ETH, etc.)
+  for (const entry of addresses) {
+    const coinLower = entry.coin.toLowerCase();
+    const isCoinMatch = words.includes(coinLower) || (coinLower === 'eth' && words.includes('ethereum')) || (coinLower === 'btc' && words.includes('bitcoin'));
+    
+    if (isCoinMatch) {
+      // Check network requirement if specified in user query
+      const netLower = entry.network.toLowerCase();
+      if (hasErc && !netLower.includes('erc')) continue;
+      if (hasBnb && !netLower.includes('bnb') && !netLower.includes('bep')) continue;
+
+      return formatReply(entry);
+    }
+  }
+
+  // 3. Custom keywords match (only if message does not mention a specific known coin like btc, eth, usdt, etc.)
+  for (const entry of addresses) {
+    const netLower = entry.network.toLowerCase();
+    if (hasErc && !netLower.includes('erc')) continue;
+    if (hasBnb && !netLower.includes('bnb') && !netLower.includes('bep')) continue;
+
+    // If user explicitly mentioned a coin (e.g. BTC), ensure entry coin matches that requested coin
+    if (requestedCoin) {
+      const entryCoin = entry.coin.toLowerCase();
+      const isSame = entryCoin === requestedCoin ||
+                     (entryCoin === 'eth' && requestedCoin === 'ethereum') ||
+                     (entryCoin === 'btc' && requestedCoin === 'bitcoin');
+      if (!isSame) continue;
+    }
+
+    if (Array.isArray(entry.keywords) && entry.keywords.length > 0) {
+      const isMatched = entry.keywords.some(kw => {
+        const cleanedKw = kw.toLowerCase().trim();
+        return cleanedKw && cleanedKw.length >= 3 && lower.includes(cleanedKw);
+      });
+
+      if (isMatched) {
+        return formatReply(entry);
+      }
+    }
+  }
+
+  // 4. Recognized coin in prompt but no address found in DB
+  if (requestedCoin) {
+    return null;
+  }
+
+  return null; // Let human support handle it
+}
 
 module.exports = (io) => {
   const chatNamespace = io.of('/chat');
   
   // Store active admin connections
   const activeAdmins = new Map();
+  // Store active user connections (socket.id -> { userId, ip, online })
+  const activeUsers = new Map();
   // Store user rooms
   const userRooms = new Map();
   
@@ -15,17 +132,13 @@ module.exports = (io) => {
     try {
       const token = socket.handshake.auth.token;
       if (!token) {
-        return next(new Error('Authentication required'));
+        return next(new Error('Authentication error'));
       }
-      
-      // Verify token and get user (simplified - use your JWT verification)
-      const userId = socket.handshake.auth.userId;
-      const user = await User.findById(userId).select('-password');
-      
+      const payload = jwt.verify(token, JWT_SECRET);
+      const user = await User.findById(payload.id);
       if (!user) {
         return next(new Error('User not found'));
       }
-      
       socket.user = user;
       next();
     } catch (error) {
@@ -39,11 +152,37 @@ module.exports = (io) => {
     const userId = socket.user._id.toString();
     const userRoom = `user_${userId}`;
     const adminRoom = 'admin_room';
-    
-    // Join user's personal room
+    // Join user's personal room and track status
     socket.join(userRoom);
     userRooms.set(userId, userRoom);
+    // Add user to activeUsers map for status tracking
+    activeUsers.set(socket.id, {
+      userId: userId,
+      ip: socket.handshake.headers['x-forwarded-for']?.split(',')[0].trim() || socket.handshake.address || socket.request?.connection?.remoteAddress || '',
+      online: true
+    });
     
+    try {
+      await User.findByIdAndUpdate(userId, { 
+        lastIpAddress: socket.handshake.headers['x-forwarded-for']?.split(',')[0].trim() || socket.handshake.address || socket.request?.connection?.remoteAddress || ''
+      });
+    } catch (err) {
+      console.error('Error updating lastIpAddress:', err);
+    }
+      // Notify admins of new user status
+      const statusList = [];
+      for (const [sockId, info] of activeUsers.entries()) {
+        const usr = await User.findById(info.userId).select('email fullName');
+        statusList.push({
+          socketId: sockId,
+          userId: info.userId,
+          email: usr?.email,
+          name: usr?.fullName,
+          ip: info.ip,
+          online: info.online
+        });
+      }
+      chatNamespace.to(adminRoom).emit('user_status', statusList);    
     // If user is admin, join admin room
     if (socket.user.role === 'admin') {
       socket.join(adminRoom);
@@ -216,6 +355,39 @@ module.exports = (io) => {
             ticketId: ticket?._id
           });
         }
+
+        // ── FAQ Bot Auto-Reply ──────────────────────────────────
+        if (socket.user.role !== 'admin') {
+          const botReply = await getFAQReply(message);
+
+          if (botReply) {
+            // Find or create a system bot user (fallback: use first admin)
+            let botUser = await User.findOne({ role: 'admin' }).select('_id email fullName role profilePicture');
+
+            const botMessage = new ChatMessage({
+              userId: botUser ? botUser._id : socket.user._id,
+              message: botReply,
+              type: 'admin',
+              room: targetRoom,
+              attachments: []
+            });
+            await botMessage.save();
+            await botMessage.populate('userId', 'email fullName role profilePicture');
+
+            // Small delay so it feels like a real reply
+            setTimeout(() => {
+              chatNamespace.to(targetRoom).emit('receive_message', {
+                ...botMessage.toObject(),
+                ticketId: ticket?._id
+              });
+              chatNamespace.to(adminRoom).emit('receive_message', {
+                ...botMessage.toObject(),
+                ticketId: ticket?._id
+              });
+            }, 600);
+          }
+        }
+        // ────────────────────────────────────────────────────────
         
       } catch (error) {
         console.error('Message send error:', error);
@@ -244,6 +416,24 @@ module.exports = (io) => {
           ticketId
         });
       }
+    });
+
+    // Admin request for current user status
+    socket.on('get_user_status', async () => {
+      if (socket.user.role !== 'admin') return;
+      const statusList = [];
+      for (const [sockId, info] of activeUsers.entries()) {
+        const user = await User.findById(info.userId).select('email fullName');
+        statusList.push({
+          socketId: sockId,
+          userId: info.userId,
+          email: user?.email,
+          name: user?.fullName,
+          ip: info.ip,
+          online: info.online
+        });
+      }
+      chatNamespace.to(adminRoom).emit('user_status', statusList);
     });
     
     // Handle read receipts
@@ -482,17 +672,33 @@ module.exports = (io) => {
       
       if (socket.user.role === 'admin') {
         activeAdmins.delete(userId);
-        
-        // Notify other admins
+        // Notify other admins about admin status change
         chatNamespace.to(adminRoom).emit('admin_status', {
           adminId: userId,
           online: false,
           totalOnline: activeAdmins.size
         });
+      } else {
+        // Update user status to offline
+        const info = activeUsers.get(socket.id);
+        if (info) {
+          info.online = false;
+          activeUsers.set(socket.id, info);
+        }
       }
       
+      // Remove room mappings
       userRooms.delete(userId);
-      
+      activeUsers.delete(socket.id);
+
+      // Broadcast updated user status to admins
+      const statusList = [];
+      for (const [sockId, info] of activeUsers.entries()) {
+        // Retrieve minimal user info synchronously is not possible here; skip details
+        statusList.push({ socketId: sockId, userId: info.userId, ip: info.ip, online: info.online });
+      }
+      chatNamespace.to(adminRoom).emit('user_status', statusList);
+
       // Update online admin count for all users
       chatNamespace.emit('online_admins', {
         count: activeAdmins.size,
