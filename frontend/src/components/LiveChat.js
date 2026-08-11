@@ -565,7 +565,7 @@ const LiveChat = () => {
                                   <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'anywhere', whiteSpace: 'pre-line' }}>
                                     {message.message}
                                   </Typography>
-                                  {message.message && message.message.includes('Wallet Address:') && (
+                                  {message.message && (message.message.includes('Wallet Address:') || message.message.includes('Deposit Address:')) && (
                                     <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                       <Typography variant="caption" sx={{ color: '#00E5FF', fontWeight: 600 }}>
                                         Copy Wallet Address
@@ -575,7 +575,7 @@ const LiveChat = () => {
                                           size="small"
                                           onClick={() => {
                                             const lines = message.message.split('\n');
-                                            const addrIdx = lines.findIndex(l => l.includes('Wallet Address:'));
+                                            const addrIdx = lines.findIndex(l => l.includes('Wallet Address:') || l.includes('Deposit Address:'));
                                             if (addrIdx !== -1 && lines[addrIdx + 1]) {
                                               const addr = lines[addrIdx + 1].trim();
                                               navigator.clipboard.writeText(addr);

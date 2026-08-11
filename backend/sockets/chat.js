@@ -9,17 +9,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 // Dynamically fetch FAQ reply from the database
 async function getFAQReply(userMessage) {
   const lower = userMessage.toLowerCase().trim();
-  const words = lower.split(/[\s,._/()\-?!\'":;]+/);
-  const cleanLower = lower.replace(/[\s\-_?]/g, '');
-
-  const hasErc = cleanLower.includes('erc') || words.includes('erc20') || words.includes('erc');
-  const hasBnb = cleanLower.includes('bnb') || cleanLower.includes('bep') || words.includes('bep20') || words.includes('bep2') || words.includes('bnb');
-  const isUsdt = words.includes('usdt') || lower.includes('tether');
-
-  // Generic USDT request without network
-  if (isUsdt && !hasErc && !hasBnb) {
-    return 'USDT is available on multiple networks (BNB, ERC20). Which network would you like to use?';
-  }
 
   // Fetch active deposit addresses from DB
   const addresses = await DepositAddress.find({ isActive: true });
@@ -29,90 +18,28 @@ async function getFAQReply(userMessage) {
   }
 
   const formatReply = (entry) =>
-    `Deposit Address Details:\n\nCoin: ${entry.coin}\nNetwork: ${entry.network}\n\nWallet Address:\n${entry.walletAddress}\n\n⚠️ Always verify you are sending on the ${entry.network} network. Sending on the wrong network may result in permanent loss of funds.`;
+    `Deposit Address Details\n\nAsset: ${entry.coin}\nNetwork: ${entry.network}\nDeposit Address:\n${entry.walletAddress}\n\n⚠️ Important: Please ensure that you select the ${entry.network} network when making your deposit. Sending ${entry.coin} through an unsupported or incorrect network may result in the permanent loss of your funds.\n\nAfter completing your deposit, please upload a screenshot or proof of the transaction in the Deposit section of the Fund page. This will help us verify and process your deposit.`;
 
-  // 1. Direct match for USDT ERC vs BNB
-  if (isUsdt) {
-    if (hasErc) {
-      const ercEntry = addresses.find(a => a.coin.toUpperCase() === 'USDT' && a.network.toLowerCase().includes('erc'));
-      if (ercEntry) return formatReply(ercEntry);
-    }
-    if (hasBnb) {
-      const bnbEntry = addresses.find(a => a.coin.toUpperCase() === 'USDT' && (a.network.toLowerCase().includes('bnb') || a.network.toLowerCase().includes('bep')));
-      if (bnbEntry) return formatReply(bnbEntry);
-    }
-  }
+  let matchedAddresses = [];
 
-  // 1b. Network-only follow-up (e.g. user says "bnb", "bep20", or "erc20" after being asked which network)
-  // If no specific coin mentioned, assume they are replying with a network choice for USDT
-  const commonCoins = ['btc', 'eth', 'usdt', 'sol', 'bnb', 'xrp', 'bitcoin', 'ethereum'];
-  const requestedCoin = commonCoins.find(c => words.includes(c));
-
-  if (!requestedCoin && (hasBnb || hasErc)) {
-    if (hasBnb) {
-      const bnbEntry = addresses.find(a => a.coin.toUpperCase() === 'USDT' && (a.network.toLowerCase().includes('bnb') || a.network.toLowerCase().includes('bep')));
-      if (bnbEntry) return formatReply(bnbEntry);
-    }
-    if (hasErc) {
-      const ercEntry = addresses.find(a => a.coin.toUpperCase() === 'USDT' && a.network.toLowerCase().includes('erc'));
-      if (ercEntry) return formatReply(ercEntry);
-    }
-    // Fallback to any address matching the network
-    if (hasBnb) {
-      const any = addresses.find(a => a.network.toLowerCase().includes('bnb') || a.network.toLowerCase().includes('bep'));
-      if (any) return formatReply(any);
-    }
-    if (hasErc) {
-      const any = addresses.find(a => a.network.toLowerCase().includes('erc'));
-      if (any) return formatReply(any);
-    }
-  }
-
-  // 2. Direct match for other coins (BTC, ETH, etc.)
   for (const entry of addresses) {
-    const coinLower = entry.coin.toLowerCase();
-    const isCoinMatch = words.includes(coinLower) || (coinLower === 'eth' && words.includes('ethereum')) || (coinLower === 'btc' && words.includes('bitcoin'));
-    
-    if (isCoinMatch) {
-      // Check network requirement if specified in user query
-      const netLower = entry.network.toLowerCase();
-      if (hasErc && !netLower.includes('erc')) continue;
-      if (hasBnb && !netLower.includes('bnb') && !netLower.includes('bep')) continue;
+    let isMatched = false;
 
-      return formatReply(entry);
-    }
-  }
-
-  // 3. Custom keywords match (only if message does not mention a specific known coin like btc, eth, usdt, etc.)
-  for (const entry of addresses) {
-    const netLower = entry.network.toLowerCase();
-    if (hasErc && !netLower.includes('erc')) continue;
-    if (hasBnb && !netLower.includes('bnb') && !netLower.includes('bep')) continue;
-
-    // If user explicitly mentioned a coin (e.g. BTC), ensure entry coin matches that requested coin
-    if (requestedCoin) {
-      const entryCoin = entry.coin.toLowerCase();
-      const isSame = entryCoin === requestedCoin ||
-                     (entryCoin === 'eth' && requestedCoin === 'ethereum') ||
-                     (entryCoin === 'btc' && requestedCoin === 'bitcoin');
-      if (!isSame) continue;
-    }
-
+    // Check keywords only (ignore coin name unless it's in keywords)
     if (Array.isArray(entry.keywords) && entry.keywords.length > 0) {
-      const isMatched = entry.keywords.some(kw => {
+      isMatched = entry.keywords.some(kw => {
         const cleanedKw = kw.toLowerCase().trim();
-        return cleanedKw && cleanedKw.length >= 3 && lower.includes(cleanedKw);
+        return cleanedKw && cleanedKw.length > 0 && lower === cleanedKw;
       });
+    }
 
-      if (isMatched) {
-        return formatReply(entry);
-      }
+    if (isMatched) {
+      matchedAddresses.push(entry);
     }
   }
 
-  // 4. Recognized coin in prompt but no address found in DB
-  if (requestedCoin) {
-    return null;
+  if (matchedAddresses.length > 0) {
+    return matchedAddresses.map(formatReply).join('\n\n-------------------\n\n');
   }
 
   return null; // Let human support handle it
@@ -373,6 +300,13 @@ module.exports = (io) => {
             });
             await botMessage.save();
             await botMessage.populate('userId', 'email fullName role profilePicture');
+
+            if (ticket) {
+              ticket.messages.push(botMessage._id);
+              ticket.lastMessage = botReply.substring(0, 100);
+              ticket.lastMessageAt = new Date();
+              await ticket.save();
+            }
 
             // Small delay so it feels like a real reply
             setTimeout(() => {
