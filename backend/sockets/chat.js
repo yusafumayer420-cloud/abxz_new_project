@@ -39,7 +39,37 @@ async function getFAQReply(userMessage) {
   }
 
   if (matchedAddresses.length > 0) {
-    return matchedAddresses.map(formatReply).join('\n\n-------------------\n\n');
+    return { type: 'text', content: matchedAddresses.map(formatReply).join('\n\n-------------------\n\n') };
+  }
+
+  // ── Generic deposit address question detection ───────────────
+  // If user asks a generic question about deposit address (no specific coin matched),
+  // reply with a selection menu showing all available coins.
+  const genericDepositKeywords = [
+    'deposit address', 'deposit', 'what is the deposit', 'how to deposit',
+    'wallet address', 'send crypto', 'fund my account', 'add funds'
+  ];
+  const isGenericDepositQuestion = genericDepositKeywords.some(kw => lower.includes(kw));
+
+  if (isGenericDepositQuestion && addresses.length > 0) {
+    // Build options list from active deposit addresses
+    const options = addresses.map(entry => ({
+      coin: entry.coin,
+      network: entry.network,
+      label: `${entry.coin} (${entry.network})`,
+      // The keyword the user should send to get the specific address
+      keyword: (Array.isArray(entry.keywords) && entry.keywords.length > 0)
+        ? entry.keywords[0]
+        : `${entry.coin.toLowerCase()} deposit address`
+    }));
+
+    return {
+      type: 'bot_crypto_selection',
+      content: '__BOT_SELECTION__:' + JSON.stringify({
+        prompt: 'Please select the cryptocurrency you want to deposit:',
+        options
+      })
+    };
   }
 
   return null; // Let human support handle it
@@ -114,7 +144,14 @@ module.exports = (io) => {
     if (socket.user.role === 'admin') {
       socket.join(adminRoom);
       activeAdmins.set(userId, socket.id);
-      
+
+      // Send the current user status list directly to this admin immediately
+      const currentStatusList = [];
+      for (const [sockId, info] of activeUsers.entries()) {
+        currentStatusList.push({ socketId: sockId, userId: info.userId, ip: info.ip, online: info.online });
+      }
+      socket.emit('user_status', currentStatusList);
+
       // Notify all admins that an admin joined
       chatNamespace.to(adminRoom).emit('admin_status', {
         adminId: userId,
@@ -122,6 +159,16 @@ module.exports = (io) => {
         totalOnline: activeAdmins.size
       });
     }
+
+    // Handle admin requesting the current user status list on demand
+    socket.on('get_user_status', async () => {
+      if (socket.user.role !== 'admin') return;
+      const statusList = [];
+      for (const [sockId, info] of activeUsers.entries()) {
+        statusList.push({ socketId: sockId, userId: info.userId, ip: info.ip, online: info.online });
+      }
+      socket.emit('user_status', statusList);
+    });
     
     // Send online admin count to user
     chatNamespace.to(userRoom).emit('online_admins', {
@@ -291,9 +338,12 @@ module.exports = (io) => {
             // Find or create a system bot user (fallback: use first admin)
             let botUser = await User.findOne({ role: 'admin' }).select('_id email fullName role profilePicture');
 
+            // botReply is now an object: { type, content }
+            const replyText = typeof botReply === 'object' ? botReply.content : botReply;
+
             const botMessage = new ChatMessage({
               userId: botUser ? botUser._id : socket.user._id,
-              message: botReply,
+              message: replyText,
               type: 'admin',
               room: targetRoom,
               attachments: []
@@ -303,7 +353,7 @@ module.exports = (io) => {
 
             if (ticket) {
               ticket.messages.push(botMessage._id);
-              ticket.lastMessage = botReply.substring(0, 100);
+              ticket.lastMessage = replyText.substring(0, 100);
               ticket.lastMessageAt = new Date();
               await ticket.save();
             }

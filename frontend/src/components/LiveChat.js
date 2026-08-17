@@ -41,6 +41,7 @@ import {
   AttachFile,
   HeadsetMic,
   ContentCopy,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,6 +50,96 @@ import io from 'socket.io-client';
 import axios from '../utils/axiosConfig';
 import toast from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
+
+// Coin icon colors/symbols for known coins
+const COIN_META = {
+  USDT: { color: '#26A17B', symbol: '₮', bg: 'rgba(38,161,123,0.18)' },
+  BTC:  { color: '#F7931A', symbol: '₿', bg: 'rgba(247,147,26,0.18)' },
+  ETH:  { color: '#627EEA', symbol: 'Ξ', bg: 'rgba(98,126,234,0.18)' },
+  BNB:  { color: '#F3BA2F', symbol: 'B', bg: 'rgba(243,186,47,0.18)' },
+  TRX:  { color: '#EF0027', symbol: 'T', bg: 'rgba(239,0,39,0.18)' },
+};
+
+// Bot crypto selection message component
+const BotCryptoSelection = ({ data, onSelect }) => {
+  const { prompt, options } = data;
+  return (
+    <Box sx={{ minWidth: 220 }}>
+      <Typography variant="body2" sx={{ mb: 1.5, color: '#CBD5E1', fontWeight: 500 }}>
+        {prompt}
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {options.map((opt, i) => {
+          const coinKey = opt.coin?.toUpperCase();
+          const meta = COIN_META[coinKey] || { color: '#00E5FF', symbol: '●', bg: 'rgba(0,229,255,0.15)' };
+          return (
+            <motion.button
+              key={i}
+              whileHover={{ scale: 1.03, x: 2 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onSelect(opt.keyword)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                background: 'rgba(255,255,255,0.05)',
+                border: `1px solid ${meta.color}55`,
+                borderRadius: 10,
+                padding: '10px 14px',
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left',
+                transition: 'border-color 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = meta.color}
+              onMouseLeave={e => e.currentTarget.style.borderColor = `${meta.color}55`}
+            >
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  bgcolor: meta.bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: 16,
+                  color: meta.color,
+                  flexShrink: 0,
+                  border: `1.5px solid ${meta.color}44`,
+                }}
+              >
+                {meta.symbol}
+              </Box>
+              <Typography variant="body2" sx={{ color: '#F1F5F9', fontWeight: 600, fontSize: '0.875rem' }}>
+                {opt.label}
+              </Typography>
+            </motion.button>
+          );
+        })}
+      </Box>
+      <Box
+        sx={{
+          mt: 1.5,
+          p: 1,
+          borderRadius: 2,
+          bgcolor: 'rgba(0,229,255,0.07)',
+          border: '1px solid rgba(0,229,255,0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.8,
+        }}
+      >
+        <InfoIcon sx={{ fontSize: 14, color: '#00E5FF', flexShrink: 0 }} />
+        <Typography variant="caption" sx={{ color: '#94A3B8', lineHeight: 1.3 }}>
+          Click on any option above to get the deposit address.
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
 
 const LiveChat = () => {
   const { user } = useContext(AuthContext);
@@ -191,6 +282,16 @@ const LiveChat = () => {
       chatSocket.disconnect();
     };
   }, [user?.id]);
+
+  // Listen for external trigger to open chat (e.g., from FundsPage deposit section)
+  useEffect(() => {
+    const handleOpenChat = () => {
+      setIsOpen(true);
+      setIsMinimized(false);
+    };
+    window.addEventListener('openLiveChat', handleOpenChat);
+    return () => window.removeEventListener('openLiveChat', handleOpenChat);
+  }, []);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -523,6 +624,40 @@ const LiveChat = () => {
                                   mb: 1,
                                 }}
                               >
+                                {/* Check if this is a bot crypto selection message */}
+                                {message.message && message.message.startsWith('__BOT_SELECTION__:') ? (
+                                  <Box
+                                    sx={{
+                                      maxWidth: { xs: '90%', sm: '80%' },
+                                      p: '12px 14px',
+                                      borderRadius: '18px 18px 18px 4px',
+                                      bgcolor: 'rgba(255,255,255,0.05)',
+                                      border: '1px solid rgba(0, 229, 255, 0.2)',
+                                    }}
+                                  >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                      <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#00E5FF' }}>
+                                        Support
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                        {formatTime(message.createdAt)}
+                                      </Typography>
+                                    </Box>
+                                    {(() => {
+                                      try {
+                                        const parsed = JSON.parse(message.message.replace('__BOT_SELECTION__:', ''));
+                                        return (
+                                          <BotCryptoSelection
+                                            data={parsed}
+                                            onSelect={(keyword) => handleSuggestionClick(keyword)}
+                                          />
+                                        );
+                                      } catch {
+                                        return <Typography variant="body2">{message.message}</Typography>;
+                                      }
+                                    })()}
+                                  </Box>
+                                ) : (
                                 <Box
                                   sx={{
                                     maxWidth: { xs: '85%', sm: '72%' },
@@ -593,6 +728,7 @@ const LiveChat = () => {
                                     </Box>
                                   )}
                                 </Box>
+                                )}
                               </Box>
                             </motion.div>
                           ))
@@ -638,10 +774,8 @@ const LiveChat = () => {
 
                       {/* Input Area */}
                       <Box sx={{ p: 2, borderTop: '1px solid rgba(0, 229, 255, 0.1)', bgcolor: 'rgba(13,17,23,0.95)' }}>
-                        <Box sx={{ display: 'flex', gap: 1, mb: 1.5, overflowX: 'auto', pb: 0.5, '&::-webkit-scrollbar': { height: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0, 229, 255, 0.3)', borderRadius: 2 } }}>
-                          <Chip label="What is the deposit address of USDT?" onClick={() => handleSuggestionClick('What is the deposit address of USDT?')} size="small" sx={{ bgcolor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', '&:hover': { bgcolor: 'rgba(0, 229, 255, 0.2)' }, cursor: 'pointer', flexShrink: 0 }} />
-                          <Chip label="What is the deposit address of BTC?" onClick={() => handleSuggestionClick('What is the deposit address of BTC?')} size="small" sx={{ bgcolor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', '&:hover': { bgcolor: 'rgba(0, 229, 255, 0.2)' }, cursor: 'pointer', flexShrink: 0 }} />
-                          <Chip label="What is the deposit address of ETH?" onClick={() => handleSuggestionClick('What is the deposit address of ETH?')} size="small" sx={{ bgcolor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', '&:hover': { bgcolor: 'rgba(0, 229, 255, 0.2)' }, cursor: 'pointer', flexShrink: 0 }} />
+                        <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                          <Chip label="What is the deposit address?" onClick={() => handleSuggestionClick('What is the deposit address?')} size="small" sx={{ bgcolor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', '&:hover': { bgcolor: 'rgba(0, 229, 255, 0.2)' }, cursor: 'pointer' }} />
                         </Box>
                         {selectedFile && (
                           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>

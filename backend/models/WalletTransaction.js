@@ -8,7 +8,7 @@ const WalletTransactionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['deposit', 'withdrawal', 'trade', 'transfer', 'exchange'],
+    enum: ['deposit', 'withdrawal', 'trade', 'transfer', 'exchange', 'trade_close'],
     required: true
   },
   currency: {

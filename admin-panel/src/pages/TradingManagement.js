@@ -139,7 +139,9 @@ const TradingManagement = () => {
       const response = await api.get('/api/admin/trades', { 
         params: {
           ...filters,
-          search: searchTerm
+          search: searchTerm,
+          limit: 10000,
+          page: 1
         } 
       });
       const processed = (response.data.trades || []).map(processTradeData);
@@ -415,16 +417,6 @@ const TradingManagement = () => {
             Monitor and manage all trading activity
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={marketSettings.tradingEnabled ? <TrendingUp /> : <TrendingDown />}
-            onClick={() => handleSettingChange('tradingEnabled', !marketSettings.tradingEnabled)}
-            color={marketSettings.tradingEnabled ? 'success' : 'error'}
-          >
-            {marketSettings.tradingEnabled ? 'Global Force Win' : 'Global Force Loss'}
-          </Button>
-        </Box>
       </Box>
 
       {/* Stats Cards */}
@@ -616,6 +608,7 @@ const TradingManagement = () => {
                     <TableCell>Profit/Loss</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Duration</TableCell>
+                    <TableCell>Date / Time</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -680,6 +673,14 @@ const TradingManagement = () => {
                       <TableCell>
                         <Typography variant="body2">
                           {trade.duration}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                          {trade.createdAt ? new Date(trade.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                          {trade.createdAt ? new Date(trade.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}
                         </Typography>
                       </TableCell>
                       <TableCell>

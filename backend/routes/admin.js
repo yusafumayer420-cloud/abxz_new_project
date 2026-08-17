@@ -174,7 +174,7 @@ router.put('/users/:id', protect, adminAuth, async (req, res) => {
 // Get all trades
 router.get('/trades', protect, adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 50, status, userId, type, search } = req.query;
+    const { page = 1, limit = 10000, status, userId, type, search } = req.query;
     
     const query = {};
     if (status) query.status = status;

@@ -9,35 +9,24 @@ import {
   Link,
   IconButton,
   InputAdornment,
-  Alert,
 } from '@mui/material';
 import { 
   Visibility, 
   VisibilityOff, 
-  Person, 
   Email, 
   Lock,
-  Phone,
-  AccountCircle,
-  Group
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import toast from 'react-hot-toast';
 
-const AuthPage = ({ isRegister = false }) => {
+const AuthPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { login, register } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    fullName: '',
-    confirmPassword: '',
-    phone: '',
-    referralCode: searchParams.get('ref') || ''
   });
 
   const handleChange = (e) => {
@@ -49,24 +38,11 @@ const AuthPage = ({ isRegister = false }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (isRegister) {
-      if (formData.password !== formData.confirmPassword) {
-        toast.error('Passwords do not match');
-        return;
-      }
-      
-      const result = await register(formData.email, formData.password, formData.fullName, formData.referralCode);
-      if (result.success) {
-        navigate('/verify-email', { state: { email: formData.email } });
-      }
-    } else {
-      const result = await login(formData.email, formData.password);
-      if (result.success) {
-        navigate('/');
-      } else if (result.unverified) {
-        navigate('/verify-email', { state: { email: result.email } });
-      }
+    const result = await login(formData.email, formData.password);
+    if (result.success) {
+      navigate('/');
+    } else if (result.unverified) {
+      navigate('/verify-email', { state: { email: result.email } });
     }
   };
 
@@ -97,34 +73,13 @@ const AuthPage = ({ isRegister = false }) => {
               }}
             />
           <Typography variant="body1" color="text.secondary">
-            {isRegister ? 'Create your account' : 'Welcome back to your trading dashboard'}
+            Welcome back to your trading dashboard
           </Typography>
         </Box>
 
         {/* Form */}
         <Paper sx={{ p: { xs: 2, sm: 4 }, borderRadius: 3 }}>
           <form onSubmit={handleSubmit}>
-            {isRegister && (
-              <TextField
-                id="reg-full-name"
-                autoComplete="name"
-                fullWidth
-                label="Full Name"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                required
-                sx={{ mb: 3 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Person />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-
             <TextField
               id="auth-email"
               autoComplete="email"
@@ -145,29 +100,9 @@ const AuthPage = ({ isRegister = false }) => {
               }}
             />
 
-            {isRegister && (
-              <TextField
-                id="reg-phone"
-                autoComplete="tel"
-                fullWidth
-                label="Phone Number (Optional)"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                sx={{ mb: 3 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Phone />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-
             <TextField
               id="auth-password"
-              autoComplete={isRegister ? "new-password" : "current-password"}
+              autoComplete="current-password"
               fullWidth
               label="Password"
               name="password"
@@ -192,66 +127,20 @@ const AuthPage = ({ isRegister = false }) => {
               }}
             />
             
-            {!isRegister && (
-              <Box sx={{ mb: 3, textAlign: 'right' }}>
-                <Link
-                  onClick={() => navigate('/forgot-password')}
-                  sx={{
-                    color: '#00E5FF',
-                    fontSize: '0.875rem',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    '&:hover': { textDecoration: 'underline' }
-                  }}
-                >
-                  Forgot Password?
-                </Link>
-              </Box>
-            )}
-
-            {isRegister && (
-              <>
-                <TextField
-                  id="reg-confirm-password"
-                  autoComplete="new-password"
-                  fullWidth
-                  label="Confirm Password"
-                  name="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  sx={{ mb: 3 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Lock />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                
-                <TextField
-                  id="reg-referral-code"
-                  fullWidth
-                  label="Referral Code (Optional)"
-                  name="referralCode"
-                  placeholder="e.g. CSIM-123456"
-                  value={formData.referralCode}
-                  onChange={handleChange}
-                  sx={{ mb: 3 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Group />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </>
-            )}
-
-            
+            <Box sx={{ mb: 3, textAlign: 'right' }}>
+              <Link
+                onClick={() => navigate('/forgot-password')}
+                sx={{
+                  color: '#00E5FF',
+                  fontSize: '0.875rem',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                  '&:hover': { textDecoration: 'underline' }
+                }}
+              >
+                Forgot Password?
+              </Link>
+            </Box>
 
             {/* Submit Button */}
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
@@ -273,16 +162,16 @@ const AuthPage = ({ isRegister = false }) => {
                   }
                 }}
               >
-                {isRegister ? 'Create Account' : 'Sign In'}
+                Sign In
               </Button>
             </motion.div>
 
             {/* Switch Mode */}
             <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
+                Don't have an account?{' '}
                 <Link
-                  href={isRegister ? '/login' : '/register'}
+                  href="/register"
                   sx={{
                     color: '#00E5FF',
                     textDecoration: 'none',
@@ -293,7 +182,7 @@ const AuthPage = ({ isRegister = false }) => {
                     }
                   }}
                 >
-                  {isRegister ? 'Sign In' : 'Sign Up'}
+                  Sign Up
                 </Link>
               </Typography>
             </Box>

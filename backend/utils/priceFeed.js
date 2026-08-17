@@ -148,13 +148,30 @@ function startPriceFeed(io) {
       console.error('Coinbase WebSocket error:', error.message);
       console.log('Falling back to Bitstamp WebSocket...');
       // Close existing socket and connect to Bitstamp
-      if (socket) socket.close();
+      try { if (socket) socket.close(); } catch (_) {}
       connectBitstamp();
     });
 
     function connectBitstamp() {
       const bitstampUrl = 'wss://ws.bitstamp.net';
-      const bsSocket = new WebSocket(bitstampUrl);
+      let bsSocket;
+      try {
+        bsSocket = new WebSocket(bitstampUrl);
+      } catch (e) {
+        console.error('Failed to create Bitstamp WebSocket:', e.message);
+        console.log('Retrying price feed in 30 seconds...');
+        setTimeout(connect, 30000);
+        return;
+      }
+
+      // ⚠️ Must add error handler BEFORE any network call to prevent uncaught crash
+      bsSocket.on('error', (err) => {
+        console.error('Bitstamp WebSocket error:', err.message);
+        console.log('Both price feeds unavailable. Retrying in 30 seconds...');
+        try { bsSocket.terminate(); } catch (_) {}
+        setTimeout(connect, 30000);
+      });
+
       bsSocket.on('open', () => {
         console.log('Connected to Bitstamp WebSocket');
         // Subscribe to live ticker for each pair
@@ -188,8 +205,8 @@ function startPriceFeed(io) {
         }
       });
       bsSocket.on('close', () => {
-        console.log('Bitstamp WebSocket closed, retrying in 5s');
-        setTimeout(connectBitstamp, 5000);
+        console.log('Bitstamp WebSocket closed, retrying in 10s');
+        setTimeout(connectBitstamp, 10000);
       });
     }
 

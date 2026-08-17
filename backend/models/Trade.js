@@ -40,7 +40,7 @@ const TradeSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'completed', 'cancelled'],
+    enum: ['pending', 'completed', 'cancelled', 'closed'],
     default: 'pending'
   },
   // Delivery contract specific fields
@@ -64,6 +64,14 @@ const TradeSchema = new mongoose.Schema({
   profitAmount: {
     type: Number,
     default: 0
+  },
+  closePrice: {
+    type: Number,
+    default: null
+  },
+  pnl: {
+    type: Number,
+    default: null
   },
   position: {
     leverage: { type: Number, default: 1 },

@@ -540,22 +540,7 @@ const HomePage = ({ marketData }) => {
                   >
                     {dailyPnl >= 0 ? '+' : '-'}${Math.abs(dailyPnl).toFixed(2)}
                   </Typography>
-                  <Chip
-                    icon={dailyPnl >= 0 ? <ArrowUpward sx={{ fontSize: '10px !important' }} /> : <ArrowDownward sx={{ fontSize: '10px !important' }} />}
-                    label={`${dailyPnlPct >= 0 ? '+' : ''}${dailyPnlPct}%`}
-                    size="small"
-                    sx={{
-                      mt: 0.75,
-                      height: 20,
-                      fontSize: '0.6rem',
-                      fontWeight: 700,
-                      bgcolor: dailyPnl >= 0 ? 'rgba(0, 200, 83, 0.12)' : 'rgba(255, 82, 82, 0.12)',
-                      color: dailyPnl >= 0 ? '#00C853' : '#FF5252',
-                      '& .MuiChip-icon': {
-                        color: dailyPnl >= 0 ? '#00C853' : '#FF5252',
-                      },
-                    }}
-                  />
+
                 </CardContent>
               </Card>
 

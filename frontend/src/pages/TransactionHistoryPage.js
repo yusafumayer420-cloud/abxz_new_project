@@ -20,12 +20,13 @@ import {
   Grid
 } from '@mui/material';
 import { ArrowBack, Close, ContentCopy } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from '../utils/axiosConfig';
 
 const TransactionHistoryPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(0);
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.tab ?? 0);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTx, setSelectedTx] = useState(null);

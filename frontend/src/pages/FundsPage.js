@@ -290,12 +290,6 @@ const FundsPage = () => {
         Wallet
       </Typography>
 
-      {/* Wallet Balance Info */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          Manage your USDT assets here. You can deposit and withdraw Tether across multiple networks.
-        </Typography>
-      </Box>
 
       {/* Total Balance */}
       <Card sx={{ 
@@ -314,24 +308,7 @@ const FundsPage = () => {
           <Typography variant="h4" sx={{ fontWeight: '800', color: 'white', mb: 3, letterSpacing: '-0.5px', fontSize: { xs: '1.5rem', sm: '1.75rem' }, lineHeight: 1.2 }}>
             {Math.floor(user?.wallet?.usdt || 0).toLocaleString('en-US')}<br />USDT
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button 
-              variant="contained" 
-              startIcon={<ArrowDownward />}
-              sx={{ flex: 1, bgcolor: 'primary.main', color: '#0b0e14', fontWeight: 800, borderRadius: '24px', py: 1.2, textTransform: 'none', fontSize: '0.9rem', boxShadow: 'none', '&:hover': { bgcolor: 'primary.light', boxShadow: 'none' } }}
-              onClick={() => setActiveTab(0)}
-            >
-              Deposit
-            </Button>
-            <Button 
-              variant="contained" 
-              startIcon={<ArrowUpward />}
-              sx={{ flex: 1, bgcolor: 'primary.main', color: '#0b0e14', fontWeight: 800, borderRadius: '24px', py: 1.2, textTransform: 'none', fontSize: '0.9rem', boxShadow: 'none', '&:hover': { bgcolor: 'primary.light', boxShadow: 'none' } }}
-              onClick={() => setActiveTab(1)}
-            >
-              Withdraw
-            </Button>
-          </Box>
+
         </CardContent>
       </Card>
 
@@ -371,25 +348,6 @@ const FundsPage = () => {
         >
           Withdraw
         </Button>
-        <Button 
-          fullWidth
-          startIcon={<History />}
-          onClick={() => navigate('/history')}
-          sx={{ 
-            color: '#8b93a6',
-            bgcolor: 'transparent',
-            borderRadius: '28px',
-            py: 1.5,
-            fontWeight: 700,
-            textTransform: 'none',
-            fontSize: '1rem',
-            transition: 'all 0.2s',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' },
-            '&:active': { bgcolor: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF' }
-          }}
-        >
-          History
-        </Button>
       </Box>
 
       {/* Deposit Tab */}
@@ -397,9 +355,31 @@ const FundsPage = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {depositStep === 1 ? (
             <Box>
-              <Typography variant="h6" sx={{ mb: 3, textAlign: 'center', fontWeight: 700 }}>
-                Select deposit crypto
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                <Typography variant="body1" sx={{ fontWeight: 600, color: '#fff' }}>
+                  Select deposit crypto
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<History sx={{ fontSize: '0.9rem !important' }} />}
+                  onClick={() => navigate('/history')}
+                  sx={{
+                    color: '#fff',
+                    bgcolor: 'rgba(255,255,255,0.08)',
+                    borderRadius: '50px',
+                    px: 1.5,
+                    py: 0.5,
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    '&:hover': { bgcolor: 'rgba(0,229,255,0.12)', borderColor: 'rgba(0,229,255,0.3)', color: '#00E5FF' },
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  Deposit History
+                </Button>
+              </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 {[
                   { symbol: 'USDT', name: 'USDT deposit', color: '#26A17B', icon: 'T' },
@@ -568,61 +548,145 @@ const FundsPage = () => {
                   ))}
                 </Box>
 
-                {user?.canViewDepositAddress && (
+                {user?.canViewDepositAddress && depositAddressLoading ? (
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="body2" sx={{ mb: 1 }}>Deposit address</Typography>
-                    {depositAddressLoading ? (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                        <CircularProgress size={24} />
-                      </Box>
-                    ) : configuredDepositAddress ? (
-                      <TextField
-                        fullWidth
-                        value={configuredDepositAddress}
-                        InputProps={{
-                          readOnly: true,
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <IconButton onClick={() => copyToClipboard(configuredDepositAddress)}>
-                                <ContentCopy />
-                              </IconButton>
-                            </InputAdornment>
-                          ),
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  </Box>
+                ) : user?.canViewDepositAddress && configuredDepositAddress ? (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>Deposit address</Typography>
+                    <TextField
+                      fullWidth
+                      value={configuredDepositAddress}
+                      InputProps={{
+                        readOnly: true,
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton onClick={() => copyToClipboard(configuredDepositAddress)}>
+                              <ContentCopy />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Box>
+                ) : (
+                  <Box
+                    sx={{
+                      mb: 3,
+                      p: 2.5,
+                      borderRadius: '20px',
+                      bgcolor: 'rgba(26,29,36,0.5)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      boxShadow: '0 4px 24px -2px rgba(0,0,0,0.2)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 2,
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Box
+                        sx={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: '50%',
+                          background: 'rgba(0, 229, 255, 0.15)',
+                          color: '#00E5FF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.4rem',
+                          flexShrink: 0,
+                          border: '1px solid rgba(0, 229, 255, 0.3)',
                         }}
-                      />
-                    ) : (
-                      <Alert severity="warning" sx={{ mb: 0 }}>
-                        No deposit address configured for {depositCurrency} ({depositChain}). Please contact support.
-                      </Alert>
-                    )}
+                      >
+                        🎧
+                      </Box>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500, lineHeight: 1.5, textAlign: 'left' }}
+                      >
+                        Please contact our support team<br />
+                        to get your deposit address.
+                      </Typography>
+                    </Box>
+
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={() => window.dispatchEvent(new Event('openLiveChat'))}
+                      sx={{
+                        py: 1.4,
+                        borderRadius: '50px',
+                        fontWeight: 700,
+                        fontSize: '0.95rem',
+                        textTransform: 'none',
+                        color: '#000',
+                        background: '#00E5FF',
+                        boxShadow: '0 0 16px rgba(0,229,255,0.4)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          background: '#33EBFF',
+                          boxShadow: '0 0 24px rgba(0,229,255,0.6)',
+                          transform: 'translateY(-2px)',
+                        },
+                      }}
+                    >
+                      Get {depositCurrency} Deposit Address
+                    </Button>
+
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+                      Our support team will provide you with a<br />secure and unique deposit address.
+                    </Typography>
                   </Box>
                 )}
 
-                <Typography variant="body2" sx={{ mb: 1 }}>Payment voucher (upload a screenshot of payment details)</Typography>
-                <Box 
+
+                <Box
                   component="label"
-                  sx={{ 
-                    display: 'block',
-                    width: '100px', 
-                    height: '100px', 
-                    bgcolor: 'rgba(255,255,255,0.05)', 
-                    borderRadius: 2, 
-                    border: '1px dashed rgba(255,255,255,0.2)',
+                  sx={{
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    width: '100%',
+                    minHeight: '140px',
+                    bgcolor: 'rgba(255,255,255,0.04)',
+                    borderRadius: '16px',
+                    border: '2px dashed rgba(255,255,255,0.18)',
                     cursor: 'pointer',
-                    mb: 4,
-                    overflow: 'hidden'
+                    mb: 3,
+                    overflow: 'hidden',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.07)',
+                      borderColor: 'rgba(0,191,255,0.45)',
+                    },
                   }}
                 >
                   <input type="file" hidden accept="image/*" onChange={handleVoucherChange} />
                   {voucherPreview ? (
-                    <img src={voucherPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={voucherPreview} alt="Preview" style={{ width: '100%', height: '140px', objectFit: 'cover' }} />
                   ) : (
-                    <QrCode sx={{ fontSize: 30, color: 'text.secondary' }} />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, py: 3 }}>
+                      <QrCode sx={{ fontSize: 40, color: 'rgba(255,255,255,0.3)' }} />
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+                        Upload Payment Voucher
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)' }}>
+                        Tap to select a screenshot of your payment
+                      </Typography>
+                    </Box>
                   )}
                 </Box>
+
 
                 <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2, mb: 4 }}>
                   <Typography variant="subtitle2" sx={{ mb: 1.5, textAlign: 'center', fontWeight: 'bold' }}>
@@ -663,9 +727,31 @@ const FundsPage = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <Card>
             <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Withdraw Crypto
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="body1" sx={{ fontWeight: 600, color: '#fff' }}>
+                  Select Crypto to Withdraw
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<History sx={{ fontSize: '0.9rem !important' }} />}
+                  onClick={() => navigate('/history', { state: { tab: 1 } })}
+                  sx={{
+                    color: '#fff',
+                    bgcolor: 'rgba(255,255,255,0.08)',
+                    borderRadius: '50px',
+                    px: 1.5,
+                    py: 0.5,
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    '&:hover': { bgcolor: 'rgba(0,229,255,0.12)', borderColor: 'rgba(0,229,255,0.3)', color: '#00E5FF' },
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  Withdraw History
+                </Button>
+              </Box>
               
               <TextField
                 select

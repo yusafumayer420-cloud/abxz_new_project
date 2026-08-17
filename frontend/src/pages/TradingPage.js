@@ -665,8 +665,11 @@ const TradingPage = ({ socket }) => {
 
   const [positions, setPositions] = useState([]);
   const [openOrders, setOpenOrders] = useState([]);
+  const [closedPositions, setClosedPositions] = useState([]);
+  const [livePrices, setLivePrices] = useState({});
   const [loading, setLoading] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
+  const [closingId, setClosingId] = useState(null);
   const [showChart, setShowChart] = useState(false);
 
   const fetchMyTrades = async () => {
@@ -674,6 +677,7 @@ const TradingPage = ({ socket }) => {
       const response = await axios.get('/api/trading/my-trades');
       setPositions(response.data.positions || []);
       setOpenOrders(response.data.openOrders || []);
+      setClosedPositions(response.data.closedPositions || []);
     } catch (error) {
       console.error('Failed to fetch trades:', error);
     }
@@ -686,6 +690,14 @@ const TradingPage = ({ socket }) => {
     // fetchWalletBalance(); // Removed redundant call
 
     const handlePriceUpdate = (prices) => {
+      setLivePrices(prev => {
+        const newPrices = { ...prev };
+        prices.forEach(p => {
+          newPrices[p.symbol] = parseFloat(p.price);
+        });
+        return newPrices;
+      });
+
       const btcPrice = prices.find(p => p.symbol === currentPair);
       if (btcPrice) {
         const livePrice = parseFloat(btcPrice.price);
@@ -771,6 +783,20 @@ const TradingPage = ({ socket }) => {
     }
   };
 
+  const handleClosePosition = async (pos) => {
+    const currentP = livePrices[pos.pair] || price;
+    setClosingId(pos._id);
+    try {
+      await axios.post(`/api/trading/order/${pos._id}/close`, { price: currentP });
+      toast.success('Position closed');
+      fetchMyTrades();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to close position');
+    } finally {
+      setClosingId(null);
+    }
+  };
+
   const handleSetPercent = (pct) => {
     const maxBtc = ((user?.wallet?.usdt || 0) / price) * pct;
     setAmount(maxBtc.toFixed(2));
@@ -788,7 +814,7 @@ const TradingPage = ({ socket }) => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ pb: 10, pt: 2 }}>
+    <Container maxWidth="sm" sx={{ pb: 16, pt: 2 }}>
       {/* Pair Header */}
       <Paper sx={{ mb: 1, p: 1.5 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1014,6 +1040,7 @@ const TradingPage = ({ socket }) => {
             <Tabs value={positionsTab} onChange={(e, v) => setPositionsTab(v)} variant="fullWidth" sx={{ mb: 1 }}>
               <Tab label={`Positions (${positions.length})`} />
               <Tab label={`Open Orders (${openOrders.length})`} />
+              <Tab label={`Closed (${closedPositions.length})`} />
             </Tabs>
 
             {positionsTab === 0 && (
@@ -1024,20 +1051,80 @@ const TradingPage = ({ socket }) => {
                     <Typography variant="caption" color="text.secondary">Place a market order to open a position</Typography>
                   </CardContent>
                 ) : (
-                  <TableContainer>
-                    <Table size="small">
+                  <TableContainer sx={{ overflowX: 'auto', '&::-webkit-scrollbar': { display: 'none' }, msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                    <Table size="small" sx={{ '& .MuiTableCell-root': { px: {xs: 0.5, sm: 1}, whiteSpace: 'nowrap' } }}>
                       <TableHead>
                         <TableRow>
                           <TableCell>Pair</TableCell>
                           <TableCell>Type</TableCell>
                           <TableCell>Amount</TableCell>
-                          <TableCell>Price</TableCell>
                           <TableCell>Total</TableCell>
-                          <TableCell>Date</TableCell>
+                          <TableCell>PnL</TableCell>
+                          <TableCell>Action</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {positions.map((pos) => (
+                        {positions.map((pos) => {
+                          const currentP = livePrices[pos.pair] || pos.price;
+                          let pnl = 0;
+                          if (pos.type === 'long') pnl = (currentP - pos.price) * pos.amount;
+                          if (pos.type === 'short') pnl = (pos.price - currentP) * pos.amount;
+
+                          return (
+                          <TableRow key={pos._id}>
+                            <TableCell><Typography variant="caption" sx={{ fontWeight: 'bold' }}>{pos.pair}</Typography></TableCell>
+                            <TableCell>
+                              <Chip label={pos.type.toUpperCase()} size="small"
+                                sx={{ fontSize: '0.65rem', bgcolor: (pos.type === 'long' || pos.type === 'buy') ? 'rgba(0,229,255,0.15)' : 'rgba(255,51,102,0.15)', color: (pos.type === 'long' || pos.type === 'buy') ? '#00E5FF' : '#FF3366' }}
+                              />
+                            </TableCell>
+                            <TableCell><Typography variant="caption">{pos.amount}</Typography></TableCell>
+                            <TableCell><Typography variant="caption">${pos.total.toLocaleString()}</Typography></TableCell>
+                            <TableCell>
+                              <Typography variant="caption" color={pnl >= 0 ? '#00E5FF' : '#FF3366'}>
+                                {pnl >= 0 ? '+' : '-'}${Math.abs(pnl).toFixed(2)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Button size="small" variant="outlined" color="error" 
+                                onClick={() => handleClosePosition(pos)} 
+                                disabled={closingId === pos._id}
+                                sx={{ py: 0, px: 1, minWidth: 0, fontSize: '0.65rem' }}
+                              >
+                                {closingId === pos._id ? <CircularProgress size={10} color="inherit" /> : 'Close'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </Card>
+            )}
+
+            {positionsTab === 2 && (
+              <Card>
+                {closedPositions.length === 0 ? (
+                  <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography color="text.secondary">No closed positions</Typography>
+                  </CardContent>
+                ) : (
+                  <TableContainer sx={{ overflowX: 'auto', '&::-webkit-scrollbar': { display: 'none' }, msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                    <Table size="small" sx={{ '& .MuiTableCell-root': { px: {xs: 0.5, sm: 1}, whiteSpace: 'nowrap' } }}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Pair</TableCell>
+                          <TableCell>Type</TableCell>
+                          <TableCell>Amount</TableCell>
+                          <TableCell>Entry</TableCell>
+                          <TableCell>Close</TableCell>
+                          <TableCell>PnL</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {closedPositions.map((pos) => (
                           <TableRow key={pos._id}>
                             <TableCell><Typography variant="caption" sx={{ fontWeight: 'bold' }}>{pos.pair}</Typography></TableCell>
                             <TableCell>
@@ -1047,8 +1134,12 @@ const TradingPage = ({ socket }) => {
                             </TableCell>
                             <TableCell><Typography variant="caption">{pos.amount}</Typography></TableCell>
                             <TableCell><Typography variant="caption">${pos.price.toLocaleString()}</Typography></TableCell>
-                            <TableCell><Typography variant="caption">${pos.total.toLocaleString()}</Typography></TableCell>
-                            <TableCell><Typography variant="caption">{new Date(pos.createdAt).toLocaleDateString()}</Typography></TableCell>
+                            <TableCell><Typography variant="caption">${pos.closePrice?.toLocaleString()}</Typography></TableCell>
+                            <TableCell>
+                              <Typography variant="caption" color={pos.pnl >= 0 ? '#00E5FF' : '#FF3366'}>
+                                {pos.pnl >= 0 ? '+' : '-'}${Math.abs(pos.pnl || 0).toFixed(2)}
+                              </Typography>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1066,8 +1157,8 @@ const TradingPage = ({ socket }) => {
                     <Typography variant="caption" color="text.secondary">Place a limit order to see it here</Typography>
                   </CardContent>
                 ) : (
-                  <TableContainer>
-                    <Table size="small">
+                  <TableContainer sx={{ overflowX: 'auto', '&::-webkit-scrollbar': { display: 'none' }, msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                    <Table size="small" sx={{ '& .MuiTableCell-root': { px: {xs: 0.5, sm: 1}, whiteSpace: 'nowrap' } }}>
                       <TableHead>
                         <TableRow>
                           <TableCell>Pair</TableCell>

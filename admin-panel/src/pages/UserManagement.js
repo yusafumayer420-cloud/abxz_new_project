@@ -35,12 +35,23 @@ const UserManagement = () => {
 
   // Initialize socket connection and listen for user status updates
   useEffect(() => {
-    // Create socket instance
-    socketRef.current = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000');
-    // Request current user status list
+    const token = localStorage.getItem('adminToken');
+    // Connect to the /chat namespace with admin auth token
+    socketRef.current = io(
+      (process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000') + '/chat',
+      { auth: { token } }
+    );
+
     socketRef.current.on('connect', () => {
+      console.log('Admin connected to /chat namespace for user status');
+      // Request current user status list
       socketRef.current.emit('get_user_status');
     });
+
+    socketRef.current.on('connect_error', (err) => {
+      console.error('Socket connect error:', err.message);
+    });
+
     const handleStatus = (list) => {
       const map = {};
       list.forEach(item => {
@@ -48,8 +59,18 @@ const UserManagement = () => {
       });
       setUserStatuses(map);
     };
+
     socketRef.current.on('user_status', handleStatus);
+
+    // Refresh status every 30 seconds
+    const interval = setInterval(() => {
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('get_user_status');
+      }
+    }, 30000);
+
     return () => {
+      clearInterval(interval);
       if (socketRef.current) {
         socketRef.current.off('user_status', handleStatus);
         socketRef.current.disconnect();
@@ -298,7 +319,14 @@ const UserManagement = () => {
             color="#4361EE"
           />
         </Grid>
-
+        <Grid item xs={12} sm={6} md={3}>
+          <StatsCard
+            title="Suspended Accounts"
+            value={users.filter(u => u.isBanned).length}
+            icon={<Block />}
+            color="#f43f5e"
+          />
+        </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
             title="KYC Verified"
@@ -312,7 +340,7 @@ const UserManagement = () => {
             title="Total Balance"
             value={formatCurrency(users.reduce((sum, u) => sum + getUserBalance(u), 0))}
             icon={<AccountBalanceWallet />}
-            color="#f43f5e"
+            color="#8b5cf6"
           />
         </Grid>
       </Grid>
@@ -438,15 +466,25 @@ const UserManagement = () => {
                 </TableHead>
                 <TableBody>
                   {users.map((user) => (
-                    <TableRow key={user._id} hover>
+                    <TableRow
+                      key={user._id}
+                      hover
+                      sx={user.isBanned ? { bgcolor: 'rgba(244,63,94,0.07)', '&:hover': { bgcolor: 'rgba(244,63,94,0.12)' } } : {}}
+                    >
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ bgcolor: '#8b5cf6' }} src={user.profilePicture}>
+                          <Avatar
+                            sx={{ bgcolor: user.isBanned ? '#f43f5e' : '#8b5cf6', opacity: user.isBanned ? 0.75 : 1 }}
+                            src={user.profilePicture}
+                          >
                             {getInitials(user.fullName)}
                           </Avatar>
                           <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', color: user.isBanned ? '#f43f5e' : 'inherit' }}>
                               {user.fullName || 'N/A'}
+                              {user.isBanned && (
+                                <Chip label="SUSPENDED" size="small" color="error" sx={{ ml: 1, fontSize: '0.55rem', height: 16, fontWeight: 'bold' }} />
+                              )}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               ID: {user._id.substring(user._id.length - 6)}
@@ -468,11 +506,20 @@ const UserManagement = () => {
                       </TableCell>
                       <TableCell>{formatIpAddress(userStatuses[user._id]?.ip || user.lastIpAddress)}</TableCell>
                       <TableCell>
-                        <Chip
-                          label={userStatuses[user._id]?.online ? 'Online' : 'Offline'}
-                          size="small"
-                          color={userStatuses[user._id]?.online ? 'success' : 'default'}
-                        />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <Chip
+                            label={userStatuses[user._id]?.online ? 'Online' : 'Offline'}
+                            size="small"
+                            color={userStatuses[user._id]?.online ? 'success' : 'default'}
+                          />
+                          <Chip
+                            label={user.isBanned ? 'Suspended' : 'Active'}
+                            size="small"
+                            color={user.isBanned ? 'error' : 'success'}
+                            icon={user.isBanned ? <Block sx={{ fontSize: '12px !important' }} /> : <CheckCircle sx={{ fontSize: '12px !important' }} />}
+                            sx={{ fontSize: '0.65rem' }}
+                          />
+                        </Box>
                       </TableCell>
                       <TableCell>
                         <Chip
@@ -569,9 +616,12 @@ const UserManagement = () => {
           <CheckCircle sx={{ mr: 2 }} />
           Verify KYC
         </MenuItem>
-        <MenuItem onClick={handleBlockUser}>
+        <MenuItem
+          onClick={handleBlockUser}
+          sx={{ color: selectedUser?.isBanned ? '#22c55e' : '#f43f5e', fontWeight: 'bold' }}
+        >
           <Block sx={{ mr: 2 }} />
-          {selectedUser?.isBanned ? 'Unblock User' : 'Block User'}
+          {selectedUser?.isBanned ? '✓ Unsuspend Account' : '⊘ Suspend Account'}
         </MenuItem>
         <MenuItem onClick={handleDeleteUser} sx={{ color: '#f43f5e' }}>
           <Delete sx={{ mr: 2 }} />

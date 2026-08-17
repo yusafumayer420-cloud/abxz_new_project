@@ -225,17 +225,20 @@ router.post('/order', auth, async (req, res) => {
     const total = parseFloat(price) * parseFloat(amount);
     let user;
 
+    const isPerpetual = type === 'long' || type === 'short';
+    const marginRequired = isPerpetual ? total / leverage : total;
+
     // Atomic deduction: only subtract if balance is sufficient
-    if (type === 'buy' || type === 'long') {
+    if (isPerpetual || type === 'buy') {
       user = await User.findOneAndUpdate(
-        { _id: req.user.id, 'wallet.usdt': { $gte: total } },
-        { $inc: { 'wallet.usdt': -total } },
+        { _id: req.user.id, 'wallet.usdt': { $gte: marginRequired } },
+        { $inc: { 'wallet.usdt': -marginRequired } },
         { new: true }
       );
       if (!user) {
         return res.status(400).json({ message: 'Insufficient USDT balance.' });
       }
-    } else if (type === 'sell' || type === 'short') {
+    } else if (type === 'sell') {
       const currency = pair.split('/')[0].toLowerCase();
       const amountNum = parseFloat(amount);
       const updateObj = { $inc: {} };
@@ -252,6 +255,7 @@ router.post('/order', auth, async (req, res) => {
 
     // Market orders are filled immediately; limit orders stay pending
     const tradeStatus = orderType === 'market' ? 'completed' : 'pending';
+    const tradeMode = isPerpetual ? 'perpetual' : 'spot';
 
     // Create trade
     const trade = new Trade({
@@ -259,7 +263,7 @@ router.post('/order', auth, async (req, res) => {
       pair,
       type,
       orderType,
-      tradeMode: 'spot',
+      tradeMode,
       price: parseFloat(price),
       amount: parseFloat(amount),
       total,
@@ -269,11 +273,25 @@ router.post('/order', auth, async (req, res) => {
 
     await trade.save();
 
-    // For completed market orders: update trading stats atomically
+    // For completed market orders: update trading stats atomically and credit assets
     if (tradeStatus === 'completed') {
-      await User.findByIdAndUpdate(req.user.id, {
-        $inc: { 'tradingStats.totalTrades': 1 }
-      });
+      const incUpdate = { 'tradingStats.totalTrades': 1 };
+      
+      // If it's a spot trade, credit the receiving asset to the wallet
+      if (!isPerpetual) {
+        if (type === 'buy') {
+          const currency = pair.split('/')[0].toLowerCase();
+          incUpdate[`wallet.${currency}`] = parseFloat(amount);
+        } else if (type === 'sell') {
+          incUpdate['wallet.usdt'] = total;
+        }
+      }
+
+      user = await User.findByIdAndUpdate(
+        req.user.id, 
+        { $inc: incUpdate },
+        { new: true }
+      );
     }
 
     // Create a wallet transaction record for completed trades
@@ -323,8 +341,9 @@ router.get('/my-trades', auth, async (req, res) => {
 
     const positions = trades.filter(t => t.status === 'completed');
     const openOrders = trades.filter(t => t.status === 'pending');
+    const closedPositions = trades.filter(t => t.status === 'closed');
 
-    res.json({ positions, openOrders });
+    res.json({ positions, openOrders, closedPositions });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -341,18 +360,29 @@ router.post('/order/:id/cancel', auth, async (req, res) => {
     if (order.tradeMode === 'delivery') return res.status(400).json({ message: 'Delivery orders cannot be cancelled' });
 
     let updatedUser;
+    const isPerpetual = order.tradeMode === 'perpetual' || (order.tradeMode === 'spot' && (order.type === 'long' || order.type === 'short'));
+
     // Atomic refund
-    if (order.type === 'buy' || order.type === 'long') {
+    if (isPerpetual) {
+      const margin = order.total / (order.position.leverage || 1);
       updatedUser = await User.findByIdAndUpdate(
         req.user.id,
-        { $inc: { 'wallet.usdt': order.total } },
+        { $inc: { 'wallet.usdt': margin } },
         { new: true }
       );
-    } else if (order.type === 'sell' || order.type === 'short') {
-      const currency = order.pair.split('/')[0].toLowerCase();
-      const updateObj = { $inc: {} };
-      updateObj.$inc[`wallet.${currency}`] = order.amount;
-      updatedUser = await User.findByIdAndUpdate(req.user.id, updateObj, { new: true });
+    } else {
+      if (order.type === 'buy') {
+        updatedUser = await User.findByIdAndUpdate(
+          req.user.id,
+          { $inc: { 'wallet.usdt': order.total } },
+          { new: true }
+        );
+      } else if (order.type === 'sell') {
+        const currency = order.pair.split('/')[0].toLowerCase();
+        const updateObj = { $inc: {} };
+        updateObj.$inc[`wallet.${currency}`] = order.amount;
+        updatedUser = await User.findByIdAndUpdate(req.user.id, updateObj, { new: true });
+      }
     }
 
     order.status = 'cancelled';
@@ -369,6 +399,80 @@ router.post('/order/:id/cancel', auth, async (req, res) => {
     }
 
     res.json({ message: 'Order cancelled' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Close perpetual position
+router.post('/order/:id/close', auth, async (req, res) => {
+  try {
+    const { price } = req.body;
+    if (!price) return res.status(400).json({ message: 'Current price is required to close position' });
+
+    const trade = await Trade.findById(req.params.id);
+    if (!trade) return res.status(404).json({ message: 'Trade not found' });
+    if (trade.userId.toString() !== req.user.id) return res.status(403).json({ message: 'Unauthorized' });
+    const isLegacyPerpetual = trade.tradeMode === 'spot' && (trade.type === 'long' || trade.type === 'short');
+    if (trade.tradeMode !== 'perpetual' && !isLegacyPerpetual) {
+      return res.status(400).json({ message: 'Only perpetual positions can be closed' });
+    }
+    if (trade.status !== 'completed') {
+      return res.status(400).json({ message: 'Position is already closed or not in open state' });
+    }
+
+    let pnl = 0;
+    if (trade.type === 'long') {
+      pnl = (parseFloat(price) - trade.price) * trade.amount;
+    } else if (trade.type === 'short') {
+      pnl = (trade.price - parseFloat(price)) * trade.amount;
+    }
+
+    const margin = trade.total / (trade.position.leverage || 1);
+    const returnAmount = Math.max(0, margin + pnl);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { 
+        $inc: { 
+          'wallet.usdt': returnAmount,
+          'tradingStats.profitLoss': pnl
+        } 
+      },
+      { new: true }
+    );
+
+    trade.status = 'closed';
+    trade.closePrice = parseFloat(price);
+    trade.pnl = pnl;
+    trade.profitAmount = pnl;
+    await trade.save();
+
+    await WalletTransaction.create({
+      userId: req.user.id,
+      type: 'trade_close',
+      currency: 'USDT',
+      amount: returnAmount,
+      status: 'completed',
+      metadata: {
+        pair: trade.pair,
+        closePrice: trade.closePrice,
+        pnl: pnl,
+        orderId: trade._id.toString()
+      }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      const populated = await trade.populate('userId', 'email fullName profilePicture');
+      io.to('admin').emit('trade_updated', populated);
+      io.to(`user_${req.user.id}`).emit('trade_updated', populated);
+      if (updatedUser) {
+        io.to(`user_${req.user.id}`).emit('balance_updated', { wallet: updatedUser.wallet });
+      }
+    }
+
+    res.json({ message: 'Position closed successfully', trade });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -393,12 +497,19 @@ router.put('/order/:id/status', auth, async (req, res) => {
     if (status === 'cancelled' && trade.status === 'pending') {
       const user = await User.findById(trade.userId);
       if (user) {
-        if (trade.type === 'buy' || trade.type === 'long') {
-          user.wallet.usdt += trade.total;
-        } else if (trade.type === 'sell' || trade.type === 'short') {
-          const currency = trade.pair.split('/')[0].toLowerCase();
-          if (user.wallet[currency] !== undefined) {
-            user.wallet[currency] += trade.amount;
+        const isPerpetual = trade.tradeMode === 'perpetual' || (trade.tradeMode === 'spot' && (trade.type === 'long' || trade.type === 'short'));
+
+        if (isPerpetual) {
+          const margin = trade.total / (trade.position.leverage || 1);
+          user.wallet.usdt += margin;
+        } else {
+          if (trade.type === 'buy') {
+            user.wallet.usdt += trade.total;
+          } else if (trade.type === 'sell') {
+            const currency = trade.pair.split('/')[0].toLowerCase();
+            if (user.wallet[currency] !== undefined) {
+              user.wallet[currency] += trade.amount;
+            }
           }
         }
         user.markModified('wallet');
