@@ -78,6 +78,8 @@ const TradingManagement = () => {
     status: '',
     sortBy: 'newest',
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const [marketSettings, setMarketSettings] = useState({
     tradingEnabled: true,
@@ -223,6 +225,7 @@ const TradingManagement = () => {
       return 0;
     });
     setFilteredTrades(filtered);
+    setCurrentPage(1); // reset to page 1 whenever filters change
   }, [trades, filters, activeTab]);
 
 
@@ -613,7 +616,7 @@ const TradingManagement = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredTrades.map((trade) => (
+                  {filteredTrades.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((trade) => (
                     <TableRow key={trade._id} hover>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
@@ -696,6 +699,84 @@ const TradingManagement = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+          )}
+
+          {/* Pagination Bar */}
+          {filteredTrades.length > 0 && (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                mt: 2,
+                pt: 2,
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                flexWrap: 'wrap',
+                gap: 1,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Showing up to
+                </Typography>
+                <FormControl size="small">
+                  <Select
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                    sx={{ fontSize: '0.75rem', height: 28, '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.12)' } }}
+                  >
+                    {[10, 20, 50, 100].map(n => (
+                      <MenuItem key={n} value={n}>{n}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Typography variant="caption" color="text.secondary">
+                  per page
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  sx={{
+                    fontSize: '0.7rem',
+                    px: 1.5,
+                    py: 0.5,
+                    minWidth: 0,
+                    borderColor: 'rgba(255,255,255,0.15)',
+                    color: currentPage === 1 ? 'text.disabled' : 'text.primary',
+                    '&:hover': { borderColor: 'rgba(255,255,255,0.3)', bgcolor: 'rgba(255,255,255,0.04)' },
+                  }}
+                >
+                  PREVIOUS
+                </Button>
+
+                <Typography variant="caption" sx={{ fontWeight: 700, px: 1, color: 'text.primary' }}>
+                  Page {currentPage} of {Math.max(1, Math.ceil(filteredTrades.length / pageSize))}
+                </Typography>
+
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={currentPage >= Math.ceil(filteredTrades.length / pageSize)}
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredTrades.length / pageSize), p + 1))}
+                  sx={{
+                    fontSize: '0.7rem',
+                    px: 1.5,
+                    py: 0.5,
+                    minWidth: 0,
+                    borderColor: 'rgba(255,255,255,0.15)',
+                    color: currentPage >= Math.ceil(filteredTrades.length / pageSize) ? 'text.disabled' : 'text.primary',
+                    '&:hover': { borderColor: 'rgba(255,255,255,0.3)', bgcolor: 'rgba(255,255,255,0.04)' },
+                  }}
+                >
+                  NEXT
+                </Button>
+              </Box>
+            </Box>
           )}
         </CardContent>
       </Card>

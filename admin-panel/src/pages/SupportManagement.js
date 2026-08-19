@@ -53,7 +53,9 @@ import {
   Add,
   Visibility,
   Edit,
-  Delete
+  Delete,
+  DoneAll,
+  Done
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -86,6 +88,7 @@ const SupportManagement = () => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editingMessageContent, setEditingMessageContent] = useState("");
   const fileInputRef = React.useRef(null);
+  const [unreadCounts, setUnreadCounts] = useState({}); // { room: count }
   const [stats, setStats] = useState({
     openTickets: 0,
     inProgressTickets: 0,
@@ -134,6 +137,10 @@ const SupportManagement = () => {
     if (filters.priority) filtered = filtered.filter((ticket) => ticket.priority === filters.priority);
     if (filters.category) filtered = filtered.filter((ticket) => ticket.category === filters.category);
     if (activeTab === 1) filtered = filtered.filter((t) => t.status === "open");
+    if (activeTab === 2) filtered = filtered.filter((t) => t.status === "seen");
+    if (activeTab === 3) filtered = filtered.filter((t) => t.status === "in_progress");
+    if (activeTab === 4) filtered = filtered.filter((t) => t.status === "resolved");
+    if (activeTab === 5) filtered = filtered.filter((t) => t.status === "closed");
     filtered.sort((a, b) => {
       if (filters.sortBy === "newest") return new Date(b.updatedAt) - new Date(a.updatedAt);
       if (filters.sortBy === "oldest") return new Date(a.updatedAt) - new Date(b.updatedAt);
@@ -239,6 +246,29 @@ const SupportManagement = () => {
       toast.success('Ticket resolved');
     });
 
+    supportSocket.on('ticket_seen', (ticket) => {
+      setTickets(prev => prev.map(t => t._id === ticket._id ? ticket : t));
+      if (selectedTicket?._id === ticket._id) {
+        setSelectedTicket(ticket);
+      }
+    });
+
+    supportSocket.on('ticket_in_progress', (ticket) => {
+      setTickets(prev => prev.map(t => t._id === ticket._id ? ticket : t));
+      if (selectedTicket?._id === ticket._id) {
+        setSelectedTicket(ticket);
+      }
+      toast.success('Ticket marked as in progress');
+    });
+
+    supportSocket.on('ticket_closed', (ticket) => {
+      setTickets(prev => prev.map(t => t._id === ticket._id ? ticket : t));
+      if (selectedTicket?._id === ticket._id) {
+        setSelectedTicket(ticket);
+      }
+      toast.success('Ticket closed');
+    });
+
     supportSocket.on('error', (error) => {
       toast.error(error.message || 'Support system error');
     });
@@ -254,6 +284,26 @@ const SupportManagement = () => {
         String(msg._id) === String(data.messageId) ? { ...msg, message: "This message was deleted", isDeleted: true } : msg
       ));
     });
+
+    // --- Seen / read receipt events ---
+    supportSocket.on('unread_counts', (countsMap) => {
+      setUnreadCounts(countsMap);
+    });
+
+    supportSocket.on('unread_count_update', ({ room, unreadCount }) => {
+      // Clear unread for the specific room
+      setUnreadCounts(prev => ({ ...prev, [room]: 0 }));
+    });
+
+    supportSocket.on('all_messages_read', ({ room }) => {
+      // Mark all currently loaded messages in this room as read
+      setChatMessages(prev =>
+        prev.map(msg => msg.type === 'user' ? { ...msg, isRead: true } : msg)
+      );
+      setUnreadCounts(prev => ({ ...prev, [room]: 0 }));
+    });
+
+    supportSocket.emit('get_unread_counts');
 
     setSocket(supportSocket);
 
@@ -302,16 +352,22 @@ const SupportManagement = () => {
       const response = await api.get(`/api/support/tickets/${targetTicket._id || targetTicket.id}`);
       setChatMessages(response.data.messages || []);
       setChatDialog(true);
-      
-      // Mark that we're viewing this ticket for real-time updates
-      console.log('Opened chat for ticket:', selectedTicket._id || selectedTicket.id);
-      
+
+      // Mark all user messages in this ticket as read
+      if (socket) {
+        const userId = typeof targetTicket.userId === 'object'
+          ? (targetTicket.userId?._id || targetTicket.userId?.id)
+          : targetTicket.userId;
+        socket.emit('mark_all_read', { userId, ticketId: targetTicket._id || targetTicket.id });
+        // Update local unread counts immediately
+        const room = `user_${userId}`;
+        setUnreadCounts(prev => ({ ...prev, [room]: 0 }));
+      }
+
       // Auto scroll to bottom after messages load
       setTimeout(() => {
         const chatContainer = document.querySelector('.chat-messages-container');
-        if (chatContainer) {
-          chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
+        if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
       }, 300);
     } catch (error) {
       console.error('Failed to load chat:', error);
@@ -339,9 +395,27 @@ const SupportManagement = () => {
   };
 
   const handleCloseTicket = () => {
-    if (!selectedTicket) return;
-    // We can reuse resolve or add a dedicated close event
-    handleResolveTicket();
+    if (!socket || !selectedTicket) return;
+    socket.emit('close_ticket', { 
+      ticketId: selectedTicket._id || selectedTicket.id
+    });
+    handleMenuClose();
+  };
+
+  const handleMarkAsInProgress = () => {
+    if (!socket || !selectedTicket) return;
+    socket.emit('mark_ticket_in_progress', { 
+      ticketId: selectedTicket._id || selectedTicket.id
+    });
+    handleMenuClose();
+  };
+
+  const handleMarkAsSeen = () => {
+    if (!socket || !selectedTicket) return;
+    socket.emit('mark_ticket_seen', { 
+      ticketId: selectedTicket._id || selectedTicket.id
+    });
+    handleMenuClose();
   };
 
   const handleSendMessage = async () => {
@@ -800,6 +874,10 @@ const SupportManagement = () => {
 
           <Tab label="All Chats" />
           <Tab label="Open" />
+          <Tab label="Seen" />
+          <Tab label="In Progress" />
+          <Tab label="Resolved" />
+          <Tab label="Closed" />
         </Tabs>
       </Paper>
 
@@ -847,30 +925,61 @@ const SupportManagement = () => {
                       key={ticket._id || ticket.id} 
                       hover
                       onClick={() => handleOpenChat(ticket)}
-                      sx={{ cursor: 'pointer' }}
+                      sx={{
+                        cursor: 'pointer',
+                        // Highlight rows with unread messages
+                        bgcolor: (() => {
+                          const userId = typeof ticket.userId === 'object'
+                            ? (ticket.userId?._id || ticket.userId?.id)
+                            : ticket.userId;
+                          const room = `user_${userId}`;
+                          return (unreadCounts[room] > 0) ? 'rgba(244,63,94,0.06)' : 'transparent';
+                        })(),
+                      }}
                     >
                       <TableCell>
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <Avatar sx={{ width: 24, height: 24, fontSize: 12 }} src={typeof ticket.userId === 'object' ? ticket.userId?.profilePicture : undefined}>
-                            {(typeof ticket.userId === 'object' ? (ticket.userId?.fullName || ticket.userId?.email || 'U') : 'U').charAt(0)}
-                          </Avatar>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          {/* Unread badge */}
+                          {(() => {
+                            const userId = typeof ticket.userId === 'object'
+                              ? (ticket.userId?._id || ticket.userId?.id)
+                              : ticket.userId;
+                            const room = `user_${userId}`;
+                            const count = unreadCounts[room] || 0;
+                            return count > 0 ? (
+                              <Badge badgeContent={count} color="error" sx={{ mr: 0.5 }}>
+                                <Avatar sx={{ width: 24, height: 24, fontSize: 12 }} src={typeof ticket.userId === 'object' ? ticket.userId?.profilePicture : undefined}>
+                                  {(typeof ticket.userId === 'object' ? (ticket.userId?.fullName || ticket.userId?.email || 'U') : 'U').charAt(0)}
+                                </Avatar>
+                              </Badge>
+                            ) : (
+                              <Avatar sx={{ width: 24, height: 24, fontSize: 12 }} src={typeof ticket.userId === 'object' ? ticket.userId?.profilePicture : undefined}>
+                                {(typeof ticket.userId === 'object' ? (ticket.userId?.fullName || ticket.userId?.email || 'U') : 'U').charAt(0)}
+                              </Avatar>
+                            );
+                          })()}
                           <Box>
-                            <Typography variant="body2">
+                            <Typography variant="body2" sx={{
+                              fontWeight: (() => {
+                                const userId = typeof ticket.userId === 'object' ? (ticket.userId?._id || ticket.userId?.id) : ticket.userId;
+                                return (unreadCounts[`user_${userId}`] > 0) ? 700 : 400;
+                              })(),
+                            }}>
                               {typeof ticket.userId === 'object' ? (ticket.userId?.fullName || ticket.userId?.email || 'Unknown User') : 'Unknown User'}
                             </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
+                            <Typography variant="caption" color="text.secondary">
                               ID: {typeof ticket.userId === 'object' ? (ticket.userId?._id || ticket.userId?.id || 'N/A') : (ticket.userId || 'N/A')}
                             </Typography>
                           </Box>
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                        <Typography variant="body2" sx={{
+                          fontWeight: (() => {
+                            const userId = typeof ticket.userId === 'object' ? (ticket.userId?._id || ticket.userId?.id) : ticket.userId;
+                            return (unreadCounts[`user_${userId}`] > 0) ? 700 : 400;
+                          })(),
+                        }}>
                           {ticket.subject}
                         </Typography>
                         <Typography
@@ -936,6 +1045,22 @@ const SupportManagement = () => {
             Assign to Me
           </MenuItem>
         )}
+        <MenuItem onClick={handleMarkAsSeen}>
+          <DoneAll sx={{ mr: 2 }} />
+          Mark as Seen
+        </MenuItem>
+        <MenuItem onClick={handleMarkAsInProgress}>
+          <Schedule sx={{ mr: 2 }} />
+          Mark as In Progress
+        </MenuItem>
+        <MenuItem onClick={handleResolveTicket}>
+          <CheckCircle sx={{ mr: 2 }} />
+          Mark as Resolved
+        </MenuItem>
+        <MenuItem onClick={handleCloseTicket}>
+          <Close sx={{ mr: 2 }} />
+          Mark as Closed
+        </MenuItem>
       </Menu>
 
       {/* View Ticket Dialog */}
@@ -1238,9 +1363,21 @@ const SupportManagement = () => {
                             <Typography
                               variant="caption"
                               color="text.secondary"
-                              sx={{ mt: 0.5, display: "block" }}
+                              sx={{ mt: 0.5, display: "flex", alignItems: 'center', gap: 0.5, justifyContent: msg.type === 'admin' ? 'flex-end' : 'flex-start' }}
                             >
                               {msg.userId?.fullName || msg.userId?.email || 'Support'} • {getTimeAgo(msg.createdAt || msg.time)}
+                              {/* Seen indicator for admin messages */}
+                              {msg.type === 'admin' && (
+                                msg.isRead
+                                  ? <DoneAll sx={{ fontSize: 14, color: '#00E5FF' }} titleAccess="Seen" />
+                                  : <Done sx={{ fontSize: 14, color: 'rgba(255,255,255,0.35)' }} titleAccess="Delivered" />
+                              )}
+                              {/* Seen indicator for user messages */}
+                              {msg.type === 'user' && (
+                                msg.isRead
+                                  ? <DoneAll sx={{ fontSize: 14, color: '#00E5FF' }} titleAccess="Seen by admin" />
+                                  : <Done sx={{ fontSize: 14, color: 'rgba(255,255,255,0.35)' }} titleAccess="Not yet read" />
+                              )}
                             </Typography>
                           </Box>
                         </ListItem>

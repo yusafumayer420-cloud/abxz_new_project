@@ -40,6 +40,75 @@ import { AnimatePresence } from 'framer-motion';
 
 const MarketPage = ({ marketData }) => {
   const navigate = useNavigate();
+
+  const coinMeta = {
+    BTC: { color: '#F7931A', text: '₿' }, ETH: { color: '#627EEA', text: 'Ξ' },
+    SOL: { color: '#9945FF', text: 'S' }, XRP: { color: '#00AAE4', text: 'X' },
+    ADA: { color: '#0D1E2D', text: 'A' }, DOGE: { color: '#C2A633', text: 'D' },
+    DOT: { color: '#E6007A', text: '●' }, LTC: { color: '#BFBBBB', text: 'Ł' },
+    BNB: { color: '#F3BA2F', text: 'B' }, EGLD: { color: '#1B46C2', text: 'E' },
+    AVAX: { color: '#E84142', text: 'A' }, LINK: { color: '#2A5ADA', text: '🔗' },
+    UNI: { color: '#FF007A', text: 'U' }, ATOM: { color: '#2E3148', text: 'A' },
+    FTM: { color: '#1969FF', text: 'F' }, NEAR: { color: '#000000', text: 'N' },
+    ICP: { color: '#29ABE2', text: 'I' }, FIL: { color: '#0090FF', text: 'F' },
+    AAVE: { color: '#B6509E', text: 'A' }, XTZ: { color: '#2C7DF7', text: 'T' },
+    MANA: { color: '#FF2D55', text: 'M' }, SAND: { color: '#04ADEF', text: 'S' },
+    AXS: { color: '#0055D5', text: 'A' }, THETA: { color: '#2AB8E6', text: 'T' },
+    ETC: { color: '#328332', text: 'E' }, ALGO: { color: '#000000', text: 'A' },
+    VET: { color: '#15BDFF', text: 'V' }, HBAR: { color: '#222222', text: 'H' },
+    EOS: { color: '#000000', text: 'E' }, SHIB: { color: '#FFA409', text: '🐕' },
+    PEPE: { color: '#009F3E', text: 'P' }, ARB: { color: '#12AAFF', text: 'A' },
+    OP: { color: '#FF0420', text: 'O' }, SUI: { color: '#6FBCF0', text: 'S' },
+    APT: { color: '#00C2FF', text: 'A' }, INJ: { color: '#00A3FF', text: 'I' },
+    SEI: { color: '#9D1C1C', text: 'S' }, TIA: { color: '#7B2BF9', text: 'T' },
+    RENDER: { color: '#A259FF', text: 'R' }, FET: { color: '#1D2D45', text: 'F' },
+    TAO: { color: '#333333', text: 'T' }, WIF: { color: '#9945FF', text: 'W' },
+    TON: { color: '#0088CC', text: 'T' }, XLM: { color: '#000000', text: '*' },
+    BCH: { color: '#8DC351', text: 'B' }, LDO: { color: '#F7931A', text: 'L' },
+    STX: { color: '#5546FF', text: 'S' }, IMX: { color: '#17B5CB', text: 'I' },
+    GRT: { color: '#6F4CBA', text: 'G' }, RNDR: { color: '#A259FF', text: 'R' },
+    MKR: { color: '#1AAB9B', text: 'M' }, GALA: { color: '#000000', text: 'G' },
+    QNT: { color: '#1E2B53', text: 'Q' }, SNX: { color: '#00D1FF', text: 'S' },
+    ASTR: { color: '#E6007A', text: 'A' }, MINA: { color: '#E39844', text: 'M' },
+    FXS: { color: '#000000', text: 'F' }, DYDX: { color: '#6966FF', text: 'D' },
+    COMP: { color: '#00D395', text: 'C' }, CRV: { color: '#FF0000', text: 'C' },
+    CHZ: { color: '#CD0124', text: 'C' }, USDT: { color: '#26A17B', text: 'T' },
+    USDC: { color: '#2775CA', text: '$' },
+  };
+
+  const CoinIcon = ({ symbol, size = 32, mr = 1.5 }) => {
+    const sym = (symbol || '').toUpperCase().split('/')[0];
+    const meta = coinMeta[sym] || { color: '#4F7CFF', text: sym.charAt(0) };
+    const [imgFailed, setImgFailed] = React.useState(false);
+
+    let imgSrc = null;
+    if (!imgFailed) {
+      try {
+        imgSrc = require(`cryptocurrency-icons/svg/color/${sym.toLowerCase()}.svg`);
+      } catch (e) {
+        // icon not in package, use colored avatar
+      }
+    }
+
+    return (
+      <Avatar
+        src={imgSrc || undefined}
+        onError={() => setImgFailed(true)}
+        sx={{
+          width: size, height: size, mr,
+          bgcolor: imgSrc && !imgFailed ? 'transparent' : meta.color,
+          border: '1px solid rgba(255,255,255,0.12)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+          fontSize: size * 0.44,
+          fontWeight: 800,
+          '& img': { objectFit: 'contain', p: '4px' },
+        }}
+      >
+        {meta.text}
+      </Avatar>
+    );
+  };
+
   const sparklinesRef = React.useRef({});
   const lastUpdateRef = React.useRef({});
   const lastSortTimeRef = React.useRef(0);
@@ -162,6 +231,45 @@ const MarketPage = ({ marketData }) => {
     { symbol: 'Gold ETF', price: 7.588, change24h: -0.42, volume: 34567890 },
   ];
 
+  const mockForexData = [
+    { symbol: 'EUR/USD', price: 1.0845, change24h: 0.12, volume: 14500000000 },
+    { symbol: 'GBP/USD', price: 1.2678, change24h: -0.24, volume: 11200000000 },
+    { symbol: 'USD/JPY', price: 150.32, change24h: 0.45, volume: 13800000000 },
+    { symbol: 'AUD/USD', price: 0.6543, change24h: -0.15, volume: 6500000000 },
+    { symbol: 'USD/CHF', price: 0.8821, change24h: 0.08, volume: 4200000000 },
+    { symbol: 'USD/CAD', price: 1.3456, change24h: -0.32, volume: 5100000000 },
+    { symbol: 'NZD/USD', price: 0.6123, change24h: 0.18, volume: 3800000000 },
+    { symbol: 'EUR/GBP', price: 0.8554, change24h: 0.36, volume: 4700000000 },
+    { symbol: 'EUR/JPY', price: 163.02, change24h: 0.57, volume: 5900000000 },
+    { symbol: 'GBP/JPY', price: 190.58, change24h: 0.21, volume: 4800000000 },
+  ];
+
+  const mockUSStocksData = [
+    { symbol: 'AAPL', price: 173.50, change24h: 1.25, volume: 56000000 },
+    { symbol: 'MSFT', price: 402.18, change24h: -0.85, volume: 24000000 },
+    { symbol: 'GOOGL', price: 144.34, change24h: 0.45, volume: 22000000 },
+    { symbol: 'AMZN', price: 175.35, change24h: 2.15, volume: 45000000 },
+    { symbol: 'NVDA', price: 822.79, change24h: 4.56, volume: 65000000 },
+    { symbol: 'META', price: 485.58, change24h: -1.24, volume: 18000000 },
+    { symbol: 'TSLA', price: 198.87, change24h: -3.45, volume: 95000000 },
+    { symbol: 'BRK.B', price: 405.12, change24h: 0.12, volume: 3500000 },
+    { symbol: 'LLY', price: 780.23, change24h: 1.89, volume: 2800000 },
+    { symbol: 'V', price: 280.45, change24h: 0.34, volume: 6500000 },
+  ];
+
+  const mockHKStocksData = [
+    { symbol: '0700.HK', price: 288.40, change24h: 1.56, volume: 15000000 },
+    { symbol: '9988.HK', price: 73.15, change24h: -2.34, volume: 22000000 },
+    { symbol: '3690.HK', price: 92.50, change24h: 3.45, volume: 35000000 },
+    { symbol: '0941.HK', price: 68.25, change24h: 0.15, volume: 12000000 },
+    { symbol: '0005.HK', price: 60.15, change24h: -0.85, volume: 18000000 },
+    { symbol: '1299.HK', price: 58.45, change24h: 0.67, volume: 16000000 },
+    { symbol: '0883.HK', price: 17.56, change24h: 2.15, volume: 45000000 },
+    { symbol: '0939.HK', price: 4.88, change24h: 0.41, volume: 85000000 },
+    { symbol: '1398.HK', price: 4.05, change24h: 0.25, volume: 115000000 },
+    { symbol: '3988.HK', price: 3.20, change24h: -0.31, volume: 95000000 },
+  ];
+
 
   useEffect(() => {
     let data = [];
@@ -171,6 +279,15 @@ const MarketPage = ({ marketData }) => {
         break;
       case 1:
         data = marketData.length > 0 ? marketData.filter(p => p.symbol.includes('ETF')) : mockETFData;
+        break;
+      case 2:
+        data = mockForexData;
+        break;
+      case 3:
+        data = mockUSStocksData;
+        break;
+      case 4:
+        data = mockHKStocksData;
         break;
       default:
         data = marketData.length > 0 ? marketData : mockCryptoData;
@@ -304,7 +421,7 @@ const MarketPage = ({ marketData }) => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ pb: 8, pt: 0 }}>
+    <Container maxWidth="sm" sx={{ pb: 12, pt: 0 }}>
       {/* Top Gainers Marquee */}
       <TopGainersMarquee data={marketData} />
 
@@ -484,17 +601,7 @@ const MarketPage = ({ marketData }) => {
                 '&:hover': { bgcolor: 'transparent' }
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Avatar
-                    src={`https://assets.coincap.io/assets/icons/${(item.pair || item.symbol).toLowerCase().split('/')[0]}@2x.png`}
-                    sx={{ 
-                      width: 32, height: 32, mr: 1.5, 
-                      bgcolor: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                    }}
-                  >
-                    {(item.pair || item.symbol).charAt(0)}
-                  </Avatar>
+                  <CoinIcon symbol={item.pair || item.symbol} size={32} mr={1.5} />
                   <Box>
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>
                       {item.pair || item.symbol}
@@ -574,10 +681,7 @@ const MarketPage = ({ marketData }) => {
                   <CardContent sx={{ p: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Avatar
-                          src={`https://assets.coincap.io/assets/icons/${(pair.pair || pair.symbol).toLowerCase().split('/')[0]}@2x.png`}
-                          sx={{ width: 24, height: 24, mr: 1, border: '1px solid rgba(255,255,255,0.1)' }}
-                        />
+                        <CoinIcon symbol={pair.pair || pair.symbol} size={24} mr={1} />
                         <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.8rem' }}>
                           {pair.pair}
                         </Typography>

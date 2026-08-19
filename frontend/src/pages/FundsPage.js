@@ -46,6 +46,8 @@ import {
   Security,
   Close,
   KeyboardArrowRight,
+  Visibility,
+  VisibilityOff,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
@@ -59,6 +61,7 @@ const FundsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
+  const [showBalance, setShowBalance] = useState(true);
 
   useEffect(() => {
     if (location.state && typeof location.state.activeTab === 'number') {
@@ -286,29 +289,60 @@ const FundsPage = () => {
   return (
     <Container maxWidth="sm" sx={{ pb: 14, pt: 2 }}>
       {/* Header */}
-      <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3 }}>
-        Wallet
-      </Typography>
-
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+          Wallet
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', color: '#8b93a6', gap: 0.5 }}>
+          <Security sx={{ fontSize: '1rem' }} />
+          <Typography variant="caption" sx={{ fontWeight: 500 }}>
+            Secure & Verified
+          </Typography>
+        </Box>
+      </Box>
 
       {/* Total Balance */}
       <Card sx={{ 
         mb: 3, 
-        background: 'linear-gradient(135deg, rgba(79,124,255,0.85) 0%, rgba(144,76,194,0.85) 100%)', 
+        background: 'linear-gradient(135deg, rgba(16, 18, 27, 0.95) 0%, rgba(25, 20, 35, 0.95) 100%)', 
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        border: '1px solid rgba(255,255,255,0.15)',
-        borderRadius: '32px', 
-        boxShadow: '0 8px 32px rgba(79,124,255,0.4), inset 0 0 24px rgba(255,255,255,0.1)' 
+        border: '1px solid rgba(138, 43, 226, 0.4)',
+        borderRadius: '24px', 
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 0 20px rgba(138, 43, 226, 0.15)' 
       }}>
-        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 500, mb: 1 }}>
-            Total Balance
-          </Typography>
-          <Typography variant="h4" sx={{ fontWeight: '800', color: 'white', mb: 3, letterSpacing: '-0.5px', fontSize: { xs: '1.5rem', sm: '1.75rem' }, lineHeight: 1.2 }}>
-            {Math.floor(user?.wallet?.usdt || 0).toLocaleString('en-US')}<br />USDT
-          </Typography>
-
+        <CardContent sx={{ p: { xs: 3, sm: 4 }, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography variant="body2" sx={{ color: '#8b93a6', fontWeight: 500 }}>
+                Total Balance
+              </Typography>
+              {showBalance ? (
+                <Visibility sx={{ fontSize: '1.2rem', color: '#8b93a6', cursor: 'pointer' }} onClick={() => setShowBalance(false)} />
+              ) : (
+                <VisibilityOff sx={{ fontSize: '1.2rem', color: '#8b93a6', cursor: 'pointer' }} onClick={() => setShowBalance(true)} />
+              )}
+            </Box>
+            <Typography variant="h4" sx={{ fontWeight: '700', color: 'white', mb: 0.5, letterSpacing: '-0.5px', fontSize: { xs: '1.75rem', sm: '2rem' } }}>
+              {showBalance ? `$${Number(user?.wallet?.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '********'}
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#8b93a6' }}>
+              {showBalance ? `≈ ${Number(user?.wallet?.usdt || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : '********'}
+            </Typography>
+          </Box>
+          <Box sx={{ 
+            width: 52, 
+            height: 52, 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            borderRadius: '14px',
+            background: 'linear-gradient(135deg, rgba(79, 124, 255, 0.1) 0%, rgba(138, 43, 226, 0.1) 100%)',
+            border: '1px solid rgba(79, 124, 255, 0.3)',
+            boxShadow: '0 4px 12px rgba(79, 124, 255, 0.2)'
+          }}>
+            <AccountBalanceWallet sx={{ fontSize: '2rem', color: '#4F7CFF' }} />
+          </Box>
         </CardContent>
       </Card>
 

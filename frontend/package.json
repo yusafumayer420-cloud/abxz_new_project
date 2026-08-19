@@ -9,6 +9,7 @@
     "@mui/material": "^5.15.14",
     "axios": "^1.5.0",
     "chart.js": "^4.4.0",
+    "cryptocurrency-icons": "^0.18.1",
     "framer-motion": "^10.16.0",
     "lightweight-charts": "^5.1.0",
     "react": "^18.2.0",

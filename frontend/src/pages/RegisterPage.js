@@ -41,6 +41,7 @@ const RegisterPage = () => {
     idBack: null,
     selfie: null
   });
+  const [docTypeChoice, setDocTypeChoice] = useState('id'); // 'id' or 'driving'
 
   // Step 3: Profile
   const [profilePhoto, setProfilePhoto] = useState(null);
@@ -274,17 +275,43 @@ const RegisterPage = () => {
           {/* STEP 2: KYC */}
           {currentStep === 2 && (
             <Box>
+              {/* Document Type Selector */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>Select Document Type</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {[
+                    { value: 'id', label: '🪪 National ID' },
+                    { value: 'driving', label: '🚗 Driver\'s License' },
+                  ].map(opt => (
+                    <Box
+                      key={opt.value}
+                      onClick={() => setDocTypeChoice(opt.value)}
+                      sx={{
+                        flex: 1, py: 1.2, px: 1, borderRadius: 2, textAlign: 'center', cursor: 'pointer',
+                        border: docTypeChoice === opt.value ? '2px solid #00E5FF' : '1px dashed rgba(255,255,255,0.2)',
+                        bgcolor: docTypeChoice === opt.value ? 'rgba(0,229,255,0.08)' : 'rgba(255,255,255,0.02)',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <Typography variant="body2" fontWeight={docTypeChoice === opt.value ? 700 : 400} sx={{ color: docTypeChoice === opt.value ? '#00E5FF' : 'text.secondary' }}>
+                        {opt.label}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+
               {['idFront', 'idBack', 'selfie'].map((docType) => (
                 <Box key={docType} sx={{ border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 2, p: 2, mb: 2, textAlign: 'center', position: 'relative' }}>
                   <Typography variant="body2" fontWeight="bold" sx={{ mb: 0.5, textAlign: 'left' }}>
-                    {docType === 'idFront' && 'ID Front Side'}
-                    {docType === 'idBack' && 'ID Back Side'}
-                    {docType === 'selfie' && 'ID with Selfie'}
+                    {docType === 'idFront' && (docTypeChoice === 'driving' ? "Driver's License Front" : 'ID Card Front')}
+                    {docType === 'idBack' && (docTypeChoice === 'driving' ? "Driver's License Back" : 'ID Card Back')}
+                    {docType === 'selfie' && 'Selfie with Document'}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2, textAlign: 'left' }}>
-                    {docType === 'idFront' && 'Upload the front side of your ID'}
-                    {docType === 'idBack' && 'Upload the back side of your ID'}
-                    {docType === 'selfie' && 'Take a selfie holding your ID'}
+                    {docType === 'idFront' && `Upload the front side of your ${docTypeChoice === 'driving' ? "driver's license" : 'ID card'}`}
+                    {docType === 'idBack' && `Upload the back side of your ${docTypeChoice === 'driving' ? "driver's license" : 'ID card'}`}
+                    {docType === 'selfie' && 'Take a selfie holding your document'}
                   </Typography>
                   
                   <input accept="image/*" style={{ display: 'none' }} id={`upload-${docType}`} type="file" onChange={handleKycFileChange(docType)} />

@@ -39,6 +39,7 @@ const ProfilePage = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState({ idFront: false, idBack: false, selfie: false });
   const [verificationStatus, setVerificationStatus] = useState('unverified');
+  const [docTypeChoice, setDocTypeChoice] = useState('id'); // 'id' or 'driving'
 
   const [formData, setFormData] = useState({
     fullName: '', email: '', phone: '', country: '', address: '', city: '', zipCode: '',
@@ -299,7 +300,7 @@ const ProfilePage = () => {
               { icon: <AccountBalanceWallet />, label: 'Personal Information', action: () => setShowEditProfile(true) },
               { icon: <HelpOutline />, label: 'FAQ', action: () => navigate('/faq') },
               { icon: <Info />, label: 'About Us', action: () => navigate('/about') },
-              { icon: <Logout />, label: 'Logout', action: () => { logout(); navigate('/login'); } }
+              { icon: <Logout />, label: 'Logout', action: () => { logout(); navigate('/welcome'); } }
             ].map((item, index) => (
               <motion.div
                 key={index}
@@ -406,8 +407,38 @@ const ProfilePage = () => {
             </Typography>
           </Box>
           <Grid container spacing={2}>
+              {/* Document Type Selector */}
+              <Grid item xs={12}>
+                <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, color: '#fff' }}>Select Document Type</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {[
+                    { value: 'id', label: '🪪 National ID' },
+                    { value: 'driving', label: '🚗 Driver\'s License' },
+                  ].map(opt => (
+                    <Box
+                      key={opt.value}
+                      onClick={() => setDocTypeChoice(opt.value)}
+                      sx={{
+                        flex: 1, py: 1.2, px: 1, borderRadius: 2, textAlign: 'center', cursor: 'pointer',
+                        border: docTypeChoice === opt.value ? '2px solid #00E5FF' : '1px solid rgba(255,255,255,0.12)',
+                        bgcolor: docTypeChoice === opt.value ? 'rgba(0,229,255,0.08)' : 'rgba(255,255,255,0.03)',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: docTypeChoice === opt.value ? 700 : 400, color: docTypeChoice === opt.value ? '#00E5FF' : '#8b93a6' }}>
+                        {opt.label}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Grid>
+
             {['idFront', 'idBack', 'selfie'].map((docType) => {
-              const labels = { idFront: 'ID Front', idBack: 'ID Back', selfie: 'Selfie' };
+              const labels = {
+                idFront: docTypeChoice === 'driving' ? "Driver's License Front" : 'ID Front',
+                idBack: docTypeChoice === 'driving' ? "Driver's License Back" : 'ID Back',
+                selfie: 'Selfie'
+              };
               const docUrl = kycDocuments[docType];
               return (
                 <Grid item xs={12} sm={4} key={docType}>

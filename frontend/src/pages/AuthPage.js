@@ -9,11 +9,14 @@ import {
   Link,
   IconButton,
   InputAdornment,
+  Checkbox,
+  FormControlLabel,
+  Divider,
 } from '@mui/material';
-import { 
-  Visibility, 
-  VisibilityOff, 
-  Email, 
+import {
+  Visibility,
+  VisibilityOff,
+  Email,
   Lock,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -27,12 +30,14 @@ const AuthPage = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    rememberMe: false,
   });
 
   const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: type === 'checkbox' ? checked : value
     });
   };
 
@@ -127,7 +132,23 @@ const AuthPage = () => {
               }}
             />
             
-            <Box sx={{ mb: 3, textAlign: 'right' }}>
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    name="rememberMe"
+                    checked={formData.rememberMe}
+                    onChange={handleChange}
+                    size="small"
+                    sx={{
+                      color: 'rgba(255,255,255,0.3)',
+                      '&.Mui-checked': { color: '#00E5FF' },
+                    }}
+                  />
+                }
+                label={<Typography variant="body2" sx={{ color: 'text.secondary' }}>Remember Me</Typography>}
+                sx={{ m: 0 }}
+              />
               <Link
                 onClick={() => navigate('/forgot-password')}
                 sx={{
@@ -154,7 +175,7 @@ const AuthPage = () => {
                   color: '#050816',
                   fontWeight: 'bold',
                   py: 1.5,
-                  mb: 2,
+                  mb: 3,
                   boxShadow: '0 4px 16px rgba(0, 229, 255, 0.25)',
                   '&:hover': {
                     background: 'linear-gradient(135deg, #33EAFF 0%, #00E5FF 100%)',
@@ -166,12 +187,14 @@ const AuthPage = () => {
               </Button>
             </motion.div>
 
+
+
             {/* Switch Mode */}
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
                 Don't have an account?{' '}
                 <Link
-                  href="/register"
+                  onClick={() => navigate('/register')}
                   sx={{
                     color: '#00E5FF',
                     textDecoration: 'none',

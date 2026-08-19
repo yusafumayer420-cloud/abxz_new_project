@@ -42,6 +42,8 @@ import {
   HeadsetMic,
   ContentCopy,
   Info as InfoIcon,
+  DoneAll,
+  Done,
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -50,14 +52,19 @@ import io from 'socket.io-client';
 import axios from '../utils/axiosConfig';
 import toast from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
+import usdtUsdcIcon from '../assets/coins/usdt-usdc.png';
+import ethIcon from '../assets/coins/eth.png';
+import btcIcon from '../assets/coins/btc.png';
+import bnbIcon from '../assets/coins/bnb.png';
+import trxIcon from '../assets/coins/trx.png';
 
 // Coin icon colors/symbols for known coins
 const COIN_META = {
-  USDT: { color: '#26A17B', symbol: '₮', bg: 'rgba(38,161,123,0.18)' },
-  BTC:  { color: '#F7931A', symbol: '₿', bg: 'rgba(247,147,26,0.18)' },
-  ETH:  { color: '#627EEA', symbol: 'Ξ', bg: 'rgba(98,126,234,0.18)' },
-  BNB:  { color: '#F3BA2F', symbol: 'B', bg: 'rgba(243,186,47,0.18)' },
-  TRX:  { color: '#EF0027', symbol: 'T', bg: 'rgba(239,0,39,0.18)' },
+  USDT: { color: '#26A17B', symbol: '₮', bg: 'rgba(38,161,123,0.18)', image: usdtUsdcIcon },
+  BTC:  { color: '#F7931A', symbol: '₿', bg: 'rgba(247,147,26,0.18)', image: btcIcon },
+  ETH:  { color: '#627EEA', symbol: 'Ξ', bg: 'rgba(98,126,234,0.18)', image: ethIcon },
+  BNB:  { color: '#F3BA2F', symbol: 'B', bg: 'rgba(243,186,47,0.18)', image: bnbIcon },
+  TRX:  { color: '#EF0027', symbol: 'T', bg: 'rgba(239,0,39,0.18)', image: trxIcon },
 };
 
 // Bot crypto selection message component
@@ -99,7 +106,7 @@ const BotCryptoSelection = ({ data, onSelect }) => {
                   width: 36,
                   height: 36,
                   borderRadius: '50%',
-                  bgcolor: meta.bg,
+                  bgcolor: meta.image ? 'transparent' : meta.bg,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -108,9 +115,14 @@ const BotCryptoSelection = ({ data, onSelect }) => {
                   color: meta.color,
                   flexShrink: 0,
                   border: `1.5px solid ${meta.color}44`,
+                  overflow: 'hidden',
                 }}
               >
-                {meta.symbol}
+                {meta.image ? (
+                  <img src={meta.image} alt={coinKey} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                ) : (
+                  meta.symbol
+                )}
               </Box>
               <Typography variant="body2" sx={{ color: '#F1F5F9', fontWeight: 600, fontSize: '0.875rem' }}>
                 {opt.label}
@@ -682,6 +694,12 @@ const LiveChat = () => {
                                     <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
                                       {formatTime(message.createdAt)}
                                     </Typography>
+                                    {/* Seen tick for current user's messages */}
+                                    {message.userId?._id === (user?._id || user?.id) && (
+                                      message.isRead
+                                        ? <DoneAll sx={{ fontSize: 13, color: '#00E5FF', ml: 0.5 }} titleAccess="Seen" />
+                                        : <Done sx={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', ml: 0.5 }} titleAccess="Delivered" />
+                                    )}
                                   </Box>
                                   {message.attachments && message.attachments.length > 0 && (
                                     <Box sx={{ mb: 1 }}>

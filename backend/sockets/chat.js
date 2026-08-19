@@ -436,29 +436,56 @@ module.exports = (io) => {
 
     socket.on('mark_all_read', async (data) => {
       try {
-        const { ticketId } = data;
-        let query = { isRead: false };
-        
+        let targetRoom;
         if (socket.user.role === 'admin') {
-          // Admin marks user messages as read
-          if (ticketId) {
-            query.ticketId = ticketId; // Note: Chat model currently doesn't store ticketId directly, let's check
+          // Admin is reading messages from a user — derive room from userId
+          if (data.userId) {
+            targetRoom = `user_${data.userId}`;
+          } else if (data.ticketId) {
+            const ticket = await SupportTicket.findById(data.ticketId).select('userId');
+            if (ticket) targetRoom = `user_${ticket.userId}`;
           }
-          // Actually, based on previous logic, messages are in rooms
+        } else {
+          // User reading admin messages in their own room
+          targetRoom = userRoom;
         }
-        
-        // Revised logic: Mark all messages in the room as read if they are NOT from the sender
-        const targetRoom = socket.user.role === 'admin' ? `user_${data.userId}` : userRoom;
-        
-        await ChatMessage.updateMany(
+
+        if (!targetRoom) return;
+
+        // Mark all messages in that room sent by the OTHER party as read
+        const result = await ChatMessage.updateMany(
           { room: targetRoom, userId: { $ne: socket.user._id }, isRead: false },
           { isRead: true }
         );
-        
-        // Notify the other side
-        chatNamespace.to(targetRoom).emit('all_messages_read', { room: targetRoom });
+
+        // Notify the user room that their messages were seen
+        chatNamespace.to(targetRoom).emit('all_messages_read', { room: targetRoom, seenBy: 'admin' });
+
+        // Send updated unread count to the admin room for all tickets
+        if (socket.user.role === 'admin') {
+          // Calculate total unread user messages so admin badge can update
+          const unreadCount = await ChatMessage.countDocuments({ type: 'user', isRead: false });
+          chatNamespace.to(adminRoom).emit('unread_count_update', { room: targetRoom, unreadCount });
+        }
       } catch (error) {
         console.error('Mark all read error:', error);
+      }
+    });
+
+    // Admin requests unread count per user room
+    socket.on('get_unread_counts', async () => {
+      if (socket.user.role !== 'admin') return;
+      try {
+        // Aggregate unread user messages grouped by room
+        const unreadByRoom = await ChatMessage.aggregate([
+          { $match: { type: 'user', isRead: false } },
+          { $group: { _id: '$room', count: { $sum: 1 } } }
+        ]);
+        const map = {};
+        unreadByRoom.forEach(r => { map[r._id] = r.count; });
+        socket.emit('unread_counts', map);
+      } catch (error) {
+        console.error('Get unread counts error:', error);
       }
     });
     
@@ -608,6 +635,72 @@ module.exports = (io) => {
           }
         } catch (error) {
           console.error('Resolve ticket error:', error);
+        }
+      });
+
+      // Mark ticket as seen
+      socket.on('mark_ticket_seen', async (data) => {
+        try {
+          const { ticketId } = data;
+          
+          const ticket = await SupportTicket.findById(ticketId);
+          if (ticket) {
+            ticket.status = 'seen';
+            await ticket.save();
+            
+            // Notify user
+            chatNamespace.to(`user_${ticket.userId}`).emit('ticket_updated', {
+              ticketId,
+              status: ticket.status
+            });
+            
+            // Re-emit ticket so UI updates
+            socket.emit('ticket_seen', ticket);
+          }
+        } catch (error) {
+          console.error('Mark ticket seen error:', error);
+        }
+      });
+
+      // Mark ticket as in progress
+      socket.on('mark_ticket_in_progress', async (data) => {
+        try {
+          const { ticketId } = data;
+          const ticket = await SupportTicket.findById(ticketId);
+          if (ticket) {
+            ticket.status = 'in_progress';
+            await ticket.save();
+            
+            chatNamespace.to(`user_${ticket.userId}`).emit('ticket_updated', {
+              ticketId,
+              status: ticket.status
+            });
+            
+            socket.emit('ticket_in_progress', ticket);
+          }
+        } catch (error) {
+          console.error('Mark ticket in progress error:', error);
+        }
+      });
+
+      // Close ticket
+      socket.on('close_ticket', async (data) => {
+        try {
+          const { ticketId } = data;
+          const ticket = await SupportTicket.findById(ticketId);
+          if (ticket) {
+            ticket.status = 'closed';
+            await ticket.save();
+            
+            chatNamespace.to(`user_${ticket.userId}`).emit('ticket_updated', {
+              ticketId,
+              status: ticket.status
+            });
+            
+            socket.emit('ticket_closed', ticket);
+          }
+        } catch (error) {
+          console.error('Close ticket error:', error);
         }
       });
 

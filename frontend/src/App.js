@@ -37,6 +37,7 @@ import ExchangeHistoryPage from './pages/ExchangeHistoryPage';
 import PortfolioPage from './pages/PortfolioPage';
 import LearnMorePage from './pages/LearnMorePage';
 import RegisterPage from './pages/RegisterPage';
+import WelcomePage from './pages/WelcomePage';
 
 // Theme
 import darkTheme from './theme';
@@ -236,11 +237,12 @@ function AppContent({ marketData, sidebarOpen, setSidebarOpen }) {
 
       <Routes>
         {/* Public Routes */}
-        <Route path="/login"                element={<AuthPage />} />
-        <Route path="/register"             element={<RegisterPage />} />
-        <Route path="/forgot-password"      element={<ForgotPasswordPage />} />
+        <Route path="/welcome"             element={<WelcomePage />} />
+        <Route path="/login"               element={<AuthPage />} />
+        <Route path="/register"            element={<RegisterPage />} />
+        <Route path="/forgot-password"     element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-        <Route path="/verify-email"         element={<VerifyEmailPage />} />
+        <Route path="/verify-email"        element={<VerifyEmailPage />} />
 
         {/* Protected Routes with Layout */}
         <Route element={

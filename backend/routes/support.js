@@ -57,7 +57,8 @@ router.get('/tickets/:id', auth, async (req, res) => {
     }
     
     // Check if user has access
-    if (req.user.role !== 'admin' && ticket.userId._id.toString() !== req.user.id) {
+    const isAdmin = ['admin', 'super_admin'].includes(req.user.role);
+    if (!isAdmin && ticket.userId?._id?.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Access denied' });
     }
     
@@ -154,7 +155,8 @@ router.post('/tickets/:id/reply', auth, async (req, res) => {
     }
 
     // Check if user has access
-    if (req.user.role !== 'admin' && ticket.userId.toString() !== req.user.id) {
+    const isAdmin = ['admin', 'super_admin'].includes(req.user.role);
+    if (!isAdmin && ticket.userId?.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
