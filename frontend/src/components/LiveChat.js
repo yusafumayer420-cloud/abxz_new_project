@@ -67,6 +67,22 @@ const COIN_META = {
   TRX:  { color: '#EF0027', symbol: 'T', bg: 'rgba(239,0,39,0.18)', image: trxIcon },
 };
 
+// Smart lookup: handles full names, aliases and slash-separated variants
+// stored in the DB (e.g. "BITCOIN", "ETHEREUM", "USDT / USDC", "TRON")
+function getCoinMeta(coinName) {
+  if (!coinName) return null;
+  const key = coinName.toUpperCase().trim();
+  // 1. Direct exact match
+  if (COIN_META[key]) return COIN_META[key];
+  // 2. Partial / alias match
+  if (key.includes('USDT') || key.includes('USDC')) return COIN_META['USDT'];
+  if (key.includes('BITCOIN') || key.includes('BTC'))  return COIN_META['BTC'];
+  if (key.includes('ETHEREUM') || key.includes('ETH')) return COIN_META['ETH'];
+  if (key.includes('BNB') || key.includes('BINANCE'))  return COIN_META['BNB'];
+  if (key.includes('TRX') || key.includes('TRON'))     return COIN_META['TRX'];
+  return null;
+}
+
 // Bot crypto selection message component
 const BotCryptoSelection = ({ data, onSelect }) => {
   const { prompt, options } = data;
@@ -77,8 +93,7 @@ const BotCryptoSelection = ({ data, onSelect }) => {
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {options.map((opt, i) => {
-          const coinKey = opt.coin?.toUpperCase();
-          const meta = COIN_META[coinKey] || { color: '#00E5FF', symbol: '●', bg: 'rgba(0,229,255,0.15)' };
+          const meta = getCoinMeta(opt.coin) || { color: '#00E5FF', symbol: '●', bg: 'rgba(0,229,255,0.15)' };
           return (
             <motion.button
               key={i}
@@ -119,7 +134,7 @@ const BotCryptoSelection = ({ data, onSelect }) => {
                 }}
               >
                 {meta.image ? (
-                  <img src={meta.image} alt={coinKey} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                  <img src={meta.image} alt={opt.coin || 'Coin'} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                 ) : (
                   meta.symbol
                 )}

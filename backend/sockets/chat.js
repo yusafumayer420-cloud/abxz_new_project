@@ -45,11 +45,8 @@ async function getFAQReply(userMessage) {
   // ── Generic deposit address question detection ───────────────
   // If user asks a generic question about deposit address (no specific coin matched),
   // reply with a selection menu showing all available coins.
-  const genericDepositKeywords = [
-    'deposit address', 'deposit', 'what is the deposit', 'how to deposit',
-    'wallet address', 'send crypto', 'fund my account', 'add funds'
-  ];
-  const isGenericDepositQuestion = genericDepositKeywords.some(kw => lower.includes(kw));
+  // Changed per user request to ONLY reply for the suggestion chip exact text
+  const isGenericDepositQuestion = lower === 'what is the deposit address?';
 
   if (isGenericDepositQuestion && addresses.length > 0) {
     // Build options list from active deposit addresses
