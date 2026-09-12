@@ -117,6 +117,12 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  requiresLoginOTP: {
+    type: Boolean,
+    default: false
+  },
+  loginOTP: String,
+  loginOTPExpires: Date,
   verificationOTP: String,
   verificationOTPExpires: Date,
   referralCode: {

@@ -154,6 +154,35 @@ const darkTheme = createTheme({
         },
       },
     },
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:600px)': {
+            paddingLeft: '12px',
+            paddingRight: '12px',
+          },
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:600px)': {
+            padding: '8px 6px',
+            fontSize: '0.8rem',
+          },
+        },
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:600px)': {
+            padding: '12px !important',
+          },
+        },
+      },
+    },
     MuiCard: {
       styleOverrides: {
         root: {

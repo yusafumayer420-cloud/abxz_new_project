@@ -51,7 +51,7 @@ router.get('/users', protect, adminAuth, async (req, res) => {
   try {
     const { page = 1, limit = 20, search = '', status, kycStatus } = req.query;
     
-    const query = {};
+    const query = { role: { $ne: 'admin' } };
     if (search) {
       query.$or = [
         { email: { $regex: search, $options: 'i' } },
@@ -98,7 +98,7 @@ router.get('/users', protect, adminAuth, async (req, res) => {
       .skip((page - 1) * limit);
     
     const count = await User.countDocuments(query);
-    const totalUsers = await User.countDocuments(); // Always send total platform users
+    const totalUsers = await User.countDocuments({ role: { $ne: 'admin' } }); // Always send total platform users
     
     res.json({
       users,
@@ -463,7 +463,7 @@ router.post('/deposit', protect, adminAuth, async (req, res) => {
 // Get platform stats
 router.get('/stats', protect, adminAuth, async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
+    const totalUsers = await User.countDocuments({ role: { $ne: 'admin' } });
 
     const verifiedUsers = await User.countDocuments({ kycStatus: 'verified' });
     

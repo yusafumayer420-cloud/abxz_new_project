@@ -347,9 +347,9 @@ const HomePage = ({ marketData }) => {
                 sx={{
                   fontWeight: 900,
                   lineHeight: 1.15,
-                  mb: 1.5,
+                  mb: { xs: 1, sm: 1.5 },
                   letterSpacing: '-0.03em',
-                  fontSize: { xs: '2rem', sm: '2.4rem' },
+                  fontSize: { xs: '1.6rem', sm: '2.4rem' },
                 }}
               >
                 Trade Crypto{' '}
@@ -367,10 +367,10 @@ const HomePage = ({ marketData }) => {
                 variant="body1"
                 sx={{
                   color: '#8FA3BF',
-                  mb: 3,
-                  lineHeight: 1.75,
-                  maxWidth: '85%',
-                  fontSize: '0.92rem',
+                  mb: { xs: 2, sm: 3 },
+                  lineHeight: { xs: 1.5, sm: 1.75 },
+                  maxWidth: '95%',
+                  fontSize: { xs: '0.8rem', sm: '0.92rem' },
                   fontWeight: 400,
                 }}
               >
@@ -472,7 +472,7 @@ const HomePage = ({ marketData }) => {
               <Card
                 onClick={() => navigate('/portfolio')}
                 sx={{
-                  minWidth: 160,
+                  minWidth: { xs: 130, sm: 160 },
                   flex: 1,
                   cursor: 'pointer',
                   background: 'rgba(17, 24, 39, 0.6)',
@@ -495,11 +495,11 @@ const HomePage = ({ marketData }) => {
                   transition: 'all 0.3s ease',
                 }}
               >
-                <CardContent sx={{ p: '14px !important' }}>
-                  <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <CardContent sx={{ p: { xs: '10px !important', sm: '14px !important' } }}>
+                  <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 0.5, fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                     <AccountBalanceWallet sx={{ fontSize: 12 }} /> Portfolio
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.5, fontSize: '1.3rem', letterSpacing: '-0.02em' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.5, fontSize: { xs: '1.1rem', sm: '1.3rem' }, letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     ${Math.floor(balance).toLocaleString('en-US')}
                   </Typography>
                   <Box sx={{ mt: 1 }}>
@@ -511,7 +511,7 @@ const HomePage = ({ marketData }) => {
               {/* 24h P&L */}
               <Card
                 sx={{
-                  minWidth: 130,
+                  minWidth: { xs: 110, sm: 130 },
                   flex: 0.8,
                   background: 'rgba(17, 24, 39, 0.6)',
                   position: 'relative',
@@ -534,8 +534,8 @@ const HomePage = ({ marketData }) => {
                   transition: 'all 0.3s ease',
                 }}
               >
-                <CardContent sx={{ p: '14px !important' }}>
-                  <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 500 }}>
+                <CardContent sx={{ p: { xs: '10px !important', sm: '14px !important' } }}>
+                  <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 500, fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>
                     24h P&L
                   </Typography>
                   <Typography
@@ -543,8 +543,10 @@ const HomePage = ({ marketData }) => {
                     sx={{
                       fontWeight: 800,
                       mt: 0.5,
-                      fontSize: '1.1rem',
+                      fontSize: { xs: '1rem', sm: '1.1rem' },
                       color: dailyPnl >= 0 ? '#00C853' : '#FF5252',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                     }}
                   >
                     {dailyPnl >= 0 ? '+' : '-'}${Math.abs(dailyPnl).toFixed(2)}
@@ -580,7 +582,7 @@ const HomePage = ({ marketData }) => {
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        height: 84,
+                        height: { xs: 70, sm: 84 },
                         borderRadius: 3,
                         background: 'rgba(17, 24, 39, 0.5)',
                         border: '1px solid rgba(148, 163, 184, 0.06)',
@@ -595,15 +597,15 @@ const HomePage = ({ marketData }) => {
                     >
                       <Box
                         sx={{
-                          width: 38,
-                          height: 38,
+                          width: { xs: 32, sm: 38 },
+                          height: { xs: 32, sm: 38 },
                           borderRadius: '12px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           background: `${action.color}14`,
-                          mb: 0.75,
-                          '& svg': { fontSize: 18, color: action.color },
+                          mb: { xs: 0.5, sm: 0.75 },
+                          '& svg': { fontSize: { xs: 16, sm: 18 }, color: action.color },
                         }}
                       >
                         {action.icon}

@@ -573,15 +573,15 @@ const MarketPage = ({ marketData }) => {
       WebkitBackdropFilter: 'blur(12px)',
       border: '1px solid rgba(255,255,255,0.06)',
       borderRadius: '20px',
-      overflow: 'hidden'
+      overflowX: 'auto'
     }}>
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell sx={{ pl: { xs: 1, sm: 2 }, width: '35%', fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Pair</TableCell>
-            <TableCell align="right" sx={{ fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Price</TableCell>
-            <TableCell align="right" sx={{ fontWeight: 'bold', display: { xs: 'none', sm: 'table-cell' }, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Last 24h</TableCell>
-            <TableCell align="right" sx={{ pr: { xs: 1, sm: 2 }, fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>24h %</TableCell>
+            <TableCell sx={{ px: { xs: 1, sm: 2 }, py: 1.5, width: { xs: 'auto', sm: '35%' }, fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Pair</TableCell>
+            <TableCell align="right" sx={{ px: { xs: 1, sm: 2 }, py: 1.5, fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Price</TableCell>
+            <TableCell align="right" sx={{ px: { xs: 1, sm: 2 }, py: 1.5, fontWeight: 'bold', display: { xs: 'none', sm: 'table-cell' }, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Last 24h</TableCell>
+            <TableCell align="right" sx={{ px: { xs: 1, sm: 2 }, py: 1.5, fontWeight: 'bold', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>24h %</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -595,15 +595,16 @@ const MarketPage = ({ marketData }) => {
               onClick={() => activeTab === 0 && handleTradeClick(item.pair)}
             >
               <TableCell sx={{ 
-                pl: { xs: 1, sm: 2 },
+                px: { xs: 0.5, sm: 2 },
+                py: 1,
                 borderBottom: '1px solid rgba(255,255,255,0.04)',
                 transition: 'all 0.25s',
                 '&:hover': { bgcolor: 'transparent' }
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <CoinIcon symbol={item.pair || item.symbol} size={32} mr={1.5} />
+                  <CoinIcon symbol={item.pair || item.symbol} size={28} mr={1} />
                   <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                       {item.pair || item.symbol}
                     </Typography>
                     {item.volume && (
@@ -614,15 +615,15 @@ const MarketPage = ({ marketData }) => {
                   </Box>
                 </Box>
               </TableCell>
-              <TableCell align="right" sx={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              <TableCell align="right" sx={{ px: { xs: 0.5, sm: 2 }, py: 1, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <Typography variant="body2" sx={{ fontWeight: 700, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   ${typeof item.price === 'number' ? item.price.toLocaleString('en-US', {
                     minimumFractionDigits: item.price < 1 ? 4 : 2,
                     maximumFractionDigits: item.price < 1 ? 4 : 2
                   }) : item.price}
                 </Typography>
               </TableCell>
-              <TableCell align="right" sx={{ display: { xs: 'none', sm: 'table-cell' }, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <TableCell align="right" sx={{ px: { xs: 0.5, sm: 2 }, py: 1, display: { xs: 'none', sm: 'table-cell' }, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <Sparkline 
                   data={item.sparkline} 
                   color={item.change24h >= 0 ? '#00D395' : '#FF6B6B'} 
@@ -630,7 +631,7 @@ const MarketPage = ({ marketData }) => {
                   height={25} 
                 />
               </TableCell>
-              <TableCell align="right" sx={{ pr: { xs: 1, sm: 2 }, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <TableCell align="right" sx={{ px: { xs: 0.5, sm: 2 }, py: 1, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <Chip
                   label={`${item.change24h >= 0 ? '+' : ''}${item.change24h}%`}
                   size="small"
@@ -638,10 +639,11 @@ const MarketPage = ({ marketData }) => {
                     bgcolor: item.change24h >= 0 ? 'rgba(0, 211, 149, 0.1)' : 'rgba(255, 107, 107, 0.1)',
                     color: item.change24h >= 0 ? '#00D395' : '#FF6B6B',
                     fontWeight: 'bold',
-                    minWidth: 70,
+                    minWidth: { xs: 60, sm: 70 },
+                    fontSize: { xs: '0.7rem', sm: '0.8125rem' },
                     border: `1px solid ${item.change24h >= 0 ? 'rgba(0,211,149,0.2)' : 'rgba(255,107,107,0.2)'}`,
                   }}
-                  icon={item.change24h >= 0 ? <TrendingUp sx={{ fontSize: 14 }} /> : <TrendingDown sx={{ fontSize: 14 }} />}
+                  icon={item.change24h >= 0 ? <TrendingUp sx={{ fontSize: { xs: 12, sm: 14 } }} /> : <TrendingDown sx={{ fontSize: { xs: 12, sm: 14 } }} />}
                 />
               </TableCell>
             </motion.tr>

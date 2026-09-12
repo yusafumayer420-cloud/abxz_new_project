@@ -97,7 +97,7 @@ function startPriceFeed(io) {
       throttleTimer = setTimeout(() => {
         io.emit('priceUpdate', latestPrices);
         throttleTimer = null;
-      }, 2500);
+      }, 500);
     }
   }
 

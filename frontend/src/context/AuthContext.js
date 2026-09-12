@@ -188,11 +188,12 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, otp) => {
     try {
       const response = await axios.post('/api/auth/login', {
         email,
-        password
+        password,
+        otp
       });
 
       const { token, user } = response.data;
@@ -205,7 +206,13 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
       const isUnverified = error.response?.status === 403 && error.response?.data?.isVerified === false;
+      const isRequireOTP = error.response?.status === 403 && error.response?.data?.requireOTP === true;
       
+      if (isRequireOTP) {
+        toast.success(message);
+        return { success: false, requireOTP: true, email: error.response.data.email };
+      }
+
       if (isUnverified) {
         toast.error(message);
         return { success: false, unverified: true, email: error.response.data.email };

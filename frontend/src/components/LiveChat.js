@@ -39,7 +39,7 @@ import {
   CheckCircle,
   Check,
   FilterList,
-  AttachFile,
+  Add,
   HeadsetMic,
   ContentCopy,
   Info as InfoIcon,
@@ -866,7 +866,7 @@ const LiveChat = () => {
                             onClick={() => fileInputRef.current?.click()}
                             sx={{ color: selectedFile ? '#00E5FF' : '#64748B' }}
                           >
-                            <AttachFile />
+                            <Add />
                           </IconButton>
                           <TextField
                             id="livechat-message-input"

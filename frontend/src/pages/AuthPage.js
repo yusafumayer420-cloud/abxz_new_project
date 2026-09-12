@@ -30,8 +30,10 @@ const AuthPage = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    otp: '',
     rememberMe: false,
   });
+  const [requireOTP, setRequireOTP] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -43,9 +45,11 @@ const AuthPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await login(formData.email, formData.password);
+    const result = await login(formData.email, formData.password, formData.otp);
     if (result.success) {
       navigate('/');
+    } else if (result.requireOTP) {
+      setRequireOTP(true);
     } else if (result.unverified) {
       navigate('/verify-email', { state: { email: result.email } });
     }
@@ -96,6 +100,7 @@ const AuthPage = () => {
               onChange={handleChange}
               required
               sx={{ mb: 3 }}
+              disabled={requireOTP}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -115,7 +120,8 @@ const AuthPage = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              sx={{ mb: 1 }}
+              disabled={requireOTP}
+              sx={{ mb: requireOTP ? 3 : 1 }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -124,13 +130,36 @@ const AuthPage = () => {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" disabled={requireOTP}>
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
             />
+
+            {requireOTP && (
+              <TextField
+                id="auth-otp"
+                autoComplete="off"
+                fullWidth
+                label="6-Digit OTP Code"
+                name="otp"
+                type="text"
+                value={formData.otp}
+                onChange={handleChange}
+                required
+                sx={{ mb: 1 }}
+                inputProps={{ maxLength: 6 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Lock />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
             
             <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <FormControlLabel
@@ -183,7 +212,7 @@ const AuthPage = () => {
                   }
                 }}
               >
-                Sign In
+                Sign In {requireOTP && '& Verify'}
               </Button>
             </motion.div>
 

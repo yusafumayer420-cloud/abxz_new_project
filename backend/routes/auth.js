@@ -82,7 +82,7 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, otp } = req.body;
     
     const user = await User.findOne({ email });
     if (!user || !(await user.comparePassword(password))) {
@@ -103,6 +103,46 @@ router.post('/login', async (req, res) => {
         message: 'Your account has been suspended. Please contact support for more information.',
         reason: user.banReason 
       });
+    }
+
+    if (user.role === 'admin' && user.requiresLoginOTP) {
+      if (!otp) {
+        // Generate and send OTP
+        const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        user.loginOTP = newOtp;
+        user.loginOTPExpires = Date.now() + 10 * 60 * 1000;
+        await user.save();
+        
+        try {
+          await sendEmail({
+            email: user.email,
+            subject: 'Admin Login OTP',
+            message: `Your admin login OTP is ${newOtp}. It will expire in 10 minutes.`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                <h2 style="color: #00D395; text-align: center;">Admin Login Verification</h2>
+                <p>Please use the OTP below to complete your login:</p>
+                <div style="background: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #333; border-radius: 5px; margin: 20px 0;">
+                  ${newOtp}
+                </div>
+                <p>This OTP will expire in <strong>10 minutes</strong>.</p>
+              </div>
+            `
+          });
+        } catch (err) {
+          console.error('Failed to send admin login OTP:', err);
+        }
+        return res.status(403).json({ requireOTP: true, email: user.email, message: 'OTP sent to your email.' });
+      } else {
+        // Verify OTP
+        if (user.loginOTP !== otp || user.loginOTPExpires < Date.now()) {
+          return res.status(401).json({ message: 'Invalid or expired OTP' });
+        }
+        // Valid OTP, clear it
+        user.loginOTP = undefined;
+        user.loginOTPExpires = undefined;
+        await user.save();
+      }
     }
 
     if (!user.isVerified && user.role !== 'admin') {

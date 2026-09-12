@@ -296,7 +296,7 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
     <Box>
       <Grid container spacing={1}>
         {/* Left Side: Order Form */}
-        <Grid item xs={7.5}>
+        <Grid item xs={7}>
 
 
           {/* Delivery Time Slots */}
@@ -445,7 +445,7 @@ const DeliveryTab = ({ price, socket, user, orderBook, currentPair }) => {
         </Grid>
 
         {/* Right Side: Order Book */}
-        <Grid item xs={4.5}>
+        <Grid item xs={5}>
           <Paper sx={{ p: 1, height: '100%', background: 'rgba(17, 24, 39, 0.4)', border: '1px solid rgba(148, 163, 184, 0.05)' }}>
             <DeliveryOrderBook orderBook={orderBook} price={price} />
           </Paper>
@@ -640,7 +640,8 @@ const TradingPage = ({ socket }) => {
   const [orderType, setOrderType] = useState('market');
   const [side, setSide] = useState('buy');
   const [amount, setAmount] = useState('');
-  const [price, setPrice] = useState(70587.31);
+  const [price, setPrice] = useState(0);
+  const [change24h, setChange24h] = useState(0);
   const [leverage, setLeverage] = useState(1);
   const [orderBook, setOrderBook] = useState({
     bids: [
@@ -702,6 +703,7 @@ const TradingPage = ({ socket }) => {
       if (btcPrice) {
         const livePrice = parseFloat(btcPrice.price);
         setPrice(livePrice);
+        setChange24h(parseFloat(btcPrice.change24h) || 0);
         setOrderBook({
           bids: [
             { price: livePrice - 2, amount: parseFloat((Math.random() * 2).toFixed(4)) },
@@ -843,11 +845,11 @@ const TradingPage = ({ socket }) => {
             </Tooltip>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h5" color={price >= 70587 ? '#00E5FF' : '#FF3366'}>
-              ${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <Typography variant="h5" color={change24h >= 0 ? '#00E5FF' : '#FF3366'}>
+              ${price > 0 ? price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
             </Typography>
-            <Typography component="span" variant="caption" color={price >= 70587 ? '#00E5FF' : '#FF3366'}>
-              {price >= 70587 ? '▲ +0.94%' : '▼ -0.94%'}
+            <Typography component="span" variant="caption" color={change24h >= 0 ? '#00E5FF' : '#FF3366'}>
+              {change24h >= 0 ? `▲ +${change24h.toFixed(2)}%` : `▼ ${change24h.toFixed(2)}%`}
             </Typography>
           </Box>
         </Box>
