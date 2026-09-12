@@ -32,8 +32,10 @@ const AdminLogin = () => {
   const [credentials, setCredentials] = useState({
     email: '',
     password: '',
+    otp: '',
     rememberMe: false,
   });
+  const [requireOTP, setRequireOTP] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,10 +45,12 @@ const AdminLogin = () => {
     setLoading(true);
     setError('');
 
-    const success = await login(credentials.email, credentials.password);
+    const result = await login(credentials.email, credentials.password, credentials.otp);
     
-    if (success) {
+    if (result.success) {
       navigate('/dashboard');
+    } else if (result.requireOTP) {
+      setRequireOTP(true);
     } else {
       setError('Invalid email or password');
     }
@@ -154,6 +158,7 @@ const AdminLogin = () => {
                   onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                   required
                   sx={{ mb: 3 }}
+                  disabled={requireOTP}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -172,7 +177,8 @@ const AdminLogin = () => {
                   value={credentials.password}
                   onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                   required
-                  sx={{ mb: 2 }}
+                  sx={{ mb: requireOTP ? 3 : 2 }}
+                  disabled={requireOTP}
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -184,6 +190,7 @@ const AdminLogin = () => {
                         <IconButton
                           onClick={() => setShowPassword(!showPassword)}
                           edge="end"
+                          disabled={requireOTP}
                           sx={{ color: 'rgba(255, 255, 255, 0.5)' }}
                         >
                           {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -194,6 +201,28 @@ const AdminLogin = () => {
                   variant="outlined"
                   size="medium"
                 />
+
+                {requireOTP && (
+                  <TextField
+                    fullWidth
+                    label="6-Digit OTP Code"
+                    type="text"
+                    value={credentials.otp}
+                    onChange={(e) => setCredentials({ ...credentials, otp: e.target.value })}
+                    required
+                    sx={{ mb: 2 }}
+                    inputProps={{ maxLength: 6 }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Lock sx={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    variant="outlined"
+                    size="medium"
+                  />
+                )}
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                   <FormControlLabel
@@ -245,7 +274,7 @@ const AdminLogin = () => {
                       },
                     }}
                   >
-                    {loading ? 'Signing in...' : 'Sign In'}
+                    {loading ? 'Signing in...' : (requireOTP ? 'Sign In & Verify' : 'Sign In')}
                   </Button>
                 </motion.div>
               </form>

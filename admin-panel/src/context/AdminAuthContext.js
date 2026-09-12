@@ -18,18 +18,19 @@ export const AdminAuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, otp) => {
     try {
       const response = await api.post('/api/auth/login', {
         email,
-        password
+        password,
+        otp
       });
       
       const { token, user } = response.data;
       
       if (user.role !== 'admin' && user.role !== 'super_admin') {
         toast.error('Access denied. Admin role required.');
-        return false;
+        return { success: false };
       }
       
       localStorage.setItem('adminToken', token);
@@ -37,10 +38,18 @@ export const AdminAuthProvider = ({ children }) => {
       setAdmin(user);
       
       toast.success('Login successful!');
-      return true;
+      return { success: true };
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed. Please try again.');
-      return false;
+      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      const isRequireOTP = error.response?.status === 403 && error.response?.data?.requireOTP === true;
+      
+      if (isRequireOTP) {
+        toast.success(message);
+        return { success: false, requireOTP: true };
+      }
+
+      toast.error(message);
+      return { success: false };
     }
   };
 
