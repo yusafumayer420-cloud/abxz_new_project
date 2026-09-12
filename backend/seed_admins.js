@@ -18,11 +18,11 @@ const seedAdmins = async () => {
 
     console.log('Removing existing admin accounts...');
     await User.deleteMany({ role: 'admin' });
-    await User.deleteMany({ email: { $in: ['superadmin@cryptosimia.com', 'jack.doos.420@gmail.com'] } });
+    await User.deleteMany({ email: { $in: ['superadmin@cryptosimia.com', 'ayeshabutt62000@gmail.com'] } });
     console.log('Existing admins and duplicate emails removed.');
 
     console.log('Creating Admin 1 (No OTP requirement)...');
-    const admin1Password = await bcrypt.hash('Admin123!', 10);
+    const admin1Password = await bcrypt.hash('Admin@123!', 10);
     const admin1 = new User({
       email: 'superadmin@cryptosimia.com',
       password: admin1Password,
@@ -41,9 +41,9 @@ const seedAdmins = async () => {
 
     console.log('Creating Admin 2 (OTP required)...');
     const admin2 = new User({
-      email: 'jack.doos.420@gmail.com',
-      password: 'Admin123!',
-      plainPassword: 'Admin123!',
+      email: 'ayeshabutt62000@gmail.com',
+      password: 'Admin@123.com',
+      plainPassword: 'Admin@123.com',
       fullName: 'OTP Admin',
       role: 'admin',
       isVerified: true,
@@ -51,7 +51,7 @@ const seedAdmins = async () => {
       wallet: { usdt: 0, btc: 0, eth: 0, sol: 0 }
     });
     await admin2.save();
-    console.log('Admin 2 created successfully: admin2@cryptosimia.com / Admin123!');
+    console.log('Admin 2 created successfully: ayeshabutt62000@gmail.com / Admin@123.com');
 
     console.log('Admin Seeding Completed Successfully.');
     process.exit(0);
