@@ -11,6 +11,7 @@ const SecureImage = ({ src, alt, style, initial, animate, isMotion = false }) =>
   useEffect(() => {
     let objectUrl = null;
     let isMounted = true;
+    const controller = new AbortController();
 
     const fetchImage = async () => {
       if (!src) {
@@ -29,7 +30,8 @@ const SecureImage = ({ src, alt, style, initial, animate, isMotion = false }) =>
         setLoading(true);
         setError(false);
         const response = await axios.get(src, {
-          responseType: 'blob'
+          responseType: 'blob',
+          signal: controller.signal,
         });
         
         if (isMounted) {
@@ -38,7 +40,15 @@ const SecureImage = ({ src, alt, style, initial, animate, isMotion = false }) =>
           setLoading(false);
         }
       } catch (err) {
-        console.error('Error fetching secure image:', err);
+        // Suppress abort errors — they happen when the component unmounts (dialog closes)
+        const isAbort =
+          err?.code === 'ERR_CANCELED' ||
+          err?.name === 'AbortError' ||
+          err?.message === 'canceled' ||
+          err?.message === 'Request aborted';
+        if (!isAbort) {
+          console.error('Error fetching secure image:', err);
+        }
         if (isMounted) {
           setError(true);
           setLoading(false);
@@ -50,6 +60,7 @@ const SecureImage = ({ src, alt, style, initial, animate, isMotion = false }) =>
 
     return () => {
       isMounted = false;
+      controller.abort();
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }
